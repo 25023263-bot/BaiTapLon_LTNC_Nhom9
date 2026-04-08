@@ -6,3 +6,8 @@ gen/
 .mvn/
 mvnw
 mvnw.cmd
+
+.DS_Store
+Thumbs.db
+
+*.log
