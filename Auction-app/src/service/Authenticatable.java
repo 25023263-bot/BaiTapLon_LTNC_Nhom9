@@ -1,4 +1,8 @@
 package service;
 
-public class Authenticatable {
+public interface Authenticatable {
+    boolean login(String email, String password);
+    void logout();
+    boolean isLoggedIn();
+    String getSessionToken();
 }

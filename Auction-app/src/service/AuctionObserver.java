@@ -1,4 +1,7 @@
 package service;
 
-public class AuctionObserver {
+import model.AuctionItem;
+
+public interface AuctionObserver {
+    void update(AuctionItem item);
 }

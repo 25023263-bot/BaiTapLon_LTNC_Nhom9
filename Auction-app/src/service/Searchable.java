@@ -1,4 +1,11 @@
 package service;
 
-public class Searchable {
+import model.FilterCriteria;
+import model.Page;
+import java.util.List;
+
+public interface Searchable<T> {
+    List<T> search(String keyword);
+    List<T> filter(FilterCriteria criteria);
+    Page<T> search(String keyword, int page, int pageSize);
 }

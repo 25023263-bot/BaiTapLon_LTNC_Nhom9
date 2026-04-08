@@ -2,10 +2,12 @@ package model;
 
 import model.enums.UserRole;
 import service.Authenticatable;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public abstract class User implements Authenticatable {
+public abstract class User implements Authenticatable, Serializable {
+    private static final long serialVersionUID = 1L;
     protected int id;
     protected String name;
     protected String email;
@@ -27,7 +29,6 @@ public abstract class User implements Authenticatable {
     }
 
     private String hashPassword(String plain) {
-        // Trong thực tế nên dùng BCrypt, ở đây chỉ mã hóa đơn giản
         return Integer.toHexString(plain.hashCode());
     }
 
@@ -66,8 +67,8 @@ public abstract class User implements Authenticatable {
         return sessionToken;
     }
 
-    // Getters and setters
     public int getId() { return id; }
+    public void setId(int id) { this.id = id; }  // THÊM SETTER
     public String getName() { return name; }
     public String getEmail() { return email; }
     public double getBalance() { return balance; }
@@ -87,7 +88,6 @@ public abstract class User implements Authenticatable {
         return false;
     }
 
-    // Abstract method for discount (can be used for transaction fees)
     public abstract double getDiscount();
 
     @Override

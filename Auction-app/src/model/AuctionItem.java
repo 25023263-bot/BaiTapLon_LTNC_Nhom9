@@ -2,11 +2,13 @@ package model;
 
 import model.enums.AuctionStatus;
 import service.Auctionable;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class AuctionItem implements Auctionable {
+public abstract class AuctionItem implements Auctionable, Serializable {
+    private static final long serialVersionUID = 1L;
     protected int id;
     protected String name;
     protected String description;
@@ -41,11 +43,9 @@ public abstract class AuctionItem implements Auctionable {
         if (bidder.getBalance() < amount) {
             throw new Exception("Insufficient balance");
         }
-        // Create bid and update
         Bid bid = new Bid(bidder, this, amount, java.time.LocalDateTime.now());
         bidHistory.add(bid);
         currentPrice = amount;
-        // Also add to buyer's bid list if buyer is instance of Buyer
         if (bidder instanceof Buyer) {
             ((Buyer) bidder).addBid(bid);
         }
@@ -60,13 +60,11 @@ public abstract class AuctionItem implements Auctionable {
     public void closeAuction() {
         if (status == AuctionStatus.ACTIVE) {
             status = AuctionStatus.CLOSED;
-            // Determine winner (highest bid)
             if (!bidHistory.isEmpty()) {
                 Bid winningBid = bidHistory.stream()
                         .max((b1, b2) -> Double.compare(b1.getAmount(), b2.getAmount()))
                         .orElse(null);
                 if (winningBid != null) {
-                    // Payment would be handled externally, here just notify
                     System.out.println("Auction closed. Winner: " + winningBid.getBidder().getName() +
                             " with amount " + winningBid.getAmount());
                 }
@@ -90,8 +88,8 @@ public abstract class AuctionItem implements Auctionable {
         }
     }
 
-    // Getters and setters
     public int getId() { return id; }
+    public void setId(int id) { this.id = id; }  // THÊM SETTER
     public String getName() { return name; }
     public String getDescription() { return description; }
     public double getStartingPrice() { return startingPrice; }
