@@ -1,99 +1,121 @@
-package domain.model.user;
+package org.example.baitaplon_ltnc_nhom9.domain.model.user;
 
-import org.example.baitaplon_ltnc_nhom9.model.enums.UserRole;
-import org.example.baitaplon_ltnc_nhom9.service.Authenticatable;
+import org.example.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
 
-import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.UUID;
+import java.util.Objects;
 
-public abstract class User implements Authenticatable, Serializable {
-    private static final long serialVersionUID = 1L;
+/**
+ * Lớp cơ sở trừu tượng cho mọi người dùng trong hệ thống.
+ * Được kế thừa bởi Buyer, Seller, Admin.
+ */
+public abstract class User {
+
     protected int id;
-    protected String name;
+    protected String username;
     protected String email;
     protected String passwordHash;
-    protected double balance;
+    protected String fullName;
+    protected String phone;
     protected UserRole role;
-    protected boolean loggedIn;
-    protected String sessionToken;
-    protected LocalDateTime lastLogin;
+    protected boolean active;
+    protected LocalDateTime createdAt;
+    protected LocalDateTime updatedAt;
 
-    public User(int id, String name, String email, String password, UserRole role) {
-        this.id = id;
-        this.name = name;
-        this.email = email;
-        this.passwordHash = hashPassword(password);
-        this.balance = 0.0;
-        this.role = role;
-        this.loggedIn = false;
+    // ─── Constructor ────────────────────────────────────────────────────────
+
+    protected User() {}
+
+    protected User(int id, String username, String email, String passwordHash,
+                   String fullName, String phone, UserRole role) {
+        this.id           = id;
+        this.username     = username;
+        this.email        = email;
+        this.passwordHash = passwordHash;
+        this.fullName     = fullName;
+        this.phone        = phone;
+        this.role         = role;
+        this.active       = true;
+        this.createdAt    = LocalDateTime.now();
+        this.updatedAt    = LocalDateTime.now();
     }
 
-    private String hashPassword(String plain) {
-        return Integer.toHexString(plain.hashCode());
+    // ─── Abstract ────────────────────────────────────────────────────────────
+
+    /** Trả về mô tả ngắn về quyền/chức năng của user này. */
+    public abstract String getRoleDescription();
+
+    // ─── Business Methods ────────────────────────────────────────────────────
+
+    public boolean isActive() { return active; }
+
+    public void deactivate() {
+        this.active    = false;
+        this.updatedAt = LocalDateTime.now();
     }
 
-    protected boolean checkPassword(String plain) {
-        return hashPassword(plain).equals(this.passwordHash);
+    public void activate() {
+        this.active    = true;
+        this.updatedAt = LocalDateTime.now();
     }
 
-    private String generateToken() {
-        return UUID.randomUUID().toString();
+    public void updateProfile(String fullName, String phone) {
+        if (fullName != null && !fullName.isBlank()) this.fullName = fullName.trim();
+        if (phone    != null && !phone.isBlank())    this.phone    = phone.trim();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+        this.updatedAt    = LocalDateTime.now();
+    }
+
+    // ─── Getters / Setters ───────────────────────────────────────────────────
+
+    public int getId()                    { return id; }
+    public void setId(int id)             { this.id = id; }
+
+    public String getUsername()                      { return username; }
+    public void setUsername(String username)         { this.username = username; }
+
+    public String getEmail()                         { return email; }
+    public void setEmail(String email)               { this.email = email; }
+
+    public String getPasswordHash()                  { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
+
+    public String getFullName()                      { return fullName; }
+    public void setFullName(String fullName)         { this.fullName = fullName; }
+
+    public String getPhone()                         { return phone; }
+    public void setPhone(String phone)               { this.phone = phone; }
+
+    public UserRole getRole()                        { return role; }
+    public void setRole(UserRole role)               { this.role = role; }
+
+    public LocalDateTime getCreatedAt()              { return createdAt; }
+    public void setCreatedAt(LocalDateTime t)        { this.createdAt = t; }
+
+    public LocalDateTime getUpdatedAt()              { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime t)        { this.updatedAt = t; }
+
+    public void setActive(boolean active)            { this.active = active; }
+
+    // ─── Object ──────────────────────────────────────────────────────────────
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof User)) return false;
+        return id == ((User) o).id;
     }
 
     @Override
-    public boolean login(String email, String password) {
-        if (this.email.equals(email) && checkPassword(password)) {
-            this.loggedIn = true;
-            this.sessionToken = generateToken();
-            this.lastLogin = LocalDateTime.now();
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public void logout() {
-        this.loggedIn = false;
-        this.sessionToken = null;
-    }
-
-    @Override
-    public boolean isLoggedIn() {
-        return loggedIn;
-    }
-
-    @Override
-    public String getSessionToken() {
-        return sessionToken;
-    }
-
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }  // THÊM SETTER
-    public String getName() { return name; }
-    public String getEmail() { return email; }
-    public double getBalance() { return balance; }
-    public void setBalance(double balance) { this.balance = balance; }
-    public UserRole getRole() { return role; }
-    public LocalDateTime getLastLogin() { return lastLogin; }
-
-    public void addBalance(double amount) {
-        this.balance += amount;
-    }
-
-    public boolean deductBalance(double amount) {
-        if (balance >= amount) {
-            balance -= amount;
-            return true;
-        }
-        return false;
-    }
-
-    public abstract double getDiscount();
+    public int hashCode() { return Objects.hash(id); }
 
     @Override
     public String toString() {
-        return String.format("User{id=%d, name='%s', email='%s', role=%s, balance=%.2f}",
-                id, name, email, role, balance);
+        return String.format("User{id=%d, username='%s', role=%s, active=%s}",
+                id, username, role, active);
     }
 }

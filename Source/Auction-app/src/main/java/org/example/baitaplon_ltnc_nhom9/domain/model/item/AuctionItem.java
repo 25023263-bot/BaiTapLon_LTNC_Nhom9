@@ -1,107 +1,197 @@
-package domain.model.item;
+package org.example.baitaplon_ltnc_nhom9.domain.model.item;
 
-import org.example.baitaplon_ltnc_nhom9.model.enums.AuctionStatus;
-import org.example.baitaplon_ltnc_nhom9.service.Auctionable;
+import org.example.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 
-import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 
-public abstract class AuctionItem implements Auctionable, Serializable {
-    private static final long serialVersionUID = 1L;
+/**
+ * Lớp cơ sở trừu tượng cho mọi vật phẩm đấu giá.
+ * Kế thừa: PhysicalItem, DigitalItem.
+ */
+public abstract class AuctionItem {
+
     protected int id;
-    protected String name;
+    protected int sellerId;
+    protected String title;
     protected String description;
-    protected double startingPrice;
-    protected double currentPrice;
-    protected double minBidStep;
-    protected LocalDateTime endTime;
+    protected String category;
+    protected String imageUrl;
+
+    /** Giá khởi điểm */
+    protected BigDecimal startingPrice;
+
+    /** Giá bid tối thiểu mỗi lần tăng */
+    protected BigDecimal minBidIncrement;
+
+    /** Giá mua ngay (Buy-Now), null = không có */
+    protected BigDecimal buyNowPrice;
+
+    /** Giá bid cao nhất hiện tại */
+    protected BigDecimal currentPrice;
+
+    /** ID người đang dẫn đầu bid (0 = chưa có bid) */
+    protected int leadingBidderId;
+
     protected AuctionStatus status;
-    protected User seller;
-    protected List<Bid> bidHistory;
+    protected LocalDateTime startTime;
+    protected LocalDateTime endTime;
+    protected LocalDateTime createdAt;
 
-    public AuctionItem(int id, String name, String description, double startingPrice, double minBidStep, User seller) {
-        this.id = id;
-        this.name = name;
-        this.description = description;
-        this.startingPrice = startingPrice;
-        this.currentPrice = startingPrice;
-        this.minBidStep = minBidStep;
-        this.seller = seller;
-        this.status = AuctionStatus.PENDING;
-        this.bidHistory = new ArrayList<>();
+    // ─── Constructor ────────────────────────────────────────────────────────
+
+    protected AuctionItem() {}
+
+    protected AuctionItem(int id, int sellerId, String title, String description,
+                          String category, BigDecimal startingPrice,
+                          BigDecimal minBidIncrement, BigDecimal buyNowPrice,
+                          LocalDateTime startTime, LocalDateTime endTime) {
+        this.id               = id;
+        this.sellerId         = sellerId;
+        this.title            = title;
+        this.description      = description;
+        this.category         = category;
+        this.startingPrice    = startingPrice;
+        this.minBidIncrement  = minBidIncrement != null ? minBidIncrement : BigDecimal.ONE;
+        this.buyNowPrice      = buyNowPrice;
+        this.currentPrice     = startingPrice;
+        this.leadingBidderId  = 0;
+        this.status           = AuctionStatus.PENDING;
+        this.startTime        = startTime;
+        this.endTime          = endTime;
+        this.createdAt        = LocalDateTime.now();
     }
 
-    public void placeBid(User bidder, double amount) throws Exception {
-        if (status != AuctionStatus.ACTIVE) {
-            throw new Exception("Auction is not active");
-        }
-        if (amount <= currentPrice + minBidStep) {
-            throw new Exception("Bid too low: must be at least " + (currentPrice + minBidStep));
-        }
-        if (bidder.getBalance() < amount) {
-            throw new Exception("Insufficient balance");
-        }
-        Bid bid = new Bid(bidder, this, amount, LocalDateTime.now());
-        bidHistory.add(bid);
-        currentPrice = amount;
-        if (bidder instanceof Buyer) {
-            ((Buyer) bidder).addBid(bid);
-        }
+    // ─── Abstract ────────────────────────────────────────────────────────────
+
+    /** Trả về loại vật phẩm (PHYSICAL / DIGITAL) */
+    public abstract String getItemType();
+
+    /** Xác thực dữ liệu đặc thù của loại vật phẩm */
+    public abstract boolean isValidItem();
+
+    // ─── Business Logic ──────────────────────────────────────────────────────
+
+    /**
+     * Kiểm tra bid mới có hợp lệ không.
+     * @param bidAmount số tiền đặt
+     * @return true nếu hợp lệ
+     */
+    public boolean isValidBid(BigDecimal bidAmount) {
+        if (bidAmount == null) return false;
+        BigDecimal minimum = currentPrice.add(minBidIncrement);
+        return bidAmount.compareTo(minimum) >= 0;
+    }
+
+    /**
+     * Cập nhật giá hiện tại khi có bid mới thắng.
+     */
+    public void updateCurrentBid(BigDecimal newBid, int bidderId) {
+        this.currentPrice    = newBid;
+        this.leadingBidderId = bidderId;
+    }
+
+    /**
+     * Tính giá bid tối thiểu tiếp theo.
+     */
+    public BigDecimal getNextMinimumBid() {
+        return currentPrice.add(minBidIncrement);
+    }
+
+    /**
+     * Số giây còn lại của phiên đấu giá.
+     */
+    public long getRemainingSeconds() {
+        if (endTime == null) return 0;
+        long diff = ChronoUnit.SECONDS.between(LocalDateTime.now(), endTime);
+        return Math.max(0, diff);
+    }
+
+    /**
+     * Phiên đấu giá đã có bid chưa.
+     */
+    public boolean hasBids() {
+        return leadingBidderId > 0 && currentPrice.compareTo(startingPrice) > 0;
+    }
+
+    /**
+     * Có giá mua ngay không.
+     */
+    public boolean hasBuyNow() {
+        return buyNowPrice != null && buyNowPrice.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    /**
+     * Phiên đấu giá đang active không.
+     */
+    public boolean isActive() {
+        return status == AuctionStatus.ACTIVE;
+    }
+
+    // ─── Getters / Setters ───────────────────────────────────────────────────
+
+    public int getId()                              { return id; }
+    public void setId(int id)                       { this.id = id; }
+
+    public int getSellerId()                        { return sellerId; }
+    public void setSellerId(int sellerId)           { this.sellerId = sellerId; }
+
+    public String getTitle()                        { return title; }
+    public void setTitle(String title)              { this.title = title; }
+
+    public String getDescription()                  { return description; }
+    public void setDescription(String desc)         { this.description = desc; }
+
+    public String getCategory()                     { return category; }
+    public void setCategory(String category)        { this.category = category; }
+
+    public String getImageUrl()                     { return imageUrl; }
+    public void setImageUrl(String imageUrl)        { this.imageUrl = imageUrl; }
+
+    public BigDecimal getStartingPrice()            { return startingPrice; }
+    public void setStartingPrice(BigDecimal p)      { this.startingPrice = p; }
+
+    public BigDecimal getMinBidIncrement()          { return minBidIncrement; }
+    public void setMinBidIncrement(BigDecimal inc)  { this.minBidIncrement = inc; }
+
+    public BigDecimal getBuyNowPrice()              { return buyNowPrice; }
+    public void setBuyNowPrice(BigDecimal p)        { this.buyNowPrice = p; }
+
+    public BigDecimal getCurrentPrice()             { return currentPrice; }
+    public void setCurrentPrice(BigDecimal p)       { this.currentPrice = p; }
+
+    public int getLeadingBidderId()                 { return leadingBidderId; }
+    public void setLeadingBidderId(int id)          { this.leadingBidderId = id; }
+
+    public AuctionStatus getStatus()                { return status; }
+    public void setStatus(AuctionStatus status)     { this.status = status; }
+
+    public LocalDateTime getStartTime()             { return startTime; }
+    public void setStartTime(LocalDateTime t)       { this.startTime = t; }
+
+    public LocalDateTime getEndTime()               { return endTime; }
+    public void setEndTime(LocalDateTime t)         { this.endTime = t; }
+
+    public LocalDateTime getCreatedAt()             { return createdAt; }
+    public void setCreatedAt(LocalDateTime t)       { this.createdAt = t; }
+
+    // ─── Object ──────────────────────────────────────────────────────────────
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof AuctionItem)) return false;
+        return id == ((AuctionItem) o).id;
     }
 
     @Override
-    public double getCurrentPrice() {
-        return currentPrice;
-    }
-
-    @Override
-    public void closeAuction() {
-        if (status == AuctionStatus.ACTIVE) {
-            status = AuctionStatus.CLOSED;
-            if (!bidHistory.isEmpty()) {
-                Bid winningBid = bidHistory.stream()
-                        .max((b1, b2) -> Double.compare(b1.getAmount(), b2.getAmount()))
-                        .orElse(null);
-                if (winningBid != null) {
-                    System.out.println("Auction closed. Winner: " + winningBid.getBidder().getName() +
-                            " with amount " + winningBid.getAmount());
-                }
-            } else {
-                System.out.println("Auction closed with no bids.");
-            }
-        }
-    }
-
-    @Override
-    public AuctionStatus getStatus() {
-        return status;
-    }
-
-    public void startAuction(LocalDateTime endTime) {
-        if (status == AuctionStatus.PENDING) {
-            this.status = AuctionStatus.ACTIVE;
-            this.endTime = endTime;
-        } else {
-            throw new IllegalStateException("Cannot start auction: status is " + status);
-        }
-    }
-
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }  // THÊM SETTER
-    public String getName() { return name; }
-    public String getDescription() { return description; }
-    public double getStartingPrice() { return startingPrice; }
-    public double getMinBidStep() { return minBidStep; }
-    public LocalDateTime getEndTime() { return endTime; }
-    public User getSeller() { return seller; }
-    public List<Bid> getBidHistory() { return bidHistory; }
-    public void setStatus(AuctionStatus status) { this.status = status; }
+    public int hashCode() { return Objects.hash(id); }
 
     @Override
     public String toString() {
-        return String.format("AuctionItem{id=%d, name='%s', currentPrice=%.2f, status=%s}",
-                id, name, currentPrice, status);
+        return String.format("AuctionItem{id=%d, title='%s', status=%s, currentPrice=%s}",
+                id, title, status, currentPrice);
     }
 }

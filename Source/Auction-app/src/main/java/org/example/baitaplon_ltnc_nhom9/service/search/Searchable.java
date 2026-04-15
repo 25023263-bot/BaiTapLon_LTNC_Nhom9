@@ -1,4 +1,4 @@
-package org.example.baitaplon_ltnc_nhom9.service;
+package org.example.baitaplon_ltnc_nhom9.service.search;
 
 import org.example.baitaplon_ltnc_nhom9.model.FilterCriteria;
 import org.example.baitaplon_ltnc_nhom9.model.Page;

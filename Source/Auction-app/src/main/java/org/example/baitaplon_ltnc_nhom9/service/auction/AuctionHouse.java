@@ -1,10 +1,11 @@
-package org.example.baitaplon_ltnc_nhom9.service;
+package org.example.baitaplon_ltnc_nhom9.service.auction;
 
 import org.example.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import org.example.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import org.example.baitaplon_ltnc_nhom9.domain.model.user.Seller;
 import org.example.baitaplon_ltnc_nhom9.domain.model.user.User;
 import org.example.baitaplon_ltnc_nhom9.exception.*;
+import org.example.baitaplon_ltnc_nhom9.service.search.Searchable;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;

@@ -1,6 +1,7 @@
-package org.example.baitaplon_ltnc_nhom9.service;
+package org.example.baitaplon_ltnc_nhom9.service.auth;
 
 import org.example.baitaplon_ltnc_nhom9.domain.model.user.User;
+import org.example.baitaplon_ltnc_nhom9.service.auction.AuctionHouse;
 
 public class AuthService {
     private AuctionHouse auctionHouse;

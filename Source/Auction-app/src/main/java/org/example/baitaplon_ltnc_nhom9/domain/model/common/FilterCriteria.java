@@ -1,74 +1,112 @@
-package domain.model.common;
+package org.example.baitaplon_ltnc_nhom9.domain.model.common;
 
-import org.example.baitaplon_ltnc_nhom9.model.enums.AuctionStatus;
 
+import org.example.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * Tiêu chí lọc dùng khi tìm kiếm vật phẩm đấu giá.
+ * Sử dụng Builder pattern để tạo điều kiện lọc linh hoạt.
+ */
 public class FilterCriteria {
-    private String nameContains;
-    private Double minPrice;
-    private Double maxPrice;
-    private AuctionStatus status;
-    private Integer sellerId;
-    private Boolean endingSoon; // if true, endTime is within next hour
-    private String category; // only for PhysicalItem
 
-    private FilterCriteria(Builder builder) {
-        this.nameContains = builder.nameContains;
-        this.minPrice = builder.minPrice;
-        this.maxPrice = builder.maxPrice;
-        this.status = builder.status;
-        this.sellerId = builder.sellerId;
-        this.endingSoon = builder.endingSoon;
-        this.category = builder.category;
-    }
+    private String keyword;          // Tìm theo tên/mô tả
+    private String category;         // Lọc theo danh mục
+    private String itemType;         // PHYSICAL | DIGITAL | null (all)
+    private AuctionStatus status;    // Trạng thái phiên đấu giá
+    private BigDecimal minPrice;     // Giá hiện tại tối thiểu
+    private BigDecimal maxPrice;     // Giá hiện tại tối đa
+    private Integer sellerId;        // Lọc theo người bán
+    private LocalDateTime startFrom; // Bắt đầu từ ngày
+    private LocalDateTime endBefore; // Kết thúc trước ngày
+    private boolean activeOnly;      // Chỉ phiên đang mở
+
+    // Sắp xếp
+    private String sortBy;           // price | endTime | createdAt | title
+    private boolean sortAscending;   // true = ASC, false = DESC
+
+    private FilterCriteria() {}
+
+    // ─── Builder ────────────────────────────────────────────────────────────
+
+    public static Builder builder() { return new Builder(); }
 
     public static class Builder {
-        private String nameContains;
-        private Double minPrice;
-        private Double maxPrice;
-        private AuctionStatus status;
-        private Integer sellerId;
-        private Boolean endingSoon;
-        private String category;
+        private final FilterCriteria f = new FilterCriteria();
 
-        public Builder nameContains(String nameContains) {
-            this.nameContains = nameContains;
-            return this;
-        }
-        public Builder minPrice(double minPrice) {
-            this.minPrice = minPrice;
-            return this;
-        }
-        public Builder maxPrice(double maxPrice) {
-            this.maxPrice = maxPrice;
-            return this;
-        }
-        public Builder status(AuctionStatus status) {
-            this.status = status;
-            return this;
-        }
-        public Builder sellerId(int sellerId) {
-            this.sellerId = sellerId;
-            return this;
-        }
-        public Builder endingSoon(boolean endingSoon) {
-            this.endingSoon = endingSoon;
+        public Builder keyword(String keyword) {
+            f.keyword = keyword;
             return this;
         }
         public Builder category(String category) {
-            this.category = category;
+            f.category = category;
             return this;
         }
-        public FilterCriteria build() {
-            return new FilterCriteria(this);
+        public Builder itemType(String itemType) {
+            f.itemType = itemType;
+            return this;
         }
+        public Builder status(AuctionStatus status) {
+            f.status = status;
+            return this;
+        }
+        public Builder priceRange(BigDecimal min, BigDecimal max) {
+            f.minPrice = min;
+            f.maxPrice = max;
+            return this;
+        }
+        public Builder sellerId(int sellerId) {
+            f.sellerId = sellerId;
+            return this;
+        }
+        public Builder timeRange(LocalDateTime from, LocalDateTime before) {
+            f.startFrom = from;
+            f.endBefore = before;
+            return this;
+        }
+        public Builder activeOnly(boolean activeOnly) {
+            f.activeOnly = activeOnly;
+            return this;
+        }
+        public Builder sortBy(String field, boolean ascending) {
+            f.sortBy        = field;
+            f.sortAscending = ascending;
+            return this;
+        }
+        public FilterCriteria build() { return f; }
     }
 
-    // Getters
-    public String getNameContains() { return nameContains; }
-    public Double getMinPrice() { return minPrice; }
-    public Double getMaxPrice() { return maxPrice; }
-    public AuctionStatus getStatus() { return status; }
-    public Integer getSellerId() { return sellerId; }
-    public Boolean getEndingSoon() { return endingSoon; }
-    public String getCategory() { return category; }
+    // ─── Utility ─────────────────────────────────────────────────────────────
+
+    public boolean hasKeyword()   { return keyword  != null && !keyword.isBlank(); }
+    public boolean hasCategory()  { return category != null && !category.isBlank(); }
+    public boolean hasItemType()  { return itemType != null && !itemType.isBlank(); }
+    public boolean hasStatus()    { return status   != null; }
+    public boolean hasPriceRange(){ return minPrice != null || maxPrice != null; }
+    public boolean hasSellerId()  { return sellerId != null; }
+    public boolean hasTimeRange() { return startFrom != null || endBefore != null; }
+    public boolean hasSort()      { return sortBy != null && !sortBy.isBlank(); }
+
+    // ─── Getters ─────────────────────────────────────────────────────────────
+
+    public String getKeyword()           { return keyword; }
+    public String getCategory()          { return category; }
+    public String getItemType()          { return itemType; }
+    public AuctionStatus getStatus()     { return status; }
+    public BigDecimal getMinPrice()      { return minPrice; }
+    public BigDecimal getMaxPrice()      { return maxPrice; }
+    public Integer getSellerId()         { return sellerId; }
+    public LocalDateTime getStartFrom()  { return startFrom; }
+    public LocalDateTime getEndBefore()  { return endBefore; }
+    public boolean isActiveOnly()        { return activeOnly; }
+    public String getSortBy()            { return sortBy; }
+    public boolean isSortAscending()     { return sortAscending; }
+
+    @Override
+    public String toString() {
+        return String.format("FilterCriteria{keyword='%s', category='%s', status=%s, price=[%s-%s]}",
+                keyword, category, status, minPrice, maxPrice);
+    }
 }

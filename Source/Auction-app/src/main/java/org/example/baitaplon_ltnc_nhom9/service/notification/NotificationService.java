@@ -1,8 +1,9 @@
-package org.example.baitaplon_ltnc_nhom9.service;
+package org.example.baitaplon_ltnc_nhom9.service.notification;
 
 import org.example.baitaplon_ltnc_nhom9.model.AuctionItem;
 import org.example.baitaplon_ltnc_nhom9.model.Buyer;
 import org.example.baitaplon_ltnc_nhom9.model.User;
+import org.example.baitaplon_ltnc_nhom9.service.auction.AuctionObserver;
 
 public class NotificationService implements AuctionObserver {
     @Override

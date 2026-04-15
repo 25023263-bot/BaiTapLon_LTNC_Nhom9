@@ -1,9 +1,16 @@
 package org.example.baitaplon_ltnc_nhom9;
 
-import org.example.baitaplon_ltnc_nhom9.model.*;
-import org.example.baitaplon_ltnc_nhom9.model.enums.*;
+import org.example.baitaplon_ltnc_nhom9.domain.model.user.User;
+import org.example.baitaplon_ltnc_nhom9.domain.model.user.*;
+import org.example.baitaplon_ltnc_nhom9.domain.model.enums.*;
 import org.example.baitaplon_ltnc_nhom9.service.*;
 import org.example.baitaplon_ltnc_nhom9.exception.*;
+import org.example.baitaplon_ltnc_nhom9.service.auction.AuctionHouse;
+import org.example.baitaplon_ltnc_nhom9.service.auction.AuctionScheduler;
+import org.example.baitaplon_ltnc_nhom9.service.auth.AuthService;
+import org.example.baitaplon_ltnc_nhom9.service.notification.NotificationService;
+import org.example.baitaplon_ltnc_nhom9.domain.model.item.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Scanner;
@@ -29,7 +36,7 @@ public class Main {
 
         boolean running = true;
         while (running) {
-            if (currentUser == null || !currentUser.isLoggedIn()) {
+            if (currentUser == null || !Boolean.parseBoolean(currentUser.isLoggedIn())) {
                 showLoginMenu();
             } else {
                 showMainMenu();
