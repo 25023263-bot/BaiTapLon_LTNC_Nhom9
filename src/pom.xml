@@ -93,7 +93,7 @@
                         <id>default-cli</id>
                         <configuration>
                             <mainClass>
-                                com.nhom9.auction.AuctionApp
+                                com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.AuctionApp
                             </mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>
