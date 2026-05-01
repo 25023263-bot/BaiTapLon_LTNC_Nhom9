@@ -4,6 +4,8 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.Item;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.observer.BidObserver;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.exception.AuctionClosedException;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.exception.InvalidBidException;
 
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
