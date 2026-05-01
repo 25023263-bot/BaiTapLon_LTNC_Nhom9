@@ -1,14 +1,177 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Rectangle?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
 
-<AnchorPane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
-            fx:controller="CONTROLLER_NAME"
-            prefHeight="400.0" prefWidth="600.0">
+<ScrollPane fitToWidth="true" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.ItemDetailController">
 
-</AnchorPane>
+    <content>
+        <VBox spacing="20.0" style="-fx-background-color: #f5f5f5;">
+            <padding>
+                <Insets bottom="30.0" left="40.0" right="40.0" top="30.0" />
+            </padding>
+
+            <!-- Tiêu đề trang -->
+            <HBox alignment="CENTER_LEFT">
+                <Text strokeType="OUTSIDE" strokeWidth="0.0" text="CHI TIẾT SẢN PHẨM ĐẤU GIÁ">
+                    <font><Font name="System Bold" size="20.0" /></font>
+                </Text>
+            </HBox>
+
+            <Separator />
+
+            <!-- Item 1 -->
+            <HBox alignment="CENTER_LEFT" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15;">
+                <ImageView fitHeight="100.0" fitWidth="108.0" preserveRatio="true">
+                    <image><Image url="@../Images/Item1.jpg" /></image>
+                    <clip><Rectangle arcHeight="16" arcWidth="16" height="100.0" width="120.0" /></clip>
+                </ImageView>
+                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                    <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Đồng hồ cổ Thụy Sĩ 1960">
+                        <font><Font name="System Bold" size="15.0" /></font>
+                    </Text>
+                    <Label style="-fx-text-fill: #666;" text="Danh mục: Đồ cổ" />
+                    <Label style="-fx-text-fill: #666;" text="Tình trạng: Tốt" />
+                    <Label style="-fx-text-fill: #e65c00; -fx-font-weight: bold;" text="Giá khởi điểm: 5.000.000 VNĐ" />
+                </VBox>
+                <VBox alignment="CENTER" spacing="8.0">
+                    <Button prefWidth="100.0" style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8;" text="Đặt giá" />
+                    <Button prefWidth="100.0" style="-fx-background-radius: 8;" text="Xem chi tiết" />
+                </VBox>
+            </HBox>
+
+            <!-- Item 2 -->
+            <HBox alignment="CENTER_LEFT" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15;">
+                <ImageView fitHeight="100.0" fitWidth="120.0" preserveRatio="true">
+                    <image><Image url="@../Images/Item2.jpg" /></image>
+                    <clip><Rectangle arcHeight="16" arcWidth="16" height="100.0" width="120.0" /></clip>
+                </ImageView>
+                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                    <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Tranh sơn dầu phong cảnh">
+                        <font><Font name="System Bold" size="15.0" /></font>
+                    </Text>
+                    <Label style="-fx-text-fill: #666;" text="Danh mục: Nghệ thuật" />
+                    <Label style="-fx-text-fill: #666;" text="Tình trạng: Rất tốt" />
+                    <Label style="-fx-text-fill: #e65c00; -fx-font-weight: bold;" text="Giá khởi điểm: 12.000.000 VNĐ" />
+                </VBox>
+                <VBox alignment="CENTER" spacing="8.0">
+                    <Button prefWidth="100.0" style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8;" text="Đặt giá" />
+                    <Button prefWidth="100.0" style="-fx-background-radius: 8;" text="Xem chi tiết" />
+                </VBox>
+            </HBox>
+
+            <!-- Item 3 -->
+            <HBox alignment="CENTER_LEFT" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15;">
+                <ImageView fitHeight="100.0" fitWidth="120.0" preserveRatio="true">
+                    <image><Image url="@../Images/Item3.jpg" /></image>
+                    <clip><Rectangle arcHeight="16" arcWidth="16" height="100.0" width="120.0" /></clip>
+                </ImageView>
+                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                    <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Bình gốm sứ thời Lý">
+                        <font><Font name="System Bold" size="15.0" /></font>
+                    </Text>
+                    <Label style="-fx-text-fill: #666;" text="Danh mục: Đồ cổ" />
+                    <Label style="-fx-text-fill: #666;" text="Tình trạng: Trung bình" />
+                    <Label style="-fx-text-fill: #e65c00; -fx-font-weight: bold;" text="Giá khởi điểm: 8.500.000 VNĐ" />
+                </VBox>
+                <VBox alignment="CENTER" spacing="8.0">
+                    <Button prefWidth="100.0" style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8;" text="Đặt giá" />
+                    <Button prefWidth="100.0" style="-fx-background-radius: 8;" text="Xem chi tiết" />
+                </VBox>
+            </HBox>
+
+            <!-- Item 4 -->
+            <HBox alignment="CENTER_LEFT" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15;">
+                <ImageView fitHeight="100.0" fitWidth="120.0" preserveRatio="true">
+                    <image><Image url="@../Images/Item4.jpg" /></image>
+                    <clip><Rectangle arcHeight="16" arcWidth="16" height="100.0" width="120.0" /></clip>
+                </ImageView>
+                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                    <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Nhẫn vàng 18k thời Nguyễn">
+                        <font><Font name="System Bold" size="15.0" /></font>
+                    </Text>
+                    <Label style="-fx-text-fill: #666;" text="Danh mục: Trang sức" />
+                    <Label style="-fx-text-fill: #666;" text="Tình trạng: Rất tốt" />
+                    <Label style="-fx-text-fill: #e65c00; -fx-font-weight: bold;" text="Giá khởi điểm: 25.000.000 VNĐ" />
+                </VBox>
+                <VBox alignment="CENTER" spacing="8.0">
+                    <Button prefWidth="100.0" style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8;" text="Đặt giá" />
+                    <Button prefWidth="100.0" style="-fx-background-radius: 8;" text="Xem chi tiết" />
+                </VBox>
+            </HBox>
+
+            <!-- Item 5 -->
+            <HBox alignment="CENTER_LEFT" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15;">
+                <ImageView fitHeight="100.0" fitWidth="120.0" preserveRatio="true">
+                    <image><Image url="@../Images/Item5.jpg" /></image>
+                    <clip><Rectangle arcHeight="16" arcWidth="16" height="100.0" width="120.0" /></clip>
+                </ImageView>
+                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                    <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Đàn tì bà cổ thế kỷ 19">
+                        <font><Font name="System Bold" size="15.0" /></font>
+                    </Text>
+                    <Label style="-fx-text-fill: #666;" text="Danh mục: Nhạc cụ cổ" />
+                    <Label style="-fx-text-fill: #666;" text="Tình trạng: Trung bình" />
+                    <Label style="-fx-text-fill: #e65c00; -fx-font-weight: bold;" text="Giá khởi điểm: 15.000.000 VNĐ" />
+                </VBox>
+                <VBox alignment="CENTER" spacing="8.0">
+                    <Button prefWidth="100.0" style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8;" text="Đặt giá" />
+                    <Button prefWidth="100.0" style="-fx-background-radius: 8;" text="Xem chi tiết" />
+                </VBox>
+            </HBox>
+
+            <!-- Item 6 -->
+            <HBox alignment="CENTER_LEFT" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15;">
+                <ImageView fitHeight="100.0" fitWidth="120.0" preserveRatio="true">
+                    <image><Image url="@../Images/Item6.jpg" /></image>
+                    <clip><Rectangle arcHeight="16" arcWidth="16" height="100.0" width="120.0" /></clip>
+                </ImageView>
+                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                    <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Kiếm samurai Nhật thế kỷ 18">
+                        <font><Font name="System Bold" size="15.0" /></font>
+                    </Text>
+                    <Label style="-fx-text-fill: #666;" text="Danh mục: Vũ khí cổ" />
+                    <Label style="-fx-text-fill: #666;" text="Tình trạng: Tốt" />
+                    <Label style="-fx-text-fill: #e65c00; -fx-font-weight: bold;" text="Giá khởi điểm: 45.000.000 VNĐ" />
+                </VBox>
+                <VBox alignment="CENTER" spacing="8.0">
+                    <Button prefWidth="100.0" style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8;" text="Đặt giá" />
+                    <Button prefWidth="100.0" style="-fx-background-radius: 8;" text="Xem chi tiết" />
+                </VBox>
+            </HBox>
+
+            <!-- Item 7 -->
+            <HBox alignment="CENTER_LEFT" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 15;">
+                <ImageView fitHeight="100.0" fitWidth="120.0" preserveRatio="true">
+                    <image><Image url="@../Images/Item7.jpg" /></image>
+                    <clip><Rectangle arcHeight="16" arcWidth="16" height="100.0" width="120.0" /></clip>
+                </ImageView>
+                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                    <Text strokeType="OUTSIDE" strokeWidth="0.0" text="Máy đánh chữ Hermes 3000 (1958)">
+                        <font><Font name="System Bold" size="15.0" /></font>
+                    </Text>
+                    <Label style="-fx-text-fill: #666;" text="Danh mục: Đồ cổ cơ khí" />
+                    <Label style="-fx-text-fill: #666;" text="Tình trạng: Còn hoạt động" />
+                    <Label style="-fx-text-fill: #e65c00; -fx-font-weight: bold;" text="Giá khởi điểm: 6.500.000 VNĐ" />
+                </VBox>
+                <VBox alignment="CENTER" spacing="8.0">
+                    <Button prefWidth="100.0" style="-fx-background-color: #2196F3; -fx-text-fill: white; -fx-background-radius: 8;" text="Đặt giá" />
+                    <Button prefWidth="100.0" style="-fx-background-radius: 8;" text="Xem chi tiết" />
+                </VBox>
+            </HBox>
+
+            <Separator />
+
+        </VBox>
+    </content>
+</ScrollPane>
