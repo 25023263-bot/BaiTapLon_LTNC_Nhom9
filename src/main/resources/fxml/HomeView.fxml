@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.geometry.*?>
+
+<!--
+  HomeView.fxml
+  UBid Auction App — Home Screen
+  Architecture: MVC | Controller: HomeController.java | Style: home.css
+
+  Layout Structure:
+    BorderPane (root)
+    ├── TOP: Navbar (HBox)
+    └── CENTER: ScrollPane > VBox (main content)
+        ├── Search Section
+        ├── Category Filter Chips (horizontal scroll)
+        ├── 🔥 Trending Live Auctions (3 hot cards — injected by controller)
+        └── All Auctions Grid (injected by controller)
+-->
+
+<BorderPane
+        xmlns="http://javafx.com/javafx"
+        xmlns:fx="http://javafx.com/fxml"
+        fx:controller="com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.HomeController"
+        stylesheets="@../css/home.css"
+        styleClass="root">
+
+    <!-- ═══════════════════════════════════════════════════════
+         TOP NAVBAR
+         ═══════════════════════════════════════════════════════ -->
+    <top>
+        <HBox styleClass="navbar" alignment="CENTER_LEFT">
+
+            <!-- Left: Logo + App Name -->
+            <HBox alignment="CENTER_LEFT" spacing="10" HBox.hgrow="ALWAYS">
+                <StackPane styleClass="logo-circle">
+                    <Label styleClass="logo-icon-label" text="⚡"/>
+                </StackPane>
+                <Label styleClass="app-name" text="UBid"/>
+            </HBox>
+
+            <!-- Center: Navigation Links -->
+            <HBox styleClass="nav-links" HBox.hgrow="NEVER">
+                <Button styleClass="nav-link-active" text="Home"
+                        onAction="#handleNavHome"/>
+                <Button styleClass="nav-link" text="Categories"
+                        onAction="#handleNavCategories"/>
+                <Button styleClass="nav-link" text="Results"
+                        onAction="#handleNavResults"/>
+            </HBox>
+
+            <!-- Right: Icons + Auth Buttons -->
+            <HBox styleClass="navbar-right" HBox.hgrow="ALWAYS" alignment="CENTER_RIGHT" spacing="12">
+
+                <!-- Search icon -->
+                <Button styleClass="icon-btn" text="🔍" onAction="#handleSearch"/>
+
+                <!-- Notification bell -->
+                <Button styleClass="icon-btn" text="🔔" onAction="#handleNotifications"/>
+
+                <!-- Separator -->
+                <Region minWidth="8"/>
+
+                <!-- Login button -->
+                <Button fx:id="btnLogin" styleClass="btn-login" text="Sign In"
+                        onAction="#handleLogin"/>
+
+                <!-- Register as Seller button -->
+                <Button fx:id="btnRegister" styleClass="btn-register" text="Sell on UBid"
+                        onAction="#handleRegister"/>
+
+            </HBox>
+        </HBox>
+    </top>
+
+    <!-- ═══════════════════════════════════════════════════════
+         MAIN SCROLLABLE CONTENT
+         ═══════════════════════════════════════════════════════ -->
+    <center>
+        <ScrollPane fitToWidth="true" styleClass="scroll-pane"
+                    hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+            <content>
+
+                <VBox styleClass="main-content" spacing="24">
+
+                    <!-- ─────────────────────────────────────────
+                         SEARCH SECTION
+                         ───────────────────────────────────────── -->
+                    <HBox styleClass="search-section" spacing="12" alignment="CENTER_LEFT">
+
+                        <!-- Search bar -->
+                        <HBox styleClass="search-bar-container" HBox.hgrow="ALWAYS" spacing="8" alignment="CENTER_LEFT">
+                            <Label styleClass="search-icon" text="🔍"/>
+                            <TextField fx:id="searchField"
+                                       styleClass="search-field"
+                                       promptText="Search products..."
+                                       HBox.hgrow="ALWAYS"
+                                       onAction="#handleSearchQuery"/>
+                            <!-- Result count — updated by controller -->
+                            <Label fx:id="resultCountLabel" styleClass="result-count" text="6 results"/>
+                        </HBox>
+
+                        <!-- Filter dropdown -->
+                        <ComboBox fx:id="filterDropdown"
+                                  styleClass="filter-dropdown"
+                                  promptText="Ending Soon"
+                                  minWidth="140"/>
+
+                    </HBox>
+
+                    <!-- ─────────────────────────────────────────
+                         CATEGORY FILTER CHIPS
+                         ───────────────────────────────────────── -->
+                    <ScrollPane styleClass="category-scroll"
+                                fitToHeight="true"
+                                hbarPolicy="NEVER"
+                                vbarPolicy="NEVER">
+                        <content>
+                            <!--
+                              fx:id lets controller update active chip state
+                              Chips are created here statically;
+                              for a dynamic list use controller injection.
+                            -->
+                            <HBox fx:id="categoryChipsContainer"
+                                  styleClass="category-chips-container"
+                                  spacing="10" alignment="CENTER_LEFT">
+
+                                <Button fx:id="chipAll" styleClass="chip-active"
+                                        text="✦ All" onAction="#handleCategoryAll"/>
+                                <Button styleClass="chip" text="⌚ Watches"
+                                        onAction="#handleCategoryFilter"/>
+                                <Button styleClass="chip" text="💎 Jewelry"
+                                        onAction="#handleCategoryFilter"/>
+                                <Button styleClass="chip" text="🎨 Art"
+                                        onAction="#handleCategoryFilter"/>
+                                <Button styleClass="chip" text="🏺 Antiques"
+                                        onAction="#handleCategoryFilter"/>
+                                <Button styleClass="chip" text="🚗 Cars"
+                                        onAction="#handleCategoryFilter"/>
+                                <Button styleClass="chip" text="🏡 Home Decor"
+                                        onAction="#handleCategoryFilter"/>
+                                <Button styleClass="chip" text="🏆 Collectibles"
+                                        onAction="#handleCategoryFilter"/>
+                                <Button styleClass="chip" text="🏢 Real Estate"
+                                        onAction="#handleCategoryFilter"/>
+
+                            </HBox>
+                        </content>
+                    </ScrollPane>
+
+                    <!-- ─────────────────────────────────────────
+                         HOT PRODUCTS SECTION
+                         ───────────────────────────────────────── -->
+                    <VBox spacing="16">
+
+                        <!-- Section header -->
+                        <VBox styleClass="section-header" spacing="4">
+                            <Label styleClass="section-title" text="🔥 TRENDING LIVE AUCTIONS"/>
+                            <Label styleClass="section-subtitle"
+                                   text="Top real-time hottest auction items based on bidding activity"/>
+                        </VBox>
+
+                        <!-- Gold accent line -->
+                        <Region styleClass="gold-divider" maxWidth="180"/>
+
+                        <!--
+                          Hot cards container — populated by HomeController.loadHotAuctions()
+                          Uses HBox so cards sit side-by-side, equal width, with spacing.
+                          fx:id allows controller to inject card nodes at runtime.
+                        -->
+                        <HBox fx:id="hotCardsContainer" spacing="20" alignment="TOP_LEFT" fillHeight="true"/>
+
+                    </VBox>
+
+                    <!-- Gold separator line -->
+                    <Region styleClass="separator-line" maxWidth="10000"/>
+
+                    <!-- ─────────────────────────────────────────
+                         ALL AUCTIONS SECTION (shown below fold)
+                         ───────────────────────────────────────── -->
+                    <VBox styleClass="all-products-section" spacing="16">
+
+                        <Label styleClass="all-products-title" text="All Auctions"/>
+
+                        <!--
+                          GridPane — columns defined by controller via ColumnConstraints.
+                          fx:id lets controller add product cards dynamically.
+                          Controller calls: allProductsGrid.getChildren().add(card)
+                        -->
+                        <GridPane fx:id="allProductsGrid" hgap="16" vgap="16"/>
+
+                    </VBox>
+
+                </VBox>
+
+            </content>
+        </ScrollPane>
+    </center>
+
+</BorderPane>
