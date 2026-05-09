@@ -1,14 +1,111 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.shape.Line?>
 
-<AnchorPane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
-            fx:controller="CONTROLLER_NAME"
-            prefHeight="400.0" prefWidth="600.0">
+<!--
+  Responsive split: left brand column grows with window; login card stays
+  centered with a sensible max width. Stylesheet path is relative to this FXML.
+-->
+<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.LoginController"
+           styleClass="root-pane"
+           stylesheets="@../css/style.css"
+           maxWidth="Infinity"
+           maxHeight="Infinity">
 
-</AnchorPane>
+    <!-- Decorative rings (mostly behind marketing copy) -->
+    <StackPane styleClass="bg-decorations" maxWidth="Infinity" maxHeight="Infinity"
+               mouseTransparent="true">
+        <Circle styleClass="deco-circle" radius="220" translateX="-40" translateY="-80"/>
+        <Circle styleClass="deco-circle" radius="320" translateX="20" translateY="120"/>
+        <Circle styleClass="deco-circle" radius="180" translateX="-120" translateY="200"/>
+    </StackPane>
+
+    <GridPane styleClass="main-grid" maxWidth="Infinity" maxHeight="Infinity">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="58.0" minWidth="320.0" hgrow="ALWAYS"/>
+            <ColumnConstraints percentWidth="42.0" minWidth="300.0" hgrow="SOMETIMES"/>
+        </columnConstraints>
+        <rowConstraints>
+            <RowConstraints vgrow="ALWAYS" minHeight="400.0"/>
+        </rowConstraints>
+
+        <!-- Left: brand -->
+        <VBox styleClass="brand-panel" GridPane.columnIndex="0" GridPane.rowIndex="0"
+              maxWidth="Infinity" maxHeight="Infinity">
+            <VBox styleClass="brand-inner" maxWidth="Infinity">
+                <HBox styleClass="premium-badge" alignment="CENTER">
+                    <Label text="★" styleClass="badge-star"/>
+                    <Label text="PREMIUM AUCTION"/>
+                </HBox>
+                <Label text="UBID" styleClass="brand-title"/>
+                <StackPane prefHeight="10">
+                    <Line startX="0" endX="260" styleClass="divider-line"/>
+                    <Circle styleClass="divider-dot" radius="4"/>
+                </StackPane>
+                <Label text="Where Every Bid Finds Value" styleClass="tagline"/>
+                <Label text="Experience secure, real-time online auctions with a modern marketplace designed for passionate buyers and sellers worldwide."
+                       styleClass="description" wrapText="true"/>
+                <VBox styleClass="gavel-wrap">
+                    <StackPane styleClass="gavel-circle">
+                        <Label text="⚖" styleClass="gavel-icon"/>
+                    </StackPane>
+                </VBox>
+            </VBox>
+        </VBox>
+
+        <!-- Right: login -->
+        <StackPane styleClass="form-outer" GridPane.columnIndex="1" GridPane.rowIndex="0"
+                   maxWidth="Infinity" maxHeight="Infinity">
+            <VBox styleClass="login-card" fillWidth="true">
+                <VBox styleClass="card-header">
+                    <Label text="MEMBER LOGIN" styleClass="card-title"/>
+                    <StackPane prefHeight="8">
+                        <Line startX="0" endX="56" styleClass="card-title-line"/>
+                    </StackPane>
+                </VBox>
+
+                <VBox styleClass="form-fields">
+                    <VBox spacing="8" maxWidth="Infinity">
+                        <Label text="Username" styleClass="field-label"/>
+                        <TextField fx:id="usernameField" styleClass="input-field"
+                                   promptText="ENTER USERNAME"/>
+                    </VBox>
+                    <VBox spacing="8" maxWidth="Infinity">
+                        <Label text="Password" styleClass="field-label"/>
+                        <PasswordField fx:id="passwordField" styleClass="input-field"
+                                       promptText="ENTER PASSWORD"/>
+                    </VBox>
+                </VBox>
+
+                <HBox styleClass="options-row" alignment="CENTER_LEFT" spacing="12">
+                    <CheckBox fx:id="rememberCheckBox" text="Remember" styleClass="remember-check"/>
+                    <Region styleClass="spacer-grow" HBox.hgrow="ALWAYS"/>
+                    <Hyperlink text="Forgot the password?"
+                               styleClass="link-forgot" onAction="#onForgotPassword"/>
+                </HBox>
+
+                <Button text="LOGIN" styleClass="primary-button"
+                        defaultButton="true" maxWidth="Infinity" onAction="#onLogin"/>
+
+                <Label text="Don't have an account?" styleClass="secondary-hint"/>
+                <Button text="SIGN UP NOW" styleClass="outline-button"
+                        maxWidth="Infinity" onAction="#onSignUp"/>
+            </VBox>
+        </StackPane>
+    </GridPane>
+</StackPane>

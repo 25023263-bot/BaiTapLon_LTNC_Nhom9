@@ -1,0 +1,263 @@
+/* UBID login — premium auction theme */
+
+.root-pane {
+    -fx-font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #0a1424, #152a45);
+}
+
+.main-grid {
+    -fx-background-color: transparent;
+}
+
+/* Decorative background rings (left panel) */
+.bg-decorations {
+    -fx-background-color: transparent;
+}
+
+.bg-decorations .deco-circle {
+    -fx-fill: transparent;
+    -fx-stroke: rgba(241, 196, 93, 0.12);
+    -fx-stroke-width: 1.2;
+}
+
+/* Left brand column */
+.brand-panel {
+    -fx-alignment: center;
+    -fx-spacing: 18;
+    -fx-padding: 48 56 48 64;
+    -fx-max-width: infinity;
+}
+
+.brand-inner {
+    -fx-alignment: center;
+    -fx-spacing: 16;
+    -fx-max-width: 520;
+}
+
+.premium-badge {
+    -fx-alignment: center;
+    -fx-spacing: 8;
+    -fx-padding: 8 20 8 20;
+    -fx-background-color: transparent;
+    -fx-border-color: #f1c45d;
+    -fx-border-width: 1;
+    -fx-border-radius: 40;
+    -fx-background-radius: 40;
+}
+
+.premium-badge .label {
+    -fx-text-fill: #f1c45d;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.18em;
+}
+
+.badge-star {
+    -fx-text-fill: #f1c45d;
+    -fx-font-size: 12px;
+}
+
+.brand-title {
+    -fx-font-family: "Georgia", "Palatino Linotype", "Times New Roman", serif;
+    -fx-font-size: 72px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f5f0e6;
+    -fx-padding: 8 0 0 0;
+}
+
+.divider-line {
+    -fx-stroke: rgba(241, 196, 93, 0.55);
+    -fx-stroke-width: 1;
+}
+
+.divider-dot {
+    -fx-fill: #f1c45d;
+}
+
+.tagline {
+    -fx-font-family: "Georgia", "Palatino Linotype", "Times New Roman", serif;
+    -fx-font-size: 22px;
+    -fx-text-fill: #ffffff;
+}
+
+.description {
+    -fx-font-size: 14px;
+    -fx-text-fill: #a8b4c8;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+    -fx-max-width: 440;
+    -fx-line-spacing: 4;
+}
+
+.gavel-wrap {
+    -fx-padding: 28 0 0 0;
+    -fx-alignment: center;
+}
+
+.gavel-circle {
+    -fx-min-width: 56;
+    -fx-min-height: 56;
+    -fx-max-width: 56;
+    -fx-max-height: 56;
+    -fx-alignment: center;
+    -fx-background-color: rgba(241, 196, 93, 0.12);
+    -fx-background-radius: 28;
+    -fx-border-color: rgba(241, 196, 93, 0.45);
+    -fx-border-width: 1;
+    -fx-border-radius: 28;
+}
+
+.gavel-icon {
+    -fx-font-size: 22px;
+    -fx-text-fill: #f1c45d;
+}
+
+/* Right column — centers card vertically */
+.form-outer {
+    -fx-padding: 40 48 40 40;
+    -fx-alignment: center;
+    -fx-max-width: infinity;
+}
+
+.login-card {
+    -fx-spacing: 22;
+    -fx-padding: 40 40 44 40;
+    -fx-alignment: top_center;
+    -fx-max-width: 420;
+    -fx-min-width: 300;
+    -fx-background-color: rgba(10, 20, 36, 0.92);
+    -fx-background-radius: 22;
+    -fx-border-color: rgba(241, 196, 93, 0.18);
+    -fx-border-width: 1;
+    -fx-border-radius: 22;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 28, 0.12, 0, 12);
+}
+
+.card-header {
+    -fx-alignment: center;
+    -fx-spacing: 10;
+}
+
+.card-title {
+    -fx-text-fill: #f1c45d;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.28em;
+}
+
+.card-title-line {
+    -fx-stroke: #f1c45d;
+    -fx-stroke-width: 2;
+}
+
+.form-fields {
+    -fx-spacing: 18;
+    -fx-padding: 8 0 0 0;
+    -fx-max-width: infinity;
+}
+
+.field-label {
+    -fx-text-fill: #f0f2f7;
+    -fx-font-size: 12px;
+}
+
+.input-field {
+    -fx-background-color: #0d1a30;
+    -fx-background-radius: 14;
+    -fx-border-color: rgba(241, 196, 93, 0.22);
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-text-fill: #e8eaf0;
+    -fx-font-size: 13px;
+    -fx-prompt-text-fill: #647896;
+    -fx-padding: 12 16 12 16;
+    -fx-pref-height: 44;
+    -fx-max-width: infinity;
+}
+
+.input-field:focused {
+    -fx-border-color: rgba(241, 196, 93, 0.55);
+    -fx-background-color: #0f1e38;
+}
+
+.options-row {
+    -fx-spacing: 12;
+    -fx-alignment: center_left;
+}
+
+.remember-check .text {
+    -fx-fill: #c5cedc;
+}
+
+.remember-check {
+    -fx-font-size: 12px;
+}
+
+.link-forgot {
+    -fx-font-size: 12px;
+    -fx-text-fill: #8ec5ff;
+    -fx-underline: false;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+
+.link-forgot:hover {
+    -fx-text-fill: #b5d9ff;
+    -fx-underline: true;
+}
+
+.spacer-grow {
+    -fx-max-width: infinity;
+}
+
+.primary-button {
+    -fx-background-color: #f1c45d;
+    -fx-text-fill: #0a1424;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.22em;
+    -fx-padding: 14 24 14 24;
+    -fx-background-radius: 40;
+    -fx-border-radius: 40;
+    -fx-cursor: hand;
+    -fx-pref-height: 48;
+    -fx-max-width: infinity;
+}
+
+.primary-button:hover {
+    -fx-background-color: derive(#f1c45d, 8%);
+}
+
+.primary-button:pressed {
+    -fx-background-color: derive(#f1c45d, -6%);
+}
+
+.secondary-hint {
+    -fx-text-fill: #8a96a8;
+    -fx-font-size: 12px;
+    -fx-padding: 6 0 0 0;
+}
+
+.outline-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #f1c45d;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.18em;
+    -fx-padding: 14 24 14 24;
+    -fx-background-radius: 40;
+    -fx-border-color: #f1c45d;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 40;
+    -fx-cursor: hand;
+    -fx-pref-height: 48;
+    -fx-max-width: infinity;
+}
+
+.outline-button:hover {
+    -fx-background-color: rgba(241, 196, 93, 0.12);
+}
+
+.outline-button:pressed {
+    -fx-background-color: rgba(241, 196, 93, 0.2);
+}
