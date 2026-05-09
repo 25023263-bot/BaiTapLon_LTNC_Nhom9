@@ -116,11 +116,6 @@
                 </VBox>
 
                 <VBox spacing="6" style="-fx-padding: 10 0 0 0;">
-                    <Label style="-fx-font-size: 11px; -fx-text-fill: #C49A68; -fx-font-family: 'Arial'; -fx-font-weight: bold;" text="Email" />
-                    <TextField fx:id="regEmail" prefHeight="38" prefWidth="388" promptText="ENTER EMAIL" style="-fx-background-color: rgba(20,58,81,0.7); -fx-border-color: #746C6B;                                       -fx-border-radius: 9; -fx-background-radius: 9; -fx-padding: 9 14;                                       -fx-font-size: 12px; -fx-text-fill: white; -fx-prompt-text-fill: #746C6B;" />
-                </VBox>
-
-                <VBox spacing="6" style="-fx-padding: 10 0 0 0;">
                     <Label style="-fx-font-size: 11px; -fx-text-fill: #C49A68; -fx-font-family: 'Arial'; -fx-font-weight: bold;" text="Mật khẩu" />
                     <PasswordField fx:id="regPassword" prefHeight="38" promptText="ENTER PASSWORD" style="-fx-background-color: rgba(20,58,81,0.7); -fx-border-color: #746C6B;                                           -fx-border-radius: 9; -fx-background-radius: 9; -fx-padding: 9 14;                                           -fx-font-size: 12px; -fx-text-fill: white; -fx-prompt-text-fill: #746C6B;" />
                 </VBox>

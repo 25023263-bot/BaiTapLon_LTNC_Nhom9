@@ -26,13 +26,11 @@ CREATE TABLE `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `full_name` varchar(100) NOT NULL,
   `username` varchar(50) NOT NULL,
-  `email` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
   `balance` decimal(15,2) DEFAULT '0.00',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `username` (`username`),
-  UNIQUE KEY `email` (`email`)
+  UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -42,7 +40,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'Administrator','admin','admin@gmail.com','1234',0.00,'2026-04-14 08:45:13'),(2,'ad','admin1','admin1@gmail.com','1234',0.00,'2026-04-14 08:52:31'),(3,'Ly','ly123','ly@gmail.com','1234',0.00,'2026-04-14 09:02:12');
+INSERT INTO `users` VALUES (1,'Administrator','admin','1234',0.00,'2026-04-14 08:45:13'),(2,'ad','admin1','1234',0.00,'2026-04-14 08:52:31'),(3,'Ly','ly123','1234',0.00,'2026-04-14 09:02:12');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

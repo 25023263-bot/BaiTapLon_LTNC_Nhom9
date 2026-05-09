@@ -6,6 +6,8 @@ module com.nhom9.auction.baitaplon_ltnc_nhom9 {
     requires com.dlsc.formsfx;
     requires org.kordamp.ikonli.javafx;
     requires java.sql;
+    requires java.net.http;
+    requires jdk.httpserver;
 
     opens com.nhom9.auction.baitaplon_ltnc_nhom9 to javafx.fxml;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller to javafx.fxml;

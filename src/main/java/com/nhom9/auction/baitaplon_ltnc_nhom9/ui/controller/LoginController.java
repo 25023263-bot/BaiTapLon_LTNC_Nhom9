@@ -1,37 +1,38 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
 
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.UserRepository;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.client.AuthApiClient;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
-import javafx.animation.FadeTransition;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
-import javafx.scene.control.*;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 
 public class LoginController {
-    private final UserRepository userDAO = new UserRepository();
-    // ── Login fields ──────────────────────────────
-    @FXML private VBox          loginCard;
-    @FXML private TextField     loginUsername;
-    @FXML private PasswordField loginPassword;
-    @FXML private CheckBox      rememberMe;
-    @FXML private Label         loginError;
+    private final AuthApiClient authApiClient = new AuthApiClient();
 
-    // ── Register fields ───────────────────────────
-    @FXML private VBox          registerCard;
-    @FXML private TextField     regFullName;
-    @FXML private TextField     regUsername;
-    @FXML private TextField     regEmail;
+    @FXML private VBox loginCard;
+    @FXML private TextField loginUsername;
+    @FXML private PasswordField loginPassword;
+    @FXML private CheckBox rememberMe;
+    @FXML private Label loginError;
+
+    @FXML private VBox registerCard;
+    @FXML private TextField regFullName;
+    @FXML private TextField regUsername;
     @FXML private PasswordField regPassword;
     @FXML private PasswordField regConfirm;
-    @FXML private Label         regError;
+    @FXML private Label regError;
 
-    // ══════════════════════════════════════════════
-    //  CHUYỂN SANG FORM ĐĂNG KÝ
-    // ══════════════════════════════════════════════
+    public void initialize() {
+        loginUsername.setOnAction(e -> loginPassword.requestFocus());
+        loginPassword.setOnAction(e -> onLogin());
+    }
+
     @FXML
     private void handleRegister() {
         loginCard.setVisible(false);
@@ -40,18 +41,6 @@ public class LoginController {
         registerCard.setManaged(true);
     }
 
-    // TODO: Enter xuống dòng
-    public void initialize() {
-        // 🔥 Enter ở username → xuống password
-        loginUsername.setOnAction(e -> loginPassword.requestFocus());
-
-        // 🔥 Enter ở password → login
-        loginPassword.setOnAction(e -> onLogin());
-    }
-
-    // ══════════════════════════════════════════════
-    //  QUAY LẠI FORM ĐĂNG NHẬP
-    // ══════════════════════════════════════════════
     @FXML
     private void handleBackToLogin() {
         registerCard.setVisible(false);
@@ -60,35 +49,30 @@ public class LoginController {
         loginCard.setManaged(true);
     }
 
-    // ══════════════════════════════════════════════
-    //  XỬ LÝ ĐĂNG NHẬP
-    // ══════════════════════════════════════════════
     @FXML
     private void onLogin() {
         String username = loginUsername.getText().trim();
         String password = loginPassword.getText().trim();
 
         if (username.isEmpty() || password.isEmpty()) {
-            showError("Vui lòng nhập đầy đủ thông tin!");
+            showError("Please input username and password.");
             return;
         }
 
-        // ✅ Kiểm tra từ database
-        User user = userDAO.login(username, password);
-        if (user != null) {
-            System.out.println("Đăng nhập thành công: " + user.getFullName());
-            try {
-                FXMLLoader loader = new FXMLLoader(
-                        getClass().getResource("/fxml/GUI.fxml")
-                );
-                Parent root = loader.load();
-                Stage stage = (Stage) loginUsername.getScene().getWindow();
-                stage.getScene().setRoot(root);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            showError("✘ Sai tên đăng nhập hoặc mật khẩu!");
+        User user = authApiClient.login(username, password);
+        if (user == null) {
+            showError(authApiClient.getLastError());
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/GUI.fxml"));
+            Parent root = loader.load();
+            Stage stage = (Stage) loginUsername.getScene().getWindow();
+            stage.getScene().setRoot(root);
+        } catch (Exception e) {
+            showError("Cannot open main screen.");
+            e.printStackTrace();
         }
     }
 
@@ -96,51 +80,44 @@ public class LoginController {
     private void onRegister() {
         String fullName = regFullName.getText().trim();
         String username = regUsername.getText().trim();
-        String email    = regEmail.getText().trim();
         String password = regPassword.getText();
-        String confirm  = regConfirm.getText();
+        String confirm = regConfirm.getText();
 
-        if (fullName.isEmpty() || username.isEmpty() || email.isEmpty()
+        if (fullName.isEmpty() || username.isEmpty()
                 || password.isEmpty() || confirm.isEmpty()) {
-            showRegError("Vui lòng điền đầy đủ thông tin.");
+            showRegError("Please input all register fields.");
             return;
         }
         if (!password.equals(confirm)) {
-            showRegError("Mật khẩu xác nhận không khớp.");
+            showRegError("Confirm password does not match.");
             return;
         }
 
-        // ✅ Lưu vào database
-        boolean success = userDAO.register(fullName, username, email, password);
-        if (success) {
-            System.out.println("✅ Đăng ký thành công!");
-            handleBackToLogin();
-        } else {
-            showRegError("❌ Username hoặc email đã tồn tại!");
+        boolean success = authApiClient.register(fullName, username, password);
+        if (!success) {
+            showRegError(authApiClient.getLastError());
+            return;
         }
+
+        regError.setVisible(false);
+        regError.setManaged(false);
+        handleBackToLogin();
     }
+
     @FXML
     private void forgotPassword() {
-        // TODO: xử lý quên mật khẩu
-        System.out.println("Quên mật khẩu");
+        showError("Feature is not implemented.");
     }
-
-    // ── Helpers ───────────────────────────────────
-
 
     private void showRegError(String msg) {
         regError.setText(msg);
         regError.setVisible(true);
         regError.setManaged(true);
     }
+
     private void showError(String message) {
         loginError.setText(message);
         loginError.setVisible(true);
         loginError.setManaged(true);
-    }
-
-    private void hideError() {
-        loginError.setVisible(false);
-        loginError.setManaged(false);
     }
 }
