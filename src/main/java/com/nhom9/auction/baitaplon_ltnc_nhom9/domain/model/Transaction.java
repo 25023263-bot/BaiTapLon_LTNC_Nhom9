@@ -5,7 +5,7 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
-
+// Transaction — tính platformFee, sellerReceives, markCompleted/Failed/Refunded
 /**
  * Giao dịch tài chính sau khi phiên đấu giá kết thúc thành công.
  */

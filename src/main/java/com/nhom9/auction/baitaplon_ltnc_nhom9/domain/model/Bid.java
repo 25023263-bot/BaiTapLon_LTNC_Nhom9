@@ -3,7 +3,7 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
-
+// Bid — auto-bid logic với canAutoBidUp và calculateAutoBidAmount
 /**
  * Đại diện cho một lần đặt giá (bid) trong phiên đấu giá.
  */
