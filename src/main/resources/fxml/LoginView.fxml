@@ -17,8 +17,8 @@
 <?import javafx.scene.shape.Line?>
 
 <!--
-  Responsive split: left brand column grows with window; login card stays
-  centered with a sensible max width. Stylesheet path is relative to this FXML.
+  Giao diện đăng nhập phản hồi: cột thương hiệu bên trái tự co giãn; thẻ đăng nhập ở giữa
+  với chiều rộng tối đa hợp lý.
 -->
 <StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.LoginController"
@@ -27,7 +27,7 @@
            maxWidth="Infinity"
            maxHeight="Infinity">
 
-    <!-- Decorative rings (mostly behind marketing copy) -->
+    <!-- Trang trí vòng tròn (phía sau nội dung marketing) -->
     <StackPane styleClass="bg-decorations" maxWidth="Infinity" maxHeight="Infinity"
                mouseTransparent="true">
         <Circle styleClass="deco-circle" radius="220" translateX="-40" translateY="-80"/>
@@ -44,21 +44,21 @@
             <RowConstraints vgrow="ALWAYS" minHeight="400.0"/>
         </rowConstraints>
 
-        <!-- Left: brand -->
+        <!-- Bên trái: Thương hiệu -->
         <VBox styleClass="brand-panel" GridPane.columnIndex="0" GridPane.rowIndex="0"
               maxWidth="Infinity" maxHeight="Infinity">
             <VBox styleClass="brand-inner" maxWidth="Infinity">
                 <HBox styleClass="premium-badge" alignment="CENTER">
                     <Label text="★" styleClass="badge-star"/>
-                    <Label text="PREMIUM AUCTION"/>
+                    <Label text="ĐẤU GIÁ CAO CẤP"/>
                 </HBox>
                 <Label text="UBID" styleClass="brand-title"/>
                 <StackPane prefHeight="10">
                     <Line startX="0" endX="260" styleClass="divider-line"/>
                     <Circle styleClass="divider-dot" radius="4"/>
                 </StackPane>
-                <Label text="Where Every Bid Finds Value" styleClass="tagline"/>
-                <Label text="Experience secure, real-time online auctions with a modern marketplace designed for passionate buyers and sellers worldwide."
+                <Label text="Nơi mỗi lần trả giá đều tìm thấy giá trị" styleClass="tagline"/>
+                <Label text="Trải nghiệm đấu giá trực tuyến an toàn, thời gian thực với thị trường hiện đại dành cho người mua và người bán đầy đam mê trên toàn thế giới."
                        styleClass="description" wrapText="true"/>
                 <VBox styleClass="gavel-wrap">
                     <StackPane styleClass="gavel-circle">
@@ -68,12 +68,12 @@
             </VBox>
         </VBox>
 
-        <!-- Right: login -->
+        <!-- Bên phải: Form đăng nhập -->
         <StackPane styleClass="form-outer" GridPane.columnIndex="1" GridPane.rowIndex="0"
                    maxWidth="Infinity" maxHeight="Infinity">
             <VBox styleClass="login-card" fillWidth="true">
                 <VBox styleClass="card-header">
-                    <Label text="MEMBER LOGIN" styleClass="card-title"/>
+                    <Label text="ĐĂNG NHẬP THÀNH VIÊN" styleClass="card-title"/>
                     <StackPane prefHeight="8">
                         <Line startX="0" endX="56" styleClass="card-title-line"/>
                     </StackPane>
@@ -81,29 +81,29 @@
 
                 <VBox styleClass="form-fields">
                     <VBox spacing="8" maxWidth="Infinity">
-                        <Label text="Username" styleClass="field-label"/>
+                        <Label text="Tên đăng nhập" styleClass="field-label"/>
                         <TextField fx:id="usernameField" styleClass="input-field"
-                                   promptText="ENTER USERNAME"/>
+                                   promptText="NHẬP TÊN ĐĂNG NHẬP"/>
                     </VBox>
                     <VBox spacing="8" maxWidth="Infinity">
-                        <Label text="Password" styleClass="field-label"/>
+                        <Label text="Mật khẩu" styleClass="field-label"/>
                         <PasswordField fx:id="passwordField" styleClass="input-field"
-                                       promptText="ENTER PASSWORD"/>
+                                       promptText="NHẬP MẬT KHẨU"/>
                     </VBox>
                 </VBox>
 
                 <HBox styleClass="options-row" alignment="CENTER_LEFT" spacing="12">
-                    <CheckBox fx:id="rememberCheckBox" text="Remember" styleClass="remember-check"/>
+                    <CheckBox fx:id="rememberCheckBox" text="Ghi nhớ" styleClass="remember-check"/>
                     <Region styleClass="spacer-grow" HBox.hgrow="ALWAYS"/>
-                    <Hyperlink text="Forgot the password?"
+                    <Hyperlink text="Quên mật khẩu?"
                                styleClass="link-forgot" onAction="#onForgotPassword"/>
                 </HBox>
 
-                <Button text="LOGIN" styleClass="primary-button"
+                <Button text="ĐĂNG NHẬP" styleClass="primary-button"
                         defaultButton="true" maxWidth="Infinity" onAction="#onLogin"/>
 
-                <Label text="Don't have an account?" styleClass="secondary-hint"/>
-                <Button text="SIGN UP NOW" styleClass="outline-button"
+                <Label text="Chưa có tài khoản?" styleClass="secondary-hint"/>
+                <Button text="ĐĂNG KÝ NGAY" styleClass="outline-button"
                         maxWidth="Infinity" onAction="#onSignUp"/>
             </VBox>
         </StackPane>

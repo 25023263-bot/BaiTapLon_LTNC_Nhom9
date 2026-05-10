@@ -535,6 +535,148 @@
     -fx-text-fill: #0a0a0a;
 }
 
+/* ── Bottom navigation ─────────────────────────────────────── */
+.bottom-nav {
+    -fx-background-color: #0a0a0a;
+    -fx-border-color: #1e1e1e;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 0 0 0 0;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.75), 14, 0, 0, -2);
+}
+.bottom-nav-tab {
+    -fx-background-color: transparent;
+    -fx-text-fill: #9a9a9a;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 32 12 32;
+    -fx-cursor: hand;
+    -fx-border-width: 0 1 0 0;
+    -fx-border-color: #151515;
+}
+.bottom-nav-tab:hover {
+    -fx-text-fill: #dcdcdc;
+    -fx-background-color: #121212;
+}
+.bottom-nav-tab:selected {
+    -fx-text-fill: #c9a84c;
+    -fx-background-color: #141414;
+}
+
+/* Primary gold “Log In” — solid per spec */
+.btn-login-solid {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: transparent;
+    -fx-padding: 8 22 8 22;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.25), 8, 0, 0, 0);
+}
+.btn-login-solid:hover {
+    -fx-background-color: #e0bb5a;
+}
+
+/* Header avatar button */
+.avatar-menu-btn {
+    -fx-background-color: #141414;
+    -fx-background-radius: 50%;
+    -fx-border-radius: 50%;
+    -fx-border-color: #c9a84c;
+    -fx-border-width: 1.5;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+.avatar-menu-btn:hover {
+    -fx-border-color: #e0bb5a;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.35), 10, 0, 0, 0);
+}
+.avatar-inner-fill {
+    -fx-background-color: #262626;
+    -fx-background-radius: 50%;
+}
+.avatar-monogram {
+    -fx-text-fill: #c9a84c;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+/* Profile tab overlay */
+.profile-overlay {
+    -fx-background-color: rgba(10,10,10,0.97);
+}
+.profile-card {
+    -fx-padding: 32 28 40 28;
+    -fx-background-color: #151515;
+    -fx-background-radius: 16;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 16;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 20, 0, 0, 4);
+}
+.profile-large-avatar {
+    -fx-pref-width: 88;
+    -fx-pref-height: 88;
+    -fx-max-width: 88;
+    -fx-max-height: 88;
+    -fx-background-color: #1e1e1e;
+    -fx-background-radius: 50%;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 50%;
+    -fx-border-width: 2;
+    -fx-alignment: center;
+}
+.profile-avatar-glyph {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 34px;
+}
+.profile-title {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+.profile-hint {
+    -fx-text-fill: #888888;
+    -fx-font-size: 13px;
+    -fx-text-alignment: center;
+}
+.btn-outline-gold {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c9a84c;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 8 18 8 18;
+    -fx-font-weight: bold;
+}
+.btn-outline-gold:hover {
+    -fx-background-color: rgba(201,168,76,0.12);
+}
+
+/* Dark context menu attached to avatar */
+.dark-context-menu.context-menu,
+.context-menu.dark-context-menu {
+    -fx-background-color: #161616;
+    -fx-border-color: #2e2e2e;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+.dark-context-menu.context-menu .menu-item,
+.context-menu.dark-context-menu .menu-item {
+    -fx-padding: 10 18 10 18;
+    -fx-text-fill: #e6e6e6;
+    -fx-background-color: transparent;
+}
+.dark-context-menu.context-menu .menu-item:hover,
+.dark-context-menu.context-menu .menu-item:focused {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+}
+.menu-danger {
+    -fx-text-fill: #ff8a8a !important;
+}
+
 /* ── LOGIN/REGISTER BUTTONS (top right) ────────────────────── */
 .btn-login {
     -fx-background-color: transparent;

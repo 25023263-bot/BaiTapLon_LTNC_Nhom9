@@ -1,0 +1,251 @@
+/*
+ * register.css — UBID Register Screen
+ *
+ * File này chỉ chứa các style RIÊNG cho màn hình đăng ký.
+ * Các style dùng chung (brand-panel, input-field, primary-button, v.v.)
+ * đã được định nghĩa trong style.css và được dùng lại trực tiếp ở đây.
+ *
+ * Thứ tự stylesheet trong FXML: style.css trước, register.css sau
+ * → register.css có thể override nếu cần.
+ */
+
+/* ── ScrollPane — xóa border và nền mặc định của JavaFX ──────────────────── */
+
+.form-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.form-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+/* Thanh scroll tối giản, hòa vào nền tối */
+.form-scroll .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-padding: 0 2 0 0;
+}
+
+.form-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(241, 196, 93, 0.25);
+    -fx-background-radius: 4;
+}
+
+.form-scroll .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: rgba(241, 196, 93, 0.45);
+}
+
+.form-scroll .scroll-bar:vertical .increment-button,
+.form-scroll .scroll-bar:vertical .decrement-button {
+    -fx-opacity: 0;
+    -fx-padding: 0;
+}
+
+/* ── Wrapper bên trong ScrollPane (căn giữa card) ────────────────────────── */
+
+.register-scroll-wrapper {
+    -fx-background-color: transparent;
+    -fx-padding: 32 44 32 36;
+    -fx-spacing: 0;
+}
+
+/* ── Register Card — giống login-card nhưng rộng hơn và compact hơn ─────── */
+
+.register-card {
+    -fx-spacing: 16;                           /* < 22 của login-card vì có nhiều fields */
+    -fx-padding: 36 38 38 38;
+    -fx-alignment: top-center;
+    -fx-max-width: 460;
+    -fx-min-width: 320;
+    -fx-background-color: rgba(10, 20, 36, 0.92);
+    -fx-background-radius: 22;
+    -fx-border-color: rgba(241, 196, 93, 0.18);
+    -fx-border-width: 1;
+    -fx-border-radius: 22;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 28, 0.12, 0, 12);
+}
+
+/* ── Feature list — hiển thị trong brand panel bên trái ─────────────────── */
+
+.feature-list {
+    -fx-spacing: 12;
+    -fx-padding: 24 0 0 0;
+    -fx-alignment: center-left;
+    -fx-max-width: 380;
+}
+
+.feature-item {
+    -fx-spacing: 10;
+    -fx-alignment: center-left;
+}
+
+.feature-check {
+    -fx-text-fill: #f1c45d;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-min-width: 20;
+}
+
+.feature-text {
+    -fx-text-fill: #c5cedc;
+    -fx-font-size: 13px;
+}
+
+/* ── Role Toggle Group ────────────────────────────────────────────────────── */
+/*
+ * Hai ToggleButton (BUYER / SELLER) tạo thành một "pill selector":
+ *   [ BUYER ][ SELLER ]
+ * Khi một button được chọn → nền vàng, chữ tối.
+ * Khi không được chọn → nền trong suốt, chữ vàng.
+ */
+
+.role-toggle-group {
+    -fx-background-color: rgba(13, 26, 48, 0.9);
+    -fx-background-radius: 40;
+    -fx-border-color: rgba(241, 196, 93, 0.3);
+    -fx-border-width: 1;
+    -fx-border-radius: 40;
+    -fx-padding: 3;
+    -fx-spacing: 0;
+}
+
+.role-toggle {
+    -fx-background-color: transparent;
+    -fx-text-fill: #a0aec0;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.12em;
+    -fx-padding: 10 16 10 16;
+    -fx-cursor: hand;
+    -fx-background-radius: 38;
+    -fx-border-width: 0;
+    -fx-pref-height: 40;
+}
+
+/* Nút trái (BUYER) */
+.role-toggle-left {
+    -fx-background-radius: 38 0 0 38;
+}
+
+/* Nút phải (SELLER) */
+.role-toggle-right {
+    -fx-background-radius: 0 38 38 0;
+}
+
+/* Trạng thái được chọn: nền vàng, chữ tối */
+.role-toggle:selected {
+    -fx-background-color: #f1c45d;
+    -fx-text-fill: #0a1424;
+    -fx-font-weight: bold;
+    -fx-background-radius: 36;
+}
+
+.role-toggle:hover:selected {
+    -fx-background-color: derive(#f1c45d, 8%);
+}
+
+.role-toggle:hover:!selected {
+    -fx-background-color: rgba(241, 196, 93, 0.1);
+    -fx-text-fill: #d4a843;
+}
+
+/* ── Field Group — VBox bọc label + input + error ────────────────────────── */
+
+.field-group {
+    -fx-spacing: 6;
+    -fx-max-width: infinity;
+}
+
+/* GridPane chứa các field-group 2 cột */
+.field-row-grid {
+    -fx-max-width: infinity;
+}
+
+/* ── Error Label — hiển thị khi validate thất bại ────────────────────────── */
+/*
+ * Mặc định: visible=false, managed=false (không chiếm chỗ).
+ * Controller sẽ set visible=true + managed=true để hiện ra.
+ */
+
+.error-label {
+    -fx-text-fill: #ff6b6b;
+    -fx-font-size: 11px;
+    -fx-padding: 2 0 0 2;
+    -fx-wrap-text: true;
+}
+
+/* ── Input field trạng thái lỗi — controller gán styleClass "input-error" ── */
+
+.input-field.input-error {
+    -fx-border-color: rgba(255, 107, 107, 0.7);
+}
+
+.input-field.input-error:focused {
+    -fx-border-color: rgba(255, 107, 107, 0.9);
+    -fx-background-color: rgba(255, 60, 60, 0.05);
+}
+
+/* ── Password Strength Bar ────────────────────────────────────────────────── */
+/*
+ * ProgressBar nhỏ phía dưới ô password.
+ * Controller sẽ gán styleClass "weak" / "medium" / "strong" để đổi màu.
+ */
+
+.strength-bar {
+    -fx-pref-height: 4;
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 2;
+    -fx-accent: #647896;    /* màu mặc định khi chưa nhập */
+    -fx-padding: 0;
+}
+
+.strength-bar > .bar {
+    -fx-background-radius: 2;
+    -fx-background-insets: 0;
+    -fx-background-color: #647896;
+}
+
+/* Yếu — đỏ */
+.strength-bar.weak > .bar {
+    -fx-background-color: #ff6b6b;
+}
+
+/* Trung bình — cam */
+.strength-bar.medium > .bar {
+    -fx-background-color: #f6ad55;
+}
+
+/* Mạnh — xanh lá */
+.strength-bar.strong > .bar {
+    -fx-background-color: #68d391;
+}
+
+/* Label text "Weak / Medium / Strong" nhỏ bên dưới thanh bar */
+.strength-label {
+    -fx-font-size: 10px;
+    -fx-padding: 0 0 0 2;
+}
+
+.strength-label.weak   { -fx-text-fill: #ff6b6b; }
+.strength-label.medium { -fx-text-fill: #f6ad55; }
+.strength-label.strong { -fx-text-fill: #68d391; }
+
+/* ── Override spacing nhỏ cho form-fields trong register ─────────────────── */
+/*
+ * Login dùng -fx-spacing: 18. Register cần compact hơn vì nhiều field hơn.
+ */
+
+.register-card .form-fields {
+    -fx-spacing: 12;
+    -fx-padding: 4 0 4 0;
+    -fx-max-width: infinity;
+}
+
+/* ── Secondary hint (Already have account?) ──────────────────────────────── */
+/* Override padding từ style.css để compact hơn */
+
+.register-card .secondary-hint {
+    -fx-padding: 2 0 0 0;
+}
