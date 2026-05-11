@@ -1,11 +1,13 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user;
 
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
+
 public class User {
     private int id;
     private String fullName;
     private String username;
     private double balance;
-
+    private UserRole role;
     public User(int id, String fullName, String username, double balance) {
         this.id = id;
         this.fullName = fullName;
