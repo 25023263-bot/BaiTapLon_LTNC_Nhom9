@@ -6,29 +6,10 @@ module com.nhom9.auction.baitaplon_ltnc_nhom9 {
     requires com.dlsc.formsfx;
     requires org.kordamp.ikonli.javafx;
     requires java.sql;
-    requires jbcrypt;
-
-    // Database drivers
-    requires org.xerial.sqlitejdbc;  // SQLite JDBC – vẫn giữ để có thể fallback
-
-    // Connection pool
-    requires com.zaxxer.hikari;
+    requires java.net.http;
+    requires jdk.httpserver;
 
     opens com.nhom9.auction.baitaplon_ltnc_nhom9 to javafx.fxml;
-    exports com.nhom9.auction.baitaplon_ltnc_nhom9;
-
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller to javafx.fxml;
-
-    exports com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user;
-    exports com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item;
-    exports com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums;
-    exports com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model;
-    exports com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto;
-    exports com.nhom9.auction.baitaplon_ltnc_nhom9.service.auth;
-    exports com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction;
-    exports com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers;
-    exports com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator;
-
-    opens com.nhom9.auction to javafx.graphics;
-    exports com.nhom9.auction;
+    exports com.nhom9.auction.baitaplon_ltnc_nhom9;
 }
