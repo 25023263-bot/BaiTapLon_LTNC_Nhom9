@@ -9,13 +9,10 @@ module com.nhom9.auction.baitaplon_ltnc_nhom9 {
     requires jbcrypt;
 
     // Database drivers
-    requires org.xerial.sqlitejdbc;  // SQLite JDBC
+    requires org.xerial.sqlitejdbc;  // SQLite JDBC – vẫn giữ để có thể fallback
 
-    // Connection pool – BẮT BUỘC phải thêm vì DatabaseConnection.java dùng HikariCP
+    // Connection pool
     requires com.zaxxer.hikari;
-
-    // MySQL driver – bỏ comment khi chuyển sang MySQL (AppConfig.USE_MYSQL = true)
-    // requires com.mysql.cj;
 
     opens com.nhom9.auction.baitaplon_ltnc_nhom9 to javafx.fxml;
     exports com.nhom9.auction.baitaplon_ltnc_nhom9;

@@ -69,15 +69,16 @@
         </dependency>
 
         <!--
-            MySQL Connector – BỎ COMMENT khi chuyển sang MySQL.
-            Đồng thời đặt AppConfig.USE_MYSQL = true.
-
+            ✅ THAY ĐỔI: Đã bỏ comment để bật MySQL Connector.
+            Dependency này cho phép Java kết nối tới MySQL server.
+            Nếu muốn quay lại SQLite, comment lại dòng này và
+            đặt AppConfig.USE_MYSQL = false.
+        -->
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <version>9.1.0</version>
         </dependency>
-        -->
 
         <!-- ─── Security ───────────────────────────────────────────────────── -->
         <dependency>
