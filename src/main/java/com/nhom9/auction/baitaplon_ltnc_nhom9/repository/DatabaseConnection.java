@@ -8,15 +8,15 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 public class DatabaseConnection {
-    private static final String DB_HOST = readValue("auction.db.host", "AUCTION_DB_HOST", "localhost");
-    private static final String DB_PORT = readValue("auction.db.port", "AUCTION_DB_PORT", "3306");
-    private static final String DB_NAME = readValue("auction.db.name", "AUCTION_DB_NAME", "auction_db");
-    private static final String DB_USER = readValue("auction.db.user", "AUCTION_DB_USER", "root");
-    private static final String DB_PASSWORD = readValue("auction.db.password", "AUCTION_DB_PASSWORD", "123Mih1234_");
+    private static final String DB_HOST = readValue("auction.db.host", "AUCTION_DB_HOST", "mysql-1c7856e0-nguyenducminhtl27-feca.b.aivencloud.com");
+    private static final String DB_PORT = readValue("auction.db.port", "AUCTION_DB_PORT", "14372");
+    private static final String DB_NAME = readValue("auction.db.name", "AUCTION_DB_NAME", "defaultdb");
+    private static final String DB_USER = readValue("auction.db.user", "AUCTION_DB_USER", "avnadmin");
+    private static final String DB_PASSWORD = readValue("auction.db.password", "AUCTION_DB_PASSWORD", "AVNS_6OE5hIWpRyWc3wjjWFo");
 
     private static final String URL =
             "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME
-                    + "?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+                    + "?sslMode=REQUIRED&allowPublicKeyRetrieval=true&serverTimezone=UTC";
 
     private static Connection connection = null;
     private static boolean schemaInitialized = false;

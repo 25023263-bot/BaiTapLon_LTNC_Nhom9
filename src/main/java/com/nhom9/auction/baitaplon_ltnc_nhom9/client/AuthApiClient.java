@@ -35,7 +35,7 @@ public class AuthApiClient {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             String payload = response.body();
             if (response.statusCode() != 200 || payload == null || !payload.startsWith("OK|")) {
-                lastError = extractError(payload, "Wrong username or password.");
+                lastError = extractError(payload, "Login failed (HTTP " + response.statusCode() + ").");
                 return null;
             }
             String[] parts = payload.split("\\|", -1);
@@ -78,7 +78,7 @@ public class AuthApiClient {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             String payload = response.body();
             if (response.statusCode() != 200 || payload == null || !payload.startsWith("OK|")) {
-                lastError = extractError(payload, "Register failed.");
+                lastError = extractError(payload, "Register failed (HTTP " + response.statusCode() + ").");
                 return false;
             }
             lastError = "";
