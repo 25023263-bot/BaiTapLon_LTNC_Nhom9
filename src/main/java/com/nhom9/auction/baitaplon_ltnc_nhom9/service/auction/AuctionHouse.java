@@ -29,16 +29,16 @@ public class AuctionHouse implements Auctionable {
 
     private static final Logger LOG = Logger.getLogger(AuctionHouse.class.getName());
 
-    private final ItemRepository        itemRepo;
+    private final AuctionRepository     auctionRepo;
     private final BidRepository         bidRepo;
     private final UserRepository        userRepo;
     private final TransactionRepository txRepo;
 
     private final List<AuctionObserver> observers = new ArrayList<>();
 
-    public AuctionHouse(ItemRepository itemRepo, BidRepository bidRepo,
+    public AuctionHouse(AuctionRepository auctionRepo, BidRepository bidRepo,
                         UserRepository userRepo, TransactionRepository txRepo) {
-        this.itemRepo = itemRepo;
+        this.auctionRepo = auctionRepo;
         this.bidRepo  = bidRepo;
         this.userRepo = userRepo;
         this.txRepo   = txRepo;
@@ -80,12 +80,12 @@ public class AuctionHouse implements Auctionable {
 
         // Tạo và lưu bid
         Bid bid = new Bid(itemId, bidderId, amount);
-        bid.setBidderUsername(buyer.getUsername());
+        bid.setBuyerUsername(buyer.getUsername());
         bidRepo.save(bid);
 
         // Cập nhật giá hiện tại
         item.updateCurrentBid(amount, bidderId);
-        itemRepo.updateCurrentBid(itemId, amount, bidderId);
+        auctionRepo.updateCurrentBid(itemId, amount, bidderId);
 
         LOG.info(String.format("Bid mới: item #%d, buyer=%s, amount=%,.0f đ",
                 itemId, buyer.getUsername(), amount));
@@ -122,13 +122,13 @@ public class AuctionHouse implements Auctionable {
         BigDecimal bidNow = firstBid;
 
         Bid bid = new Bid(itemId, bidderId, bidNow);
-        bid.setBidderUsername(buyer.getUsername());
+        bid.setBuyerUsername(buyer.getUsername());
         bid.setAutoBid(true);
         bid.setAutoBidLimit(maxLimit);
         bidRepo.save(bid);
 
         item.updateCurrentBid(bidNow, bidderId);
-        itemRepo.updateCurrentBid(itemId, bidNow, bidderId);
+        auctionRepo.updateCurrentBid(itemId, bidNow, bidderId);
 
         LOG.info(String.format("Auto-bid đặt: item #%d, buyer=%s, now=%,.0f, limit=%,.0f",
                 itemId, buyer.getUsername(), bidNow, maxLimit));
@@ -142,25 +142,24 @@ public class AuctionHouse implements Auctionable {
      */
     private void triggerAutoBids(AuctionItem item, int lastBidderId) throws Exception {
         // Tìm auto-bid cao nhất của người khác
-        List<Bid> allBids = bidRepo.findByItemId(item.getId());
+        List<Bid> allBids = bidRepo.findByAuctionId(item.getId());
         for (Bid existing : allBids) {
-            if (existing.getBidderId() == lastBidderId) continue;
+            if (existing.getBuyerId() == lastBidderId) continue;
             if (!existing.isAutoBid() || existing.getAutoBidLimit() == null) continue;
 
             BigDecimal needed = item.getNextMinimumBid();
             if (existing.getAutoBidLimit().compareTo(needed) >= 0) {
-                // Auto-bid có thể counter
-                Buyer autoBuyer = loadBuyer(existing.getBidderId());
+                Buyer autoBuyer = loadBuyer(existing.getBuyerId());
                 if (!autoBuyer.hasSufficientBalance(needed)) continue;
 
-                Bid counter = new Bid(item.getId(), existing.getBidderId(), needed);
-                counter.setBidderUsername(autoBuyer.getUsername());
+                Bid counter = new Bid(item.getId(), existing.getBuyerId(), needed);
+                counter.setBuyerUsername(autoBuyer.getUsername());
                 counter.setAutoBid(true);
                 counter.setAutoBidLimit(existing.getAutoBidLimit());
                 bidRepo.save(counter);
 
-                item.updateCurrentBid(needed, existing.getBidderId());
-                itemRepo.updateCurrentBid(item.getId(), needed, existing.getBidderId());
+                item.updateCurrentBid(needed, existing.getBuyerId());
+                auctionRepo.updateCurrentBid(item.getId(), needed, existing.getBuyerId());
 
                 LOG.info(String.format("Auto-bid counter: buyer=%s, amount=%,.0f",
                         autoBuyer.getUsername(), needed));
@@ -193,7 +192,7 @@ public class AuctionHouse implements Auctionable {
         item.setCurrentPrice(item.getBuyNowPrice());
         item.setLeadingBidderId(buyerId);
         item.setStatus(AuctionStatus.CLOSED);
-        itemRepo.update(item);
+        auctionRepo.update(item);
 
         // Tạo transaction và thanh toán
         processPayment(item, buyerId, totalCost);
@@ -207,7 +206,7 @@ public class AuctionHouse implements Auctionable {
 
     @Override
     public synchronized void closeAuction(int itemId) throws Exception {
-        AuctionItem item = itemRepo.findById(itemId)
+        AuctionItem item = auctionRepo.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy item #" + itemId));
 
         if (item.getStatus() != AuctionStatus.ACTIVE) {
@@ -218,7 +217,7 @@ public class AuctionHouse implements Auctionable {
         if (!item.hasBids()) {
             // Hết giờ, không có bid → EXPIRED
             item.setStatus(AuctionStatus.EXPIRED);
-            itemRepo.updateStatus(itemId, AuctionStatus.EXPIRED);
+            auctionRepo.updateStatus(itemId, AuctionStatus.EXPIRED);
             LOG.info("Phiên hết hạn (không có bid): item #" + itemId);
             notifyClosed(item, null);
             return;
@@ -227,7 +226,7 @@ public class AuctionHouse implements Auctionable {
         // Có người thắng
         int winnerId = item.getLeadingBidderId();
         item.setStatus(AuctionStatus.CLOSED);
-        itemRepo.updateStatus(itemId, AuctionStatus.CLOSED);
+        auctionRepo.updateStatus(itemId, AuctionStatus.CLOSED);
 
         // Tính tổng tiền buyer phải trả
         BigDecimal totalCost = item.getCurrentPrice();
@@ -245,7 +244,7 @@ public class AuctionHouse implements Auctionable {
 
     @Override
     public synchronized void cancelAuction(int itemId, int sellerId) throws Exception {
-        AuctionItem item = itemRepo.findById(itemId)
+        AuctionItem item = auctionRepo.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy item #" + itemId));
 
         if (item.getSellerId() != sellerId)
@@ -258,7 +257,7 @@ public class AuctionHouse implements Auctionable {
             throw new IllegalStateException("Phiên đã kết thúc, không thể huỷ.");
 
         item.setStatus(AuctionStatus.CANCELLED);
-        itemRepo.updateStatus(itemId, AuctionStatus.CANCELLED);
+        auctionRepo.updateStatus(itemId, AuctionStatus.CANCELLED);
 
         LOG.info("Phiên bị huỷ: item #" + itemId + " bởi seller #" + sellerId);
         notifyCancelled(item);
@@ -286,7 +285,7 @@ public class AuctionHouse implements Auctionable {
         else
             item.setStatus(AuctionStatus.PENDING);
 
-        itemRepo.save(item);
+        auctionRepo.save(item);
         LOG.info("Đăng vật phẩm: #" + item.getId() + " – " + item.getTitle());
 
         if (item.getStatus() == AuctionStatus.ACTIVE) notifyStarted(item);
@@ -337,7 +336,7 @@ public class AuctionHouse implements Auctionable {
 
     private AuctionItem loadActiveItem(int itemId) throws AuctionClosedException, Exception {
         try {
-            AuctionItem item = itemRepo.findById(itemId)
+            AuctionItem item = auctionRepo.findById(itemId)
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy item #" + itemId));
             if (item.getStatus() != AuctionStatus.ACTIVE)
                 throw new AuctionClosedException(itemId, item.getStatus());
@@ -378,7 +377,7 @@ public class AuctionHouse implements Auctionable {
             LocalDateTime newEnd = item.getEndTime()
                     .plusSeconds(AppConfig.LAST_MINUTE_EXTENSION_SECONDS);
             item.setEndTime(newEnd);
-            itemRepo.update(item);
+            auctionRepo.update(item);
             LOG.info("Gia hạn phiên: item #" + item.getId() + " → " + newEnd);
         }
     }

@@ -1,7 +1,7 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.ItemRepository;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.AuctionRepository;
 
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -24,14 +24,14 @@ public class AuctionScheduler {
     /** Khoảng thời gian kiểm tra (giây) */
     private static final int POLL_INTERVAL_SECONDS = 10;
 
-    private final ItemRepository    itemRepo;
+    private final AuctionRepository auctionRepo;
     private final AuctionHouse      auctionHouse;
     private final ScheduledExecutorService executor;
     private ScheduledFuture<?>      taskHandle;
     private volatile boolean        running = false;
 
-    public AuctionScheduler(ItemRepository itemRepo, AuctionHouse auctionHouse) {
-        this.itemRepo     = itemRepo;
+    public AuctionScheduler(AuctionRepository auctionRepo, AuctionHouse auctionHouse) {
+        this.auctionRepo  = auctionRepo;
         this.auctionHouse = auctionHouse;
         this.executor     = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "AuctionScheduler");
@@ -78,11 +78,11 @@ public class AuctionScheduler {
      */
     private void openDueAuctions() {
         try {
-            List<AuctionItem> dueItems = itemRepo.findDueToStart();
+            List<AuctionItem> dueItems = auctionRepo.findDueToStart();
             for (AuctionItem item : dueItems) {
                 try {
                     item.setStatus(com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus.ACTIVE);
-                    itemRepo.updateStatus(item.getId(),
+                    auctionRepo.updateStatus(item.getId(),
                             com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus.ACTIVE);
                     // Notify observers qua AuctionHouse
                     // (gọi internal – ta dùng reflection-free approach)
@@ -101,7 +101,7 @@ public class AuctionScheduler {
      */
     private void closeExpiredAuctions() {
         try {
-            List<AuctionItem> expired = itemRepo.findExpiredActive();
+            List<AuctionItem> expired = auctionRepo.findExpiredActive();
             for (AuctionItem item : expired) {
                 try {
                     auctionHouse.closeAuction(item.getId());

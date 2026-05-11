@@ -8,8 +8,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
- * Lớp cơ sở trừu tượng cho mọi vật phẩm đấu giá.
- * Kế thừa: PhysicalItem, DigitalItem.
+ * Aggregate root for a seller listing ({@code auctions} row + physical/digital detail).
+ * Subtypes: {@link PhysicalItem}, {@link DigitalItem}.
  */
 public abstract class AuctionItem {
 

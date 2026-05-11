@@ -8,6 +8,7 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.DateTimeUtils;
 import javafx.application.Application;
@@ -21,15 +22,37 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.*;
 import javafx.stage.Stage;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.Statement;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
- * Entry point của ứng dụng Auction House.
+ * ─────────────────────────────────────────────────────────────────────────────
+ * AuctionApp – Dev Sandbox / Backend Test Screen
+ * ─────────────────────────────────────────────────────────────────────────────
  *
- * Giai đoạn này: khởi động đầy đủ backend (DB, services, scheduler)
- * và hiển thị màn hình demo kiểm thử chức năng – chưa tích hợp FXML.
+ * ĐÂY KHÔNG PHẢI UI THẬT CỦA APP.
+ *
+ * File này là một màn hình riêng dành cho developer, dùng để:
+ *  - Kiểm tra backend (DB, services, repositories) còn hoạt động không
+ *  - Test nhanh các tính năng (đăng ký, login, đặt bid, ...) mà không cần
+ *    bấm qua toàn bộ UI FXML
+ *  - Xem log trực tiếp trên giao diện
+ *  - Nạp seed data / xoá data trong quá trình phát triển
+ *
+ * Entry point thật của app là HelloApplication (load FXML HomeView).
+ * Entry point của màn hình test này là AuctionApp.main() bên dưới.
+ *
+ * Để chạy màn hình này thay vì UI thật:
+ *  → Trong pom.xml, đổi <mainClass> thành:
+ *    com.nhom9.auction.AuctionApp
+ * ─────────────────────────────────────────────────────────────────────────────
  */
 public class AuctionApp extends Application {
 
@@ -38,11 +61,17 @@ public class AuctionApp extends Application {
     private ServiceLocator sl;
     private TextArea       logArea;
 
-    // ─── JavaFX Entry ─────────────────────────────────────────────────────────
+    // ─── JavaFX Lifecycle ────────────────────────────────────────────────────
 
+    /**
+     * init() chạy TRƯỚC start(), trên một background thread (không phải FX thread).
+     * Đây là nơi đúng để khởi tạo những thứ nặng như DB connection, services.
+     *
+     * Nếu đặt code này trong start(), DB sẽ khởi tạo TRÊN FX thread
+     * → UI bị đóng băng trong vài giây → trải nghiệm xấu.
+     */
     @Override
     public void init() {
-        // Khởi tạo toàn bộ services trên background thread (init() không phải FX thread)
         LOG.info("Khởi tạo ServiceLocator...");
         sl = ServiceLocator.getInstance();
         LOG.info("ServiceLocator sẵn sàng.");
@@ -59,30 +88,29 @@ public class AuctionApp extends Application {
         BorderPane root = new BorderPane();
         root.setStyle("-fx-background-color: #1a1a2e;");
 
-        // Header
         root.setTop(buildHeader());
-
-        // Center: tabs
         root.setCenter(buildTabs());
-
-        // Footer
         root.setBottom(buildFooter());
 
-        Scene scene = new Scene(root);
-        stage.setScene(scene);
+        stage.setScene(new Scene(root));
         stage.show();
 
-        // Khởi động scheduler sau khi UI hiển thị
         startScheduler();
-
-        // Tự chạy smoke-test để kiểm tra backend
         runSmokeTest();
     }
 
+    /**
+     * stop() được JavaFX gọi khi cửa sổ đóng.
+     * Đây là nơi đúng để dọn dẹp: đóng DB pool, dừng scheduler.
+     *
+     * Nếu không override stop(), DB pool sẽ không được đóng sạch
+     * → có thể mất data hoặc lock file SQLite.
+     */
     @Override
     public void stop() {
         log("App đang tắt – dọn dẹp tài nguyên...");
         sl.shutdown();
+        DatabaseConnection.getInstance().close();
         LOG.info("App đã tắt.");
     }
 
@@ -98,14 +126,16 @@ public class AuctionApp extends Application {
         title.setFill(Color.web("#e94560"));
         title.setFont(Font.font("System", FontWeight.BOLD, 22));
 
-        Text version = new Text("  v" + AppConfig.APP_VERSION + " – Backend OK");
+        Text version = new Text("  v" + AppConfig.APP_VERSION + " – Dev Sandbox");
         version.setFill(Color.web("#a0a0c0"));
         version.setFont(Font.font("System", 13));
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Label statusDot = new Label("● LIVE");
+        // Hiển thị đang dùng DB nào
+        String dbLabel = AppConfig.USE_MYSQL ? "MySQL" : "SQLite";
+        Label statusDot = new Label("● " + dbLabel);
         statusDot.setStyle("-fx-text-fill: #00ff88; -fx-font-size: 12px; -fx-font-weight: bold;");
 
         header.getChildren().addAll(title, version, spacer, statusDot);
@@ -138,11 +168,16 @@ public class AuctionApp extends Application {
 
         box.getChildren().add(sectionLabel("TRẠNG THÁI KHỞI ĐỘNG"));
 
+        // Hiển thị thông tin DB đang dùng (SQLite hay MySQL)
+        String dbInfo = AppConfig.USE_MYSQL
+                ? "✅  MySQL – " + AppConfig.MYSQL_HOST + "/" + AppConfig.MYSQL_DATABASE
+                : "✅  SQLite – " + AppConfig.SQLITE_PATH;
+
         String[][] items = {
-                {"SQLite Database",     "✅  auction.db"},
+                {"Database",            dbInfo},
                 {"Schema",              "✅  " + AppConfig.SCHEMA_FILE},
                 {"UserRepository",      "✅  Sẵn sàng"},
-                {"ItemRepository",      "✅  Sẵn sàng"},
+                {"AuctionRepository",   "✅  Sẵn sàng"},
                 {"BidRepository",       "✅  Sẵn sàng"},
                 {"AuctionHouse",        "✅  Observer đã kết nối"},
                 {"NotificationService", "✅  Inbox in-memory"},
@@ -170,7 +205,8 @@ public class AuctionApp extends Application {
         HBox actions = new HBox(10);
         Button btnSeed   = actionButton("📦  Nạp seed data",    "#0f3460", this::seedDatabase);
         Button btnClear  = actionButton("🗑  Xoá tất cả data",  "#4a1020", this::clearDatabase);
-        Button btnReload = actionButton("🔄  Reload services",  "#1a3a1a", () -> log("Services đã reload (restart app để áp dụng)."));
+        Button btnReload = actionButton("🔄  Reload services",  "#1a3a1a",
+                () -> log("Services đã reload (restart app để áp dụng)."));
         actions.getChildren().addAll(btnSeed, btnClear, btnReload);
         box.getChildren().add(actions);
 
@@ -276,20 +312,20 @@ public class AuctionApp extends Application {
         TextField tfItemId  = styledField("1");
         TextField tfBuyer   = styledField("4");
         TextField tfAmount  = styledField("23000000");
-        form.addRow(0, label("Item ID:"),   tfItemId);
-        form.addRow(1, label("Buyer ID:"),  tfBuyer);
-        form.addRow(2, label("Amount (đ):"),tfAmount);
+        form.addRow(0, label("Item ID:"),    tfItemId);
+        form.addRow(1, label("Buyer ID:"),   tfBuyer);
+        form.addRow(2, label("Amount (đ):"), tfAmount);
         box.getChildren().add(form);
 
         TextArea bidArea = styledTextArea(14);
         box.getChildren().add(bidArea);
 
         HBox buttons = new HBox(10);
-        Button btnBid      = actionButton("💰  Đặt Bid",        "#0f3460",
+        Button btnBid     = actionButton("💰  Đặt Bid",      "#0f3460",
                 () -> placeBid(tfItemId.getText(), tfBuyer.getText(), tfAmount.getText(), bidArea));
-        Button btnHistory  = actionButton("📜  Lịch sử Bid",    "#1a3a1a",
+        Button btnHistory = actionButton("📜  Lịch sử Bid",  "#1a3a1a",
                 () -> loadBidHistory(tfItemId.getText(), bidArea));
-        Button btnBuyNow   = actionButton("⚡  Buy Now",         "#3a1a00",
+        Button btnBuyNow  = actionButton("⚡  Buy Now",       "#3a1a00",
                 () -> testBuyNow(tfItemId.getText(), tfBuyer.getText(), bidArea));
         buttons.getChildren().addAll(btnBid, btnHistory, btnBuyNow);
         box.getChildren().add(buttons);
@@ -327,9 +363,19 @@ public class AuctionApp extends Application {
         footer.setPadding(new Insets(8, 16, 8, 16));
         footer.setStyle("-fx-background-color: #0f0f1e;");
 
-        Label lbl = new Label("DB: " + AppConfig.DB_URL
-                + "   |   Scheduler: " + AppConfig.MIN_AUCTION_DURATION_MINUTES + "min min"
-                + "   |   Fee: " + (int)(AppConfig.PLATFORM_FEE_RATE*100) + "%");
+        // FIX: Trước đây dùng AppConfig.DB_URL → lỗi sau khi refactor.
+        // Bây giờ AppConfig có 2 URL riêng: SQLITE_URL và MYSQL_URL.
+        // Dùng biểu thức điều kiện để lấy URL đang active.
+        String activeUrl = AppConfig.USE_MYSQL ? AppConfig.MYSQL_URL : AppConfig.SQLITE_URL;
+
+        // Rút gọn URL cho footer cho dễ đọc (cắt bỏ các tham số dài của MySQL)
+        String displayUrl = activeUrl.contains("?")
+                ? activeUrl.substring(0, activeUrl.indexOf("?"))
+                : activeUrl;
+
+        Label lbl = new Label("DB: " + displayUrl
+                + "   |   Min duration: " + AppConfig.MIN_AUCTION_DURATION_MINUTES + "min"
+                + "   |   Fee: " + (int)(AppConfig.PLATFORM_FEE_RATE * 100) + "%");
         lbl.setStyle("-fx-text-fill: #606080; -fx-font-size: 11px;");
         footer.getChildren().add(lbl);
         return footer;
@@ -345,20 +391,21 @@ public class AuctionApp extends Application {
     private void runSmokeTest() {
         new Thread(() -> {
             try {
-                Thread.sleep(500);
+                Thread.sleep(500); // Chờ UI render xong rồi mới log
                 Platform.runLater(() -> {
                     log("━━━━━━━━━━━━━━ SMOKE TEST ━━━━━━━━━━━━━━");
-                    log("DB URL: " + AppConfig.DB_URL);
+                    log("DB: " + (AppConfig.USE_MYSQL ? "MySQL" : "SQLite"));
                     log("Platform fee: " + (int)(AppConfig.PLATFORM_FEE_RATE * 100) + "%");
                     try {
                         int userCount = sl.getUserRepo().findAll().size();
-                        int itemCount = sl.getItemRepo().findByStatus(AuctionStatus.ACTIVE).size();
+                        int itemCount = sl.getAuctionRepo().findByStatus(AuctionStatus.ACTIVE).size();
                         log("Users trong DB: " + userCount);
                         log("Active items:   " + itemCount);
                         log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                         log("✅ Backend khởi động thành công!");
                     } catch (Exception e) {
                         log("⚠️  DB chưa có data – hãy bấm 'Nạp seed data' ở tab Hệ thống.");
+                        log("   Chi tiết lỗi: " + e.getMessage());
                     }
                 });
             } catch (InterruptedException ignored) {}
@@ -367,7 +414,7 @@ public class AuctionApp extends Application {
 
     private void loadActiveItems(TextArea area) {
         runAsync(() -> {
-            List<AuctionItem> items = sl.getItemRepo().findByStatus(AuctionStatus.ACTIVE);
+            List<AuctionItem> items = sl.getAuctionRepo().findByStatus(AuctionStatus.ACTIVE);
             StringBuilder sb = new StringBuilder();
             if (items.isEmpty()) { sb.append("Không có vật phẩm ACTIVE.\n"); }
             for (AuctionItem item : items) {
@@ -378,7 +425,7 @@ public class AuctionApp extends Application {
                         DateTimeUtils.formatShort(item.getEndTime()),
                         DateTimeUtils.formatCountdown(item.getEndTime())));
                 sb.append(String.format("    Bids: %d  |  Leading bidder: %s\n\n",
-                        sl.getBidRepo().countByItemId(item.getId()),
+                        sl.getBidRepo().countByAuctionId(item.getId()),
                         item.getLeadingBidderId() > 0 ? "#" + item.getLeadingBidderId() : "(chưa có)"));
             }
             area.setText(sb.toString());
@@ -388,7 +435,7 @@ public class AuctionApp extends Application {
 
     private void loadAllItems(TextArea area) {
         runAsync(() -> {
-            Page<AuctionItem> page = sl.getItemRepo().search(
+            Page<AuctionItem> page = sl.getAuctionRepo().search(
                     FilterCriteria.builder().build(), 0, 20);
             StringBuilder sb = new StringBuilder();
             sb.append(String.format("Tổng: %d vật phẩm\n\n", page.getTotalElements()));
@@ -404,7 +451,7 @@ public class AuctionApp extends Application {
     private void searchItems(TextArea area, String keyword) {
         runAsync(() -> {
             FilterCriteria f = FilterCriteria.builder().keyword(keyword).activeOnly(true).build();
-            Page<AuctionItem> page = sl.getItemRepo().search(f, 0, 10);
+            Page<AuctionItem> page = sl.getAuctionRepo().search(f, 0, 10);
             StringBuilder sb = new StringBuilder();
             sb.append(String.format("Kết quả tìm '%s': %d items\n\n", keyword, page.getTotalElements()));
             for (AuctionItem item : page.getContent()) {
@@ -459,7 +506,8 @@ public class AuctionApp extends Application {
             int buyerId  = Integer.parseInt(buyerIdStr.trim());
             BigDecimal a = new BigDecimal(amountStr.trim());
             Bid bid = sl.getAuctionHouse().placeBid(itemId, buyerId, a);
-            area.setText("✅ Bid thành công!\n\n" + bid + "\n\nAmount: " + DateTimeUtils.formatCurrency(bid.getAmount()));
+            area.setText("✅ Bid thành công!\n\n" + bid
+                    + "\n\nAmount: " + DateTimeUtils.formatCurrency(bid.getAmount()));
             log("Bid đặt: #" + bid.getId() + " – " + DateTimeUtils.formatCurrency(bid.getAmount()));
         });
     }
@@ -467,12 +515,12 @@ public class AuctionApp extends Application {
     private void loadBidHistory(String itemIdStr, TextArea area) {
         runAsync(() -> {
             int itemId = Integer.parseInt(itemIdStr.trim());
-            List<Bid> bids = sl.getBidRepo().findByItemId(itemId);
+            List<Bid> bids = sl.getBidRepo().findByAuctionId(itemId);
             StringBuilder sb = new StringBuilder();
             sb.append(String.format("Lịch sử bid item #%d: %d bids\n\n", itemId, bids.size()));
             for (Bid b : bids) {
                 sb.append(String.format("  #%-5d  %-12s  %s  %s  %s\n",
-                        b.getId(), b.getBidderUsername(),
+                        b.getId(), b.getBuyerUsername(),
                         DateTimeUtils.formatCurrency(b.getAmount()),
                         DateTimeUtils.formatRelative(b.getBidTime()),
                         b.isAutoBid() ? "[AUTO]" : ""));
@@ -491,20 +539,44 @@ public class AuctionApp extends Application {
         });
     }
 
+    /**
+     * Nạp seed data từ seed.sql.
+     *
+     * FIX: Phiên bản cũ lấy connection bằng getConnection() của singleton cũ
+     * (trả về connection không cần đóng). Với HikariCP, getConnection() trả về
+     * connection từ pool → BẮT BUỘC phải đóng sau khi dùng.
+     *
+     * try-with-resources đảm bảo conn.close() được gọi tự động → connection
+     * được trả về pool, không bị leak.
+     *
+     * LƯU Ý: seed.sql dùng "INSERT OR IGNORE" (SQLite). Khi dùng MySQL,
+     * phải đổi thành "INSERT IGNORE" – xem file MYSQL_MIGRATION_GUIDE.md.
+     */
     private void seedDatabase() {
         runAsync(() -> {
-            // Đọc seed.sql và chạy qua connection
-            try (var conn = com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection.getInstance().getConnection();
-                 var stmt = conn.createStatement();
-                 var is = getClass().getResourceAsStream(AppConfig.SEED_FILE);
-                 var reader = new java.io.BufferedReader(new java.io.InputStreamReader(is))) {
+            try (Connection conn = DatabaseConnection.getInstance().getConnection();
+                 Statement stmt = conn.createStatement();
+                 InputStream is = getClass().getResourceAsStream(AppConfig.SEED_FILE)) {
 
-                String sql = reader.lines().collect(java.util.stream.Collectors.joining("\n"));
+                if (is == null) {
+                    log("❌ Không tìm thấy file: " + AppConfig.SEED_FILE);
+                    return;
+                }
+
+                String sql;
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+                    sql = reader.lines().collect(Collectors.joining("\n"));
+                }
+
+                // Chạy từng statement, bỏ qua comment và dòng trống
                 for (String s : sql.split(";")) {
-                    String t = s.trim();
-                    if (!t.isEmpty() && !t.startsWith("--")) stmt.execute(t);
+                    String trimmed = s.strip();
+                    if (!trimmed.isEmpty() && !trimmed.startsWith("--")) {
+                        stmt.execute(trimmed);
+                    }
                 }
                 log("✅ Seed data đã được nạp thành công!");
+
             } catch (Exception e) {
                 log("❌ Lỗi seed: " + e.getMessage());
             }
@@ -513,12 +585,16 @@ public class AuctionApp extends Application {
 
     private void clearDatabase() {
         runAsync(() -> {
-            try (var conn = com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection.getInstance().getConnection();
-                 var stmt = conn.createStatement()) {
-                String[] tables = {"transactions","watchlist","bids","digital_items",
-                        "physical_items","auction_items","admins","sellers","buyers","users"};
+            try (Connection conn = DatabaseConnection.getInstance().getConnection();
+                 Statement stmt = conn.createStatement()) {
+
+                // Xoá theo thứ tự từ bảng con → bảng cha để không vi phạm FK
+                String[] tables = {"transactions", "watchlist", "bids", "digital_items",
+                        "physical_items", "auctions", "admins", "sellers", "buyers", "users"};
                 for (String t : tables) stmt.execute("DELETE FROM " + t);
+
                 log("🗑  Đã xoá toàn bộ data.");
+
             } catch (Exception e) {
                 log("❌ Lỗi clear: " + e.getMessage());
             }
@@ -528,7 +604,15 @@ public class AuctionApp extends Application {
     // ─── Utility Helpers ──────────────────────────────────────────────────────
 
     /**
-     * Chạy task trên background thread, bắt exception và hiển thị trên FX thread.
+     * Chạy một task trên background thread.
+     *
+     * Tại sao không chạy thẳng trên FX thread?
+     * → FX thread chịu trách nhiệm render UI. Nếu chạy DB query trực tiếp,
+     *   UI sẽ bị đóng băng trong khi query đang chạy.
+     * → Giải pháp: chạy query trên background thread, rồi dùng
+     *   Platform.runLater() để cập nhật UI từ FX thread.
+     *
+     * runAsync() xử lý exception và hiển thị lỗi vào log tự động.
      */
     private void runAsync(ThrowingRunnable task) {
         new Thread(() -> {

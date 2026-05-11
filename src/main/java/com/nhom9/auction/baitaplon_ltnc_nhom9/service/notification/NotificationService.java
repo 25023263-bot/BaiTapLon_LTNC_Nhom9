@@ -39,14 +39,12 @@ public class NotificationService implements AuctionObserver {
     @Override
     public void onNewBid(AuctionItem item, Bid bid) {
         String msg = String.format("💰 Bid mới trên \"%s\": %,.0f đ bởi %s",
-                item.getTitle(), bid.getAmount(), bid.getBidderUsername());
+                item.getTitle(), bid.getAmount(), bid.getBuyerUsername());
 
-        // Thông báo cho người dẫn đầu cũ (nếu bị vượt qua)
-        // Thông báo cho người theo dõi watchlist
         try {
-            List<Integer> watchers = watchlistRepo.findItemIdsByBuyer(item.getId());
-            // watchers ở đây là item IDs, cần reverse lookup – simplified:
-            push(item.getLeadingBidderId(), msg);
+            for (int watcherId : watchlistRepo.findBuyerIdsByAuctionId(item.getId())) {
+                push(watcherId, msg);
+            }
         } catch (Exception e) {
             LOG.warning("Lỗi gửi notification bid: " + e.getMessage());
         }

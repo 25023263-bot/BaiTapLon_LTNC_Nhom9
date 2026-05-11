@@ -21,7 +21,7 @@ public class ServiceLocator {
 
     // ── Repositories ─────────────────────────────────────────────────────────
     private final UserRepository        userRepo;
-    private final ItemRepository        itemRepo;
+    private final AuctionRepository      auctionRepo;
     private final BidRepository         bidRepo;
     private final WatchlistRepository   watchlistRepo;
     private final TransactionRepository txRepo;
@@ -42,16 +42,16 @@ public class ServiceLocator {
 
         // 2. Repositories
         userRepo      = new UserRepository();
-        itemRepo      = new ItemRepository();
+        auctionRepo   = new AuctionRepository();
         bidRepo       = new BidRepository();
         watchlistRepo = new WatchlistRepository();
         txRepo        = new TransactionRepository();
 
         // 3. Services
         authService         = new AuthService(userRepo);
-        auctionHouse        = new AuctionHouse(itemRepo, bidRepo, userRepo, txRepo);
+        auctionHouse        = new AuctionHouse(auctionRepo, bidRepo, userRepo, txRepo);
         notificationService = new NotificationService(watchlistRepo);
-        auctionScheduler    = new AuctionScheduler(itemRepo, auctionHouse);
+        auctionScheduler    = new AuctionScheduler(auctionRepo, auctionHouse);
         walletPayment       = new WalletPayment(userRepo);
         creditCardPayment   = new CreditCardPayment();
 
@@ -67,7 +67,7 @@ public class ServiceLocator {
     // ─── Getters ──────────────────────────────────────────────────────────────
 
     public UserRepository        getUserRepo()           { return userRepo; }
-    public ItemRepository        getItemRepo()           { return itemRepo; }
+    public AuctionRepository      getAuctionRepo()       { return auctionRepo; }
     public BidRepository         getBidRepo()            { return bidRepo; }
     public WatchlistRepository   getWatchlistRepo()      { return watchlistRepo; }
     public TransactionRepository getTxRepo()             { return txRepo; }

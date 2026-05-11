@@ -12,7 +12,7 @@ import java.util.Objects;
 public class Transaction {
 
     private int id;
-    private int itemId;
+    private int auctionId;
     private int buyerId;
     private int sellerId;
 
@@ -49,10 +49,10 @@ public class Transaction {
     /**
      * Constructor tạo giao dịch mới khi phiên đấu giá kết thúc.
      */
-    public Transaction(int itemId, int buyerId, int sellerId,
+    public Transaction(int auctionId, int buyerId, int sellerId,
                        BigDecimal amount, BigDecimal shippingFee,
                        double platformFeeRate, String paymentMethod) {
-        this.itemId        = itemId;
+        this.auctionId     = auctionId;
         this.buyerId       = buyerId;
         this.sellerId      = sellerId;
         this.amount        = amount;
@@ -65,13 +65,13 @@ public class Transaction {
         this.createdAt     = LocalDateTime.now();
     }
 
-    public Transaction(int id, int itemId, int buyerId, int sellerId,
+    public Transaction(int id, int auctionId, int buyerId, int sellerId,
                        BigDecimal amount, BigDecimal shippingFee, BigDecimal platformFee,
                        BigDecimal totalPaid, BigDecimal sellerReceives,
                        PaymentStatus paymentStatus, String paymentMethod,
                        String externalRef, LocalDateTime createdAt, LocalDateTime completedAt) {
         this.id              = id;
-        this.itemId          = itemId;
+        this.auctionId       = auctionId;
         this.buyerId         = buyerId;
         this.sellerId        = sellerId;
         this.amount          = amount;
@@ -112,8 +112,8 @@ public class Transaction {
     public int getId()                                  { return id; }
     public void setId(int id)                           { this.id = id; }
 
-    public int getItemId()                              { return itemId; }
-    public void setItemId(int itemId)                   { this.itemId = itemId; }
+    public int getAuctionId()                           { return auctionId; }
+    public void setAuctionId(int auctionId)           { this.auctionId = auctionId; }
 
     public int getBuyerId()                             { return buyerId; }
     public void setBuyerId(int buyerId)                 { this.buyerId = buyerId; }
@@ -165,7 +165,7 @@ public class Transaction {
 
     @Override
     public String toString() {
-        return String.format("Transaction{id=%d, itemId=%d, amount=%s, status=%s}",
-                id, itemId, totalPaid, paymentStatus);
+        return String.format("Transaction{id=%d, auctionId=%d, amount=%s, status=%s}",
+                id, auctionId, totalPaid, paymentStatus);
     }
 }

@@ -5,40 +5,36 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Data Transfer Object cho Bid.
- * Dùng để hiển thị lịch sử đấu giá trên UI.
+ * DTO for bid history on the UI.
  */
 public class BidDTO {
 
     private int id;
-    private int itemId;
-    private String itemTitle;        // join từ auction_items
-    private int bidderId;
-    private String bidderUsername;
+    private int auctionId;
+    /** Title from {@code auctions} (joined for display). */
+    private String auctionTitle;
+    private int buyerId;
+    private String buyerUsername;
     private BigDecimal amount;
     private LocalDateTime bidTime;
     private boolean autoBid;
-    private boolean isLeading;       // Có phải bid đang dẫn đầu không
-
-    // ─── Constructor ────────────────────────────────────────────────────────
+    private boolean isLeading;
 
     public BidDTO() {}
 
-    public BidDTO(int id, int itemId, String itemTitle, int bidderId,
-                  String bidderUsername, BigDecimal amount, LocalDateTime bidTime,
+    public BidDTO(int id, int auctionId, String auctionTitle, int buyerId,
+                  String buyerUsername, BigDecimal amount, LocalDateTime bidTime,
                   boolean autoBid) {
         this.id              = id;
-        this.itemId          = itemId;
-        this.itemTitle       = itemTitle;
-        this.bidderId        = bidderId;
-        this.bidderUsername  = bidderUsername;
+        this.auctionId       = auctionId;
+        this.auctionTitle    = auctionTitle;
+        this.buyerId         = buyerId;
+        this.buyerUsername   = buyerUsername;
         this.amount          = amount;
         this.bidTime         = bidTime;
         this.autoBid         = autoBid;
         this.isLeading       = false;
     }
-
-    // ─── Utility ─────────────────────────────────────────────────────────────
 
     private static final DateTimeFormatter DISPLAY_FORMAT =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
@@ -56,22 +52,20 @@ public class BidDTO {
         return autoBid ? "🤖 Auto-bid" : "Đã vượt";
     }
 
-    // ─── Getters / Setters ───────────────────────────────────────────────────
-
     public int getId()                              { return id; }
     public void setId(int id)                       { this.id = id; }
 
-    public int getItemId()                          { return itemId; }
-    public void setItemId(int itemId)               { this.itemId = itemId; }
+    public int getAuctionId()                       { return auctionId; }
+    public void setAuctionId(int auctionId)       { this.auctionId = auctionId; }
 
-    public String getItemTitle()                    { return itemTitle; }
-    public void setItemTitle(String itemTitle)      { this.itemTitle = itemTitle; }
+    public String getAuctionTitle()                { return auctionTitle; }
+    public void setAuctionTitle(String title)      { this.auctionTitle = title; }
 
-    public int getBidderId()                        { return bidderId; }
-    public void setBidderId(int bidderId)           { this.bidderId = bidderId; }
+    public int getBuyerId()                         { return buyerId; }
+    public void setBuyerId(int buyerId)             { this.buyerId = buyerId; }
 
-    public String getBidderUsername()               { return bidderUsername; }
-    public void setBidderUsername(String name)      { this.bidderUsername = name; }
+    public String getBuyerUsername()              { return buyerUsername; }
+    public void setBuyerUsername(String name)       { this.buyerUsername = name; }
 
     public BigDecimal getAmount()                   { return amount; }
     public void setAmount(BigDecimal amount)        { this.amount = amount; }
@@ -87,7 +81,7 @@ public class BidDTO {
 
     @Override
     public String toString() {
-        return String.format("BidDTO{id=%d, item='%s', bidder='%s', amount=%s, leading=%s}",
-                id, itemTitle, bidderUsername, amount, isLeading);
+        return String.format("BidDTO{id=%d, auction='%s', buyer='%s', amount=%s, leading=%s}",
+                id, auctionTitle, buyerUsername, amount, isLeading);
     }
 }

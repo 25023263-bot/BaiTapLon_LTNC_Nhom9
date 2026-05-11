@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.logging.Level;
@@ -17,6 +18,9 @@ import java.util.stream.Collectors;
 /**
  * Singleton quản lý kết nối SQLite duy nhất cho toàn ứng dụng.
  * Thread-safe với double-checked locking.
+ *
+ * Phiên bản này giữ nguyên kiến trúc singleton (không dùng HikariCP)
+ * nhưng sửa vấn đề schema không được load.
  */
 public class DatabaseConnection {
 
@@ -49,8 +53,8 @@ public class DatabaseConnection {
     private void initConnection() {
         try {
             Class.forName("org.sqlite.JDBC");
-            connection = DriverManager.getConnection(AppConfig.DB_URL);
-            LOG.info("Kết nối SQLite thành công: " + AppConfig.DB_PATH);
+            connection = DriverManager.getConnection(AppConfig.SQLITE_URL);
+            LOG.info("Kết nối SQLite thành công: " + AppConfig.SQLITE_PATH);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException("Không tìm thấy SQLite JDBC driver.", e);
         } catch (SQLException e) {
@@ -58,9 +62,6 @@ public class DatabaseConnection {
         }
     }
 
-    /**
-     * Bật WAL mode và foreign keys cho SQLite.
-     */
     private void applyPragmas() {
         try (Statement stmt = connection.createStatement()) {
             stmt.execute("PRAGMA journal_mode=WAL");
@@ -72,31 +73,136 @@ public class DatabaseConnection {
     }
 
     /**
-     * Chạy schema.sql nếu bảng chưa tồn tại.
+     * Chạy schema.sql để tạo bảng nếu chưa có.
+     *
+     * FIX: Phiên bản cũ silently bỏ qua nếu không đọc được file.
+     * Phiên bản này:
+     *  1. Kiểm tra tables đã tồn tại chưa trước khi chạy schema
+     *  2. Thử nhiều cách đọc file schema
+     *  3. Log rõ ràng nếu có lỗi
      */
     private void runSchema() {
-        String sql = readResourceFile(AppConfig.SCHEMA_FILE);
-        if (sql == null || sql.isBlank()) {
-            LOG.warning("Không đọc được schema.sql – bỏ qua.");
+        // Kiểm tra xem bảng users đã tồn tại chưa
+        if (tableExists("users")) {
+            LOG.info("Schema đã tồn tại – bỏ qua runSchema().");
             return;
         }
-        try (Statement stmt = connection.createStatement()) {
-            // Tách và chạy từng statement riêng lẻ
-            for (String s : sql.split(";")) {
-                String trimmed = s.trim();
-                if (!trimmed.isEmpty()) stmt.execute(trimmed);
-            }
-            LOG.info("Schema khởi tạo thành công.");
-        } catch (SQLException e) {
-            LOG.log(Level.SEVERE, "Lỗi chạy schema.sql: " + e.getMessage(), e);
+
+        LOG.info("Bảng chưa tồn tại – đang tạo schema...");
+
+        String sql = readSchemaFile();
+        if (sql == null || sql.isBlank()) {
+            // Lỗi nghiêm trọng: không đọc được schema → app không dùng được
+            throw new RuntimeException(
+                    "KHÔNG ĐỌC ĐƯỢC schema.sql!\n" +
+                            "Hãy kiểm tra:\n" +
+                            "  1. File tồn tại tại: src/main/resources/db/schema.sql\n" +
+                            "  2. Đã chạy 'mvn clean compile' hoặc 'Reload Maven Project' trong IDE\n" +
+                            "  3. Thư mục 'src/main/resources' được đánh dấu là Resources Root"
+            );
         }
+
+        try (Statement stmt = connection.createStatement()) {
+            // Tắt foreign keys tạm thời khi tạo schema để tránh lỗi thứ tự
+            stmt.execute("PRAGMA foreign_keys=OFF");
+
+            int tableCount = 0;
+            for (String s : sql.split(";")) {
+                String trimmed = s.strip();
+                // Bỏ qua dòng trống và comment thuần túy
+                if (trimmed.isEmpty() || isOnlyComments(trimmed)) continue;
+                // Bỏ qua PRAGMA trong schema (đã xử lý ở applyPragmas)
+                if (trimmed.toUpperCase().startsWith("PRAGMA")) continue;
+
+                stmt.execute(trimmed);
+                if (trimmed.toUpperCase().contains("CREATE TABLE")) tableCount++;
+            }
+
+            // Bật lại foreign keys
+            stmt.execute("PRAGMA foreign_keys=ON");
+            LOG.info("Schema khởi tạo thành công – " + tableCount + " bảng được tạo.");
+
+        } catch (SQLException e) {
+            LOG.log(Level.SEVERE, "Lỗi khi chạy schema.sql: " + e.getMessage(), e);
+            throw new RuntimeException("Không thể tạo schema database: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Đọc file schema bằng 3 cách khác nhau để đảm bảo tìm được.
+     * Cách 1: getResourceAsStream với đường dẫn tuyệt đối (chuẩn)
+     * Cách 2: ClassLoader (đôi khi hoạt động khi cách 1 không được)
+     * Cách 3: Thread context ClassLoader
+     */
+    private String readSchemaFile() {
+        String path = AppConfig.SCHEMA_FILE; // "/db/schema.sql"
+
+        // Cách 1: Class-level resource (path tuyệt đối bắt đầu bằng /)
+        String content = readFromStream(getClass().getResourceAsStream(path));
+        if (content != null) {
+            LOG.info("Đọc schema từ class resource: " + path);
+            return content;
+        }
+
+        // Cách 2: ClassLoader resource (không có / ở đầu)
+        String pathNoSlash = path.startsWith("/") ? path.substring(1) : path;
+        content = readFromStream(getClass().getClassLoader().getResourceAsStream(pathNoSlash));
+        if (content != null) {
+            LOG.info("Đọc schema từ classloader: " + pathNoSlash);
+            return content;
+        }
+
+        // Cách 3: Thread context classloader
+        content = readFromStream(Thread.currentThread().getContextClassLoader()
+                .getResourceAsStream(pathNoSlash));
+        if (content != null) {
+            LOG.info("Đọc schema từ thread classloader: " + pathNoSlash);
+            return content;
+        }
+
+        LOG.severe("Không tìm thấy schema.sql qua bất kỳ classloader nào!");
+        return null;
+    }
+
+    private String readFromStream(InputStream is) {
+        if (is == null) return null;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+            return reader.lines().collect(Collectors.joining("\n"));
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Kiểm tra bảng có tồn tại trong DB chưa.
+     */
+    private boolean tableExists(String tableName) {
+        String sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=?";
+        try (var ps = connection.prepareStatement(sql)) {
+            ps.setString(1, tableName);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Kiểm tra một đoạn SQL chỉ chứa comment không (không có lệnh thật).
+     */
+    private boolean isOnlyComments(String sql) {
+        for (String line : sql.split("\n")) {
+            String trimmedLine = line.strip();
+            if (!trimmedLine.isEmpty() && !trimmedLine.startsWith("--")) {
+                return false; // Có ít nhất 1 dòng không phải comment
+            }
+        }
+        return true;
     }
 
     // ─── Public API ───────────────────────────────────────────────────────────
 
-    /**
-     * Lấy kết nối. Tự reconnect nếu đứt.
-     */
     public Connection getConnection() {
         try {
             if (connection == null || connection.isClosed()) {
@@ -111,9 +217,6 @@ public class DatabaseConnection {
         return connection;
     }
 
-    /**
-     * Đóng kết nối – gọi khi thoát app.
-     */
     public void close() {
         try {
             if (connection != null && !connection.isClosed()) {
@@ -122,20 +225,6 @@ public class DatabaseConnection {
             }
         } catch (SQLException e) {
             LOG.warning("Lỗi đóng kết nối: " + e.getMessage());
-        }
-    }
-
-    // ─── Utility ─────────────────────────────────────────────────────────────
-
-    private String readResourceFile(String path) {
-        try (InputStream is = getClass().getResourceAsStream(path)) {
-            if (is == null) return null;
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
-                return reader.lines().collect(Collectors.joining("\n"));
-            }
-        } catch (IOException e) {
-            LOG.warning("Không đọc được resource: " + path);
-            return null;
         }
     }
 }

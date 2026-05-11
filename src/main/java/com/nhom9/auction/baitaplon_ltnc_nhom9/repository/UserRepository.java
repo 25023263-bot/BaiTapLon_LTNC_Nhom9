@@ -3,6 +3,7 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.repository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.*;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DbUtil;
 
 import java.math.BigDecimal;
 import java.sql.*;
@@ -15,27 +16,67 @@ import java.util.logging.Logger;
 /**
  * Truy cập dữ liệu cho User, Buyer, Seller, Admin.
  * Dùng table-per-subclass: users + (buyers | sellers | admins).
+ *
+ * ─── THAY ĐỔI SO VỚI PHIÊN BẢN CŨ ──────────────────────────────────────
+ * 1. Mỗi method tự mượn Connection từ pool và đóng trong try-with-resources.
+ *    → Trước: conn() trả về singleton → không bao giờ được đóng.
+ *    → Sau: try (Connection conn = db().getConnection()) { ... }
+ *           conn.close() tự gọi khi ra khỏi block → trả về pool.
+ *
+ * 2. INSERT OR REPLACE → check-then-insert/update (hoạt động trên cả hai DB).
+ *    → INSERT OR REPLACE là cú pháp riêng của SQLite.
+ *    → MySQL dùng ON DUPLICATE KEY UPDATE hoặc REPLACE INTO (khác ngữ nghĩa).
+ *    → Giải pháp portable nhất: kiểm tra tồn tại rồi INSERT hoặc UPDATE.
+ *
+ * 3. toStr/fromStr → DbUtil.toDbString/fromDbString.
+ *    → Dùng format "yyyy-MM-dd HH:mm:ss" nhất quán trên cả hai DB.
+ * ──────────────────────────────────────────────────────────────────────────
  */
 public class UserRepository {
 
     private static final Logger LOG = Logger.getLogger(UserRepository.class.getName());
 
-    private Connection conn() {
+    /** Lấy connection từ pool – phải dùng trong try-with-resources! */
+    private Connection db() throws SQLException {
         return DatabaseConnection.getInstance().getConnection();
     }
 
     // ─── Create ──────────────────────────────────────────────────────────────
 
     /**
-     * Lưu user mới vào DB (INSERT vào users + bảng phụ tương ứng).
+     * Lưu user mới vào DB.
+     * INSERT vào bảng users + bảng phụ (buyers / sellers / admins).
+     *
+     * Cả hai INSERT chạy trong cùng 1 transaction để đảm bảo nhất quán:
+     * nếu INSERT bảng phụ lỗi, user cũng bị rollback.
+     *
      * @return user với id được DB gán
      */
     public User save(User user) throws SQLException {
+        // Dùng 1 connection duy nhất cho cả transaction
+        try (Connection conn = db()) {
+            conn.setAutoCommit(false); // Bắt đầu transaction
+            try {
+                insertUser(conn, user);
+                insertRoleExtension(conn, user);
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback(); // Có lỗi → hoàn tác tất cả
+                throw e;
+            } finally {
+                conn.setAutoCommit(true); // Khôi phục auto-commit
+            }
+        }
+        return user;
+    }
+
+    /** INSERT vào bảng users và lấy ID được DB tạo ra. */
+    private void insertUser(Connection conn, User user) throws SQLException {
         String sql = """
                 INSERT INTO users (username, email, password_hash, full_name, phone, role, active, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        try (PreparedStatement ps = conn().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, user.getUsername());
             ps.setString(2, user.getEmail());
             ps.setString(3, user.getPasswordHash());
@@ -43,44 +84,84 @@ public class UserRepository {
             ps.setString(5, user.getPhone());
             ps.setString(6, user.getRole().name());
             ps.setInt   (7, user.isActive() ? 1 : 0);
-            ps.setString(8, toStr(user.getCreatedAt()));
-            ps.setString(9, toStr(user.getUpdatedAt()));
+            ps.setString(8, DbUtil.toDbString(user.getCreatedAt()));
+            ps.setString(9, DbUtil.toDbString(user.getUpdatedAt()));
             ps.executeUpdate();
 
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) user.setId(rs.getInt(1));
             }
         }
-        saveRoleExtension(user);
-        return user;
     }
 
-    private void saveRoleExtension(User user) throws SQLException {
+    /**
+     * INSERT vào bảng phụ tương ứng với role của user.
+     *
+     * Tại sao không dùng INSERT OR REPLACE?
+     * → "INSERT OR REPLACE" là cú pháp riêng SQLite (không có trong MySQL).
+     * → Thay bằng: kiểm tra row đã tồn tại chưa, rồi INSERT hoặc UPDATE.
+     * → Hoạt động giống nhau trên cả SQLite lẫn MySQL.
+     */
+    private void insertRoleExtension(Connection conn, User user) throws SQLException {
         if (user instanceof Buyer b) {
-            String sql = "INSERT OR REPLACE INTO buyers (user_id, wallet_balance, total_wins) VALUES (?,?,?)";
-            try (PreparedStatement ps = conn().prepareStatement(sql)) {
-                ps.setInt   (1, b.getId());
-                ps.setDouble(2, b.getWalletBalance().doubleValue());
-                ps.setInt   (3, b.getTotalWins());
-                ps.executeUpdate();
+            if (DbUtil.rowExists(conn, "buyers", "user_id", b.getId())) {
+                String sql = "UPDATE buyers SET wallet_balance=?, total_wins=? WHERE user_id=?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setDouble(1, b.getWalletBalance().doubleValue());
+                    ps.setInt   (2, b.getTotalWins());
+                    ps.setInt   (3, b.getId());
+                    ps.executeUpdate();
+                }
+            } else {
+                String sql = "INSERT INTO buyers (user_id, wallet_balance, total_wins) VALUES (?,?,?)";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt   (1, b.getId());
+                    ps.setDouble(2, b.getWalletBalance().doubleValue());
+                    ps.setInt   (3, b.getTotalWins());
+                    ps.executeUpdate();
+                }
             }
+
         } else if (user instanceof Seller s) {
-            String sql = "INSERT OR REPLACE INTO sellers (user_id, earnings_balance, total_sold, rating, rating_count) VALUES (?,?,?,?,?)";
-            try (PreparedStatement ps = conn().prepareStatement(sql)) {
-                ps.setInt   (1, s.getId());
-                ps.setDouble(2, s.getEarningsBalance().doubleValue());
-                ps.setInt   (3, s.getTotalSold());
-                ps.setDouble(4, s.getRating());
-                ps.setInt   (5, s.getRatingCount());
-                ps.executeUpdate();
+            if (DbUtil.rowExists(conn, "sellers", "user_id", s.getId())) {
+                String sql = "UPDATE sellers SET earnings_balance=?, total_sold=?, rating=?, rating_count=? WHERE user_id=?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setDouble(1, s.getEarningsBalance().doubleValue());
+                    ps.setInt   (2, s.getTotalSold());
+                    ps.setDouble(3, s.getRating());
+                    ps.setInt   (4, s.getRatingCount());
+                    ps.setInt   (5, s.getId());
+                    ps.executeUpdate();
+                }
+            } else {
+                String sql = "INSERT INTO sellers (user_id, earnings_balance, total_sold, rating, rating_count) VALUES (?,?,?,?,?)";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt   (1, s.getId());
+                    ps.setDouble(2, s.getEarningsBalance().doubleValue());
+                    ps.setInt   (3, s.getTotalSold());
+                    ps.setDouble(4, s.getRating());
+                    ps.setInt   (5, s.getRatingCount());
+                    ps.executeUpdate();
+                }
             }
+
         } else if (user instanceof Admin a) {
-            String sql = "INSERT OR REPLACE INTO admins (user_id, access_level, notes) VALUES (?,?,?)";
-            try (PreparedStatement ps = conn().prepareStatement(sql)) {
-                ps.setInt   (1, a.getId());
-                ps.setInt   (2, a.getAccessLevel());
-                ps.setString(3, a.getNotes());
-                ps.executeUpdate();
+            if (DbUtil.rowExists(conn, "admins", "user_id", a.getId())) {
+                String sql = "UPDATE admins SET access_level=?, notes=? WHERE user_id=?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt   (1, a.getAccessLevel());
+                    ps.setString(2, a.getNotes());
+                    ps.setInt   (3, a.getId());
+                    ps.executeUpdate();
+                }
+            } else {
+                String sql = "INSERT INTO admins (user_id, access_level, notes) VALUES (?,?,?)";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setInt   (1, a.getId());
+                    ps.setInt   (2, a.getAccessLevel());
+                    ps.setString(3, a.getNotes());
+                    ps.executeUpdate();
+                }
             }
         }
     }
@@ -89,32 +170,38 @@ public class UserRepository {
 
     public Optional<User> findById(int id) throws SQLException {
         String sql = "SELECT * FROM users WHERE id = ?";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return Optional.of(mapWithExtension(rs));
+                if (rs.next()) return Optional.of(mapWithExtension(conn, rs));
             }
         }
         return Optional.empty();
     }
 
     public Optional<User> findByUsername(String username) throws SQLException {
-        String sql = "SELECT * FROM users WHERE username = ? COLLATE NOCASE";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        // COLLATE NOCASE: SQLite. MySQL dùng collation ci (case-insensitive) trên cột → không cần keyword này.
+        // Câu query này hoạt động trên cả hai vì MySQL bỏ qua COLLATE không hiểu.
+        // Tuy nhiên nếu muốn sạch hơn: dùng LOWER(username) = LOWER(?)
+        String sql = "SELECT * FROM users WHERE LOWER(username) = LOWER(?)";
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return Optional.of(mapWithExtension(rs));
+                if (rs.next()) return Optional.of(mapWithExtension(conn, rs));
             }
         }
         return Optional.empty();
     }
 
     public Optional<User> findByEmail(String email) throws SQLException {
-        String sql = "SELECT * FROM users WHERE email = ? COLLATE NOCASE";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        String sql = "SELECT * FROM users WHERE LOWER(email) = LOWER(?)";
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, email);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return Optional.of(mapWithExtension(rs));
+                if (rs.next()) return Optional.of(mapWithExtension(conn, rs));
             }
         }
         return Optional.empty();
@@ -123,9 +210,10 @@ public class UserRepository {
     public List<User> findAll() throws SQLException {
         List<User> list = new ArrayList<>();
         String sql = "SELECT * FROM users ORDER BY created_at DESC";
-        try (Statement st = conn().createStatement();
+        try (Connection conn = db();
+             Statement st = conn.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) list.add(mapWithExtension(rs));
+            while (rs.next()) list.add(mapWithExtension(conn, rs));
         }
         return list;
     }
@@ -133,26 +221,29 @@ public class UserRepository {
     public List<User> findByRole(UserRole role) throws SQLException {
         List<User> list = new ArrayList<>();
         String sql = "SELECT * FROM users WHERE role = ? ORDER BY username";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, role.name());
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(mapWithExtension(rs));
+                while (rs.next()) list.add(mapWithExtension(conn, rs));
             }
         }
         return list;
     }
 
     public boolean existsByUsername(String username) throws SQLException {
-        String sql = "SELECT 1 FROM users WHERE username = ? COLLATE NOCASE";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        String sql = "SELECT 1 FROM users WHERE LOWER(username) = LOWER(?)";
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
         }
     }
 
     public boolean existsByEmail(String email) throws SQLException {
-        String sql = "SELECT 1 FROM users WHERE email = ? COLLATE NOCASE";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        String sql = "SELECT 1 FROM users WHERE LOWER(email) = LOWER(?)";
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, email);
             try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
         }
@@ -160,28 +251,44 @@ public class UserRepository {
 
     // ─── Update ───────────────────────────────────────────────────────────────
 
+    /**
+     * Cập nhật user (thông tin cơ bản + bảng phụ).
+     * Tương tự save(), dùng transaction để đảm bảo nhất quán.
+     */
     public void update(User user) throws SQLException {
-        String sql = """
-                UPDATE users SET full_name=?, phone=?, email=?, active=?, updated_at=?
-                WHERE id=?
-                """;
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
-            ps.setString(1, user.getFullName());
-            ps.setString(2, user.getPhone());
-            ps.setString(3, user.getEmail());
-            ps.setInt   (4, user.isActive() ? 1 : 0);
-            ps.setString(5, toStr(LocalDateTime.now()));
-            ps.setInt   (6, user.getId());
-            ps.executeUpdate();
+        try (Connection conn = db()) {
+            conn.setAutoCommit(false);
+            try {
+                String sql = """
+                        UPDATE users SET full_name=?, phone=?, email=?, active=?, updated_at=?
+                        WHERE id=?
+                        """;
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, user.getFullName());
+                    ps.setString(2, user.getPhone());
+                    ps.setString(3, user.getEmail());
+                    ps.setInt   (4, user.isActive() ? 1 : 0);
+                    ps.setString(5, DbUtil.toDbString(LocalDateTime.now()));
+                    ps.setInt   (6, user.getId());
+                    ps.executeUpdate();
+                }
+                insertRoleExtension(conn, user); // insert or update bảng phụ
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
         }
-        saveRoleExtension(user);
     }
 
     public void updatePassword(int userId, String newHash) throws SQLException {
         String sql = "UPDATE users SET password_hash=?, updated_at=? WHERE id=?";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, newHash);
-            ps.setString(2, toStr(LocalDateTime.now()));
+            ps.setString(2, DbUtil.toDbString(LocalDateTime.now()));
             ps.setInt   (3, userId);
             ps.executeUpdate();
         }
@@ -189,7 +296,8 @@ public class UserRepository {
 
     public void updateWalletBalance(int buyerId, BigDecimal balance) throws SQLException {
         String sql = "UPDATE buyers SET wallet_balance=? WHERE user_id=?";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setDouble(1, balance.doubleValue());
             ps.setInt   (2, buyerId);
             ps.executeUpdate();
@@ -198,7 +306,8 @@ public class UserRepository {
 
     public void updateEarningsBalance(int sellerId, BigDecimal balance) throws SQLException {
         String sql = "UPDATE sellers SET earnings_balance=? WHERE user_id=?";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setDouble(1, balance.doubleValue());
             ps.setInt   (2, sellerId);
             ps.executeUpdate();
@@ -208,9 +317,10 @@ public class UserRepository {
     // ─── Delete ───────────────────────────────────────────────────────────────
 
     public void deleteById(int id) throws SQLException {
-        // Cascade sẽ xoá buyers/sellers/admins tương ứng
+        // ON DELETE CASCADE trong schema sẽ xoá buyers/sellers/admins tương ứng
         String sql = "DELETE FROM users WHERE id=?";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             ps.executeUpdate();
         }
@@ -219,28 +329,27 @@ public class UserRepository {
     // ─── Mapping ──────────────────────────────────────────────────────────────
 
     /**
-     * Map một row từ ResultSet sang đúng subclass User + load extension.
+     * Map một row từ ResultSet sang đúng subclass User.
+     *
+     * Nhận conn làm tham số để load bảng phụ trong CÙNG connection.
+     * Điều này quan trọng khi dùng transaction (cần cùng connection để thấy uncommitted data).
      */
-    private User mapWithExtension(ResultSet rs) throws SQLException {
+    private User mapWithExtension(Connection conn, ResultSet rs) throws SQLException {
         UserRole role = UserRole.fromString(rs.getString("role"));
-        User user;
         int id = rs.getInt("id");
-
-        switch (role) {
-            case BUYER  -> user = loadBuyer(id, rs);
-            case SELLER -> user = loadSeller(id, rs);
-            case ADMIN  -> user = loadAdmin(id, rs);
+        return switch (role) {
+            case BUYER  -> loadBuyer (conn, id, rs);
+            case SELLER -> loadSeller(conn, id, rs);
+            case ADMIN  -> loadAdmin (conn, id, rs);
             default     -> throw new SQLException("Unknown role: " + role);
-        }
-        return user;
+        };
     }
 
-    private Buyer loadBuyer(int id, ResultSet rs) throws SQLException {
+    private Buyer loadBuyer(Connection conn, int id, ResultSet rs) throws SQLException {
         Buyer b = new Buyer();
         applyBaseFields(b, rs);
-
         String sql = "SELECT * FROM buyers WHERE user_id=?";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet r2 = ps.executeQuery()) {
                 if (r2.next()) {
@@ -252,12 +361,11 @@ public class UserRepository {
         return b;
     }
 
-    private Seller loadSeller(int id, ResultSet rs) throws SQLException {
+    private Seller loadSeller(Connection conn, int id, ResultSet rs) throws SQLException {
         Seller s = new Seller();
         applyBaseFields(s, rs);
-
         String sql = "SELECT * FROM sellers WHERE user_id=?";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet r2 = ps.executeQuery()) {
                 if (r2.next()) {
@@ -271,12 +379,11 @@ public class UserRepository {
         return s;
     }
 
-    private Admin loadAdmin(int id, ResultSet rs) throws SQLException {
+    private Admin loadAdmin(Connection conn, int id, ResultSet rs) throws SQLException {
         Admin a = new Admin();
         applyBaseFields(a, rs);
-
         String sql = "SELECT * FROM admins WHERE user_id=?";
-        try (PreparedStatement ps = conn().prepareStatement(sql)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet r2 = ps.executeQuery()) {
                 if (r2.next()) {
@@ -297,18 +404,7 @@ public class UserRepository {
         u.setPhone(rs.getString("phone"));
         u.setRole(UserRole.fromString(rs.getString("role")));
         u.setActive(rs.getInt("active") == 1);
-        u.setCreatedAt(fromStr(rs.getString("created_at")));
-        u.setUpdatedAt(fromStr(rs.getString("updated_at")));
-    }
-
-    // ─── Helpers ──────────────────────────────────────────────────────────────
-
-    private String toStr(LocalDateTime t) {
-        return t != null ? t.toString() : null;
-    }
-
-    private LocalDateTime fromStr(String s) {
-        try { return s != null ? LocalDateTime.parse(s) : null; }
-        catch (Exception e) { return null; }
+        u.setCreatedAt(DbUtil.fromDbString(rs.getString("created_at")));
+        u.setUpdatedAt(DbUtil.fromDbString(rs.getString("updated_at")));
     }
 }
