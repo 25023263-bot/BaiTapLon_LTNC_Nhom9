@@ -13,7 +13,7 @@ public final class AppConfig {
     // ─────────────────────────────────────────────────────────
     // Database selection
     // ─────────────────────────────────────────────────────────
-    public static final boolean USE_MYSQL = true;
+    public static final boolean USE_MYSQL = false;
 
     // ─────────────────────────────────────────────────────────
     // SQLite fallback

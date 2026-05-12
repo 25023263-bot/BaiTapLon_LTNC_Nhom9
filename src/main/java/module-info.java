@@ -29,6 +29,4 @@ module com.nhom9.auction.baitaplon_ltnc_nhom9 {
     exports com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers;
     exports com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator;
 
-    opens com.nhom9.auction to javafx.graphics;
-    exports com.nhom9.auction;
 }

@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.control.ToggleGroup?>
@@ -21,6 +23,10 @@
   RegisterView — cùng layout với LoginView (split 52/48).
   Stylesheet: dùng style.css (shared) + register.css (register-specific).
   ScrollPane ở cột phải để form có thể scroll khi cửa sổ nhỏ.
+
+  THAY ĐỔI: Thêm phần điều khoản (terms) dành cho NGƯỜI BÁN.
+  Phần này chỉ hiện ra khi user chọn toggle "NGƯỜI BÁN".
+  Gồm 3 checkbox riêng biệt cho 3 loại điều khoản.
 -->
 <StackPane xmlns="http://javafx.com/javafx/21"
            xmlns:fx="http://javafx.com/fxml/1"
@@ -38,14 +44,13 @@
         <Circle styleClass="deco-circle" radius="180" translateX="-120" translateY="200"/>
     </StackPane>
 
-    <!-- ToggleGroup cho việc chọn vai trò — định nghĩa ở đây để dùng trong FXML -->
+    <!-- ToggleGroup cho việc chọn vai trò -->
     <fx:define>
         <ToggleGroup fx:id="roleGroup"/>
     </fx:define>
 
     <GridPane styleClass="main-grid" maxWidth="Infinity" maxHeight="Infinity">
         <columnConstraints>
-            <!-- Cột trái (brand): 52%, cột phải (form): 48% -->
             <ColumnConstraints percentWidth="52.0" minWidth="300.0" hgrow="ALWAYS"/>
             <ColumnConstraints percentWidth="48.0" minWidth="340.0" hgrow="SOMETIMES"/>
         </columnConstraints>
@@ -53,55 +58,42 @@
             <RowConstraints vgrow="ALWAYS" minHeight="500.0"/>
         </rowConstraints>
 
-        <!-- ═══════════════════════════════════════════════════════════════════
-             CỘT TRÁI — Brand Panel (tái sử dụng class từ style.css)
-             ═══════════════════════════════════════════════════════════════════ -->
+        <!-- CỘT TRÁI — Brand Panel (giữ nguyên) -->
         <VBox styleClass="brand-panel"
               GridPane.columnIndex="0" GridPane.rowIndex="0"
               maxWidth="Infinity" maxHeight="Infinity">
 
             <VBox styleClass="brand-inner" maxWidth="Infinity">
-                <!-- Badge -->
                 <HBox styleClass="premium-badge" alignment="CENTER">
                     <Label text="★" styleClass="badge-star"/>
-                    <Label text="PREMIUM AUCTION"/>
+                    <Label text="ĐẤU GIÁ CAO CẤP"/>
                 </HBox>
-
-                <!-- Logo -->
                 <Label text="UBID" styleClass="brand-title"/>
-
-                <!-- Divider -->
                 <StackPane prefHeight="10">
                     <Line startX="0" endX="260" styleClass="divider-line"/>
                     <Circle styleClass="divider-dot" radius="4"/>
                 </StackPane>
-
-                <!-- Tagline & description -->
-                <Label text="Join the Community" styleClass="tagline"/>
-                <Label text="Create your account and start bidding or selling in our secure, real-time auction marketplace trusted by thousands."
+                <Label text="Tham gia cộng đồng" styleClass="tagline"/>
+                <Label text="Tạo tài khoản và bắt đầu đấu giá hoặc bán hàng trên nền tảng đấu giá trực tuyến an toàn, thời gian thực được hàng nghìn người tin dùng."
                        styleClass="description" wrapText="true"/>
-
-                <!-- Danh sách tính năng -->
                 <VBox styleClass="feature-list">
                     <HBox styleClass="feature-item" alignment="CENTER_LEFT" spacing="10">
                         <Label text="✓" styleClass="feature-check"/>
-                        <Label text="Secure real-time bidding" styleClass="feature-text"/>
+                        <Label text="Đấu giá trực tiếp bảo mật" styleClass="feature-text"/>
                     </HBox>
                     <HBox styleClass="feature-item" alignment="CENTER_LEFT" spacing="10">
                         <Label text="✓" styleClass="feature-check"/>
-                        <Label text="Buyer &amp; Seller accounts" styleClass="feature-text"/>
+                        <Label text="Tài khoản Người mua &amp; Người bán" styleClass="feature-text"/>
                     </HBox>
                     <HBox styleClass="feature-item" alignment="CENTER_LEFT" spacing="10">
                         <Label text="✓" styleClass="feature-check"/>
-                        <Label text="Instant bid notifications" styleClass="feature-text"/>
+                        <Label text="Thông báo đấu giá tức thì" styleClass="feature-text"/>
                     </HBox>
                     <HBox styleClass="feature-item" alignment="CENTER_LEFT" spacing="10">
                         <Label text="✓" styleClass="feature-check"/>
-                        <Label text="Wallet &amp; payment support" styleClass="feature-text"/>
+                        <Label text="Hỗ trợ ví &amp; thanh toán" styleClass="feature-text"/>
                     </HBox>
                 </VBox>
-
-                <!-- Icon trang trí -->
                 <VBox styleClass="gavel-wrap">
                     <StackPane styleClass="gavel-circle">
                         <Label text="📝" styleClass="gavel-icon"/>
@@ -110,19 +102,13 @@
             </VBox>
         </VBox>
 
-        <!-- ═══════════════════════════════════════════════════════════════════
-             CỘT PHẢI — Register Form (bọc trong ScrollPane)
-             ═══════════════════════════════════════════════════════════════════ -->
+        <!-- CỘT PHẢI — Register Form (bọc trong ScrollPane) -->
         <ScrollPane styleClass="form-scroll"
                     fitToWidth="true"
                     hbarPolicy="NEVER"
                     vbarPolicy="AS_NEEDED"
                     GridPane.columnIndex="1" GridPane.rowIndex="0">
 
-            <!--
-              VBox này đóng vai trò "centering wrapper": minHeight khiến card
-              nằm giữa khi cửa sổ lớn; khi cửa sổ nhỏ thì ScrollPane tự scroll.
-            -->
             <VBox styleClass="register-scroll-wrapper"
                   alignment="CENTER"
                   minHeight="680">
@@ -131,29 +117,24 @@
 
                     <!-- Header -->
                     <VBox styleClass="card-header">
-                        <Label text="CREATE ACCOUNT" styleClass="card-title"/>
+                        <Label text="TẠO TÀI KHOẢN" styleClass="card-title"/>
                         <StackPane prefHeight="8">
                             <Line startX="0" endX="70" styleClass="card-title-line"/>
                         </StackPane>
                     </VBox>
 
-                    <!-- ── Chọn vai trò ────────────────────────────────── -->
+                    <!-- Chọn vai trò -->
                     <VBox styleClass="field-group">
-                        <Label text="I want to" styleClass="field-label"/>
+                        <Label text="Tôi muốn" styleClass="field-label"/>
                         <HBox styleClass="role-toggle-group" spacing="0">
-                            <!--
-                              toggleGroup="$roleGroup" → JavaFX FXML sẽ bind
-                              ToggleButton vào ToggleGroup được define ở trên.
-                              Controller cũng sẽ enforce: luôn có 1 button được chọn.
-                            -->
                             <ToggleButton fx:id="buyerToggle"
-                                          text="🛒  BUYER"
+                                          text="🛒  NGƯỜI MUA"
                                           toggleGroup="$roleGroup"
                                           styleClass="role-toggle, role-toggle-left"
                                           HBox.hgrow="ALWAYS"
                                           maxWidth="Infinity"/>
                             <ToggleButton fx:id="sellerToggle"
-                                          text="🏷  SELLER"
+                                          text="🏷  NGƯỜI BÁN"
                                           toggleGroup="$roleGroup"
                                           styleClass="role-toggle, role-toggle-right"
                                           HBox.hgrow="ALWAYS"
@@ -161,22 +142,21 @@
                         </HBox>
                     </VBox>
 
-                    <!-- ── Các trường nhập liệu ──────────────────────── -->
+                    <!-- Các trường nhập liệu (giữ nguyên) -->
                     <VBox styleClass="form-fields">
 
-                        <!-- Hàng 1: Full Name + Username (2 cột) -->
+                        <!-- Hàng 1: Họ tên + Tên đăng nhập -->
                         <GridPane styleClass="field-row-grid" hgap="12">
                             <columnConstraints>
                                 <ColumnConstraints hgrow="ALWAYS" percentWidth="50"/>
                                 <ColumnConstraints hgrow="ALWAYS" percentWidth="50"/>
                             </columnConstraints>
 
-                            <!-- Full Name -->
                             <VBox styleClass="field-group" GridPane.columnIndex="0">
-                                <Label text="Full Name" styleClass="field-label"/>
+                                <Label text="Họ và tên" styleClass="field-label"/>
                                 <TextField fx:id="fullNameField"
                                            styleClass="input-field"
-                                           promptText="YOUR NAME"/>
+                                           promptText="NHẬP HỌ VÀ TÊN"/>
                                 <Label fx:id="fullNameError"
                                        styleClass="error-label"
                                        text=""
@@ -184,12 +164,11 @@
                                        managed="false"/>
                             </VBox>
 
-                            <!-- Username -->
                             <VBox styleClass="field-group" GridPane.columnIndex="1">
-                                <Label text="Username" styleClass="field-label"/>
+                                <Label text="Tên đăng nhập" styleClass="field-label"/>
                                 <TextField fx:id="usernameField"
                                            styleClass="input-field"
-                                           promptText="LETTERS &amp; NUMBERS"/>
+                                           promptText="CHỮ &amp; SỐ"/>
                                 <Label fx:id="usernameError"
                                        styleClass="error-label"
                                        text=""
@@ -198,16 +177,15 @@
                             </VBox>
                         </GridPane>
 
-                        <!-- Hàng 2: Email + Phone (2 cột) -->
+                        <!-- Hàng 2: Email + Số điện thoại -->
                         <GridPane styleClass="field-row-grid" hgap="12">
                             <columnConstraints>
                                 <ColumnConstraints hgrow="ALWAYS" percentWidth="60"/>
                                 <ColumnConstraints hgrow="ALWAYS" percentWidth="40"/>
                             </columnConstraints>
 
-                            <!-- Email -->
                             <VBox styleClass="field-group" GridPane.columnIndex="0">
-                                <Label text="Email Address" styleClass="field-label"/>
+                                <Label text="Địa chỉ Email" styleClass="field-label"/>
                                 <TextField fx:id="emailField"
                                            styleClass="input-field"
                                            promptText="EMAIL"/>
@@ -218,12 +196,11 @@
                                        managed="false"/>
                             </VBox>
 
-                            <!-- Phone -->
                             <VBox styleClass="field-group" GridPane.columnIndex="1">
-                                <Label text="Phone" styleClass="field-label"/>
+                                <Label text="Số điện thoại" styleClass="field-label"/>
                                 <TextField fx:id="phoneField"
                                            styleClass="input-field"
-                                           promptText="OPTIONAL"/>
+                                           promptText="TÙY CHỌN"/>
                                 <Label fx:id="phoneError"
                                        styleClass="error-label"
                                        text=""
@@ -232,16 +209,12 @@
                             </VBox>
                         </GridPane>
 
-                        <!-- Password -->
+                        <!-- Mật khẩu -->
                         <VBox styleClass="field-group">
-                            <Label text="Password" styleClass="field-label"/>
+                            <Label text="Mật khẩu" styleClass="field-label"/>
                             <PasswordField fx:id="passwordField"
                                            styleClass="input-field"
-                                           promptText="MIN 8 CHARS · UPPER + LOWER + NUMBER"/>
-                            <!--
-                              ProgressBar hiển thị độ mạnh mật khẩu.
-                              progress: 0=trống, 0.33=yếu, 0.66=trung bình, 1=mạnh
-                            -->
+                                           promptText="TỐI THIỂU 8 KÝ TỰ · HOA + THƯỜNG + SỐ"/>
                             <ProgressBar fx:id="strengthBar"
                                          styleClass="strength-bar"
                                          progress="0"
@@ -259,12 +232,12 @@
                                    managed="false"/>
                         </VBox>
 
-                        <!-- Confirm Password -->
+                        <!-- Xác nhận mật khẩu -->
                         <VBox styleClass="field-group">
-                            <Label text="Confirm Password" styleClass="field-label"/>
+                            <Label text="Xác nhận mật khẩu" styleClass="field-label"/>
                             <PasswordField fx:id="confirmPasswordField"
                                            styleClass="input-field"
-                                           promptText="RE-ENTER PASSWORD"/>
+                                           promptText="NHẬP LẠI MẬT KHẨU"/>
                             <Label fx:id="confirmError"
                                    styleClass="error-label"
                                    text=""
@@ -273,27 +246,116 @@
                         </VBox>
 
                     </VBox>
-                    <!-- ── End form-fields ─────────────────────────────── -->
+
+                    <!-- ================================================ -->
+                    <!--   ĐIỀU KHOẢN NGƯỜI BÁN                           -->
+                    <!--   Chỉ hiện khi chọn toggle "NGƯỜI BÁN"           -->
+                    <!--   Controller sẽ toggle visible/managed            -->
+                    <!-- ================================================ -->
+                    <VBox fx:id="sellerTermsSection"
+                          styleClass="seller-terms-section"
+                          visible="false"
+                          managed="false">
+
+                        <!-- Tiêu đề phần điều khoản -->
+                        <HBox styleClass="terms-header" alignment="CENTER_LEFT" spacing="10">
+                            <Label text="📋" styleClass="terms-header-icon"/>
+                            <VBox>
+                                <Label text="ĐIỀU KHOẢN NGƯỜI BÁN" styleClass="terms-header-title"/>
+                                <Label text="Đọc và chấp nhận tất cả điều khoản để hoàn tất đăng ký"
+                                       styleClass="terms-header-sub" wrapText="true"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- Điều khoản 1: Hàng hóa -->
+                        <VBox styleClass="terms-item">
+                            <HBox alignment="CENTER_LEFT" spacing="10">
+                                <CheckBox fx:id="termsMerchandiseCheck"
+                                          styleClass="terms-check"/>
+                                <VBox HBox.hgrow="ALWAYS" spacing="2">
+                                    <Label text="Chính sách về Hàng hóa"
+                                           styleClass="terms-item-title"/>
+                                    <Label text="Quy định loại hàng được bán, tiêu chuẩn chất lượng và hàng cấm."
+                                           styleClass="terms-item-desc" wrapText="true"/>
+                                </VBox>
+                                <Button text="Xem"
+                                        styleClass="terms-view-btn"
+                                        onAction="#onViewMerchandiseTerms"/>
+                            </HBox>
+                            <Label fx:id="termsMerchandiseError"
+                                   styleClass="error-label, terms-error"
+                                   text="⚠  Vui lòng chấp nhận chính sách hàng hóa"
+                                   visible="false" managed="false"/>
+                        </VBox>
+
+                        <Separator styleClass="terms-sep"/>
+
+                        <!-- Điều khoản 2: Nội dung -->
+                        <VBox styleClass="terms-item">
+                            <HBox alignment="CENTER_LEFT" spacing="10">
+                                <CheckBox fx:id="termsContentCheck"
+                                          styleClass="terms-check"/>
+                                <VBox HBox.hgrow="ALWAYS" spacing="2">
+                                    <Label text="Chính sách về Nội dung"
+                                           styleClass="terms-item-title"/>
+                                    <Label text="Quy định mô tả sản phẩm, hình ảnh và nội dung đăng tải."
+                                           styleClass="terms-item-desc" wrapText="true"/>
+                                </VBox>
+                                <Button text="Xem"
+                                        styleClass="terms-view-btn"
+                                        onAction="#onViewContentTerms"/>
+                            </HBox>
+                            <Label fx:id="termsContentError"
+                                   styleClass="error-label, terms-error"
+                                   text="⚠  Vui lòng chấp nhận chính sách nội dung"
+                                   visible="false" managed="false"/>
+                        </VBox>
+
+                        <Separator styleClass="terms-sep"/>
+
+                        <!-- Điều khoản 3: Bảo mật -->
+                        <VBox styleClass="terms-item">
+                            <HBox alignment="CENTER_LEFT" spacing="10">
+                                <CheckBox fx:id="termsPrivacyCheck"
+                                          styleClass="terms-check"/>
+                                <VBox HBox.hgrow="ALWAYS" spacing="2">
+                                    <Label text="Chính sách Bảo mật Thông tin"
+                                           styleClass="terms-item-title"/>
+                                    <Label text="Cách chúng tôi thu thập, sử dụng và bảo vệ thông tin cá nhân."
+                                           styleClass="terms-item-desc" wrapText="true"/>
+                                </VBox>
+                                <Button text="Xem"
+                                        styleClass="terms-view-btn"
+                                        onAction="#onViewPrivacyTerms"/>
+                            </HBox>
+                            <Label fx:id="termsPrivacyError"
+                                   styleClass="error-label, terms-error"
+                                   text="⚠  Vui lòng chấp nhận chính sách bảo mật"
+                                   visible="false" managed="false"/>
+                        </VBox>
+
+                    </VBox>
+                    <!-- ================================================ -->
+                    <!--   KẾT THÚC ĐIỀU KHOẢN NGƯỜI BÁN                  -->
+                    <!-- ================================================ -->
 
                     <!-- Nút đăng ký chính -->
-                    <Button text="CREATE ACCOUNT"
+                    <Button text="TẠO TÀI KHOẢN"
                             styleClass="primary-button"
                             defaultButton="true"
                             maxWidth="Infinity"
                             onAction="#onRegister"/>
 
                     <!-- Chuyển về Login -->
-                    <Label text="Already have an account?" styleClass="secondary-hint"/>
-                    <Button text="SIGN IN"
+                    <Label text="Đã có tài khoản?" styleClass="secondary-hint"/>
+                    <Button text="ĐĂNG NHẬP"
                             styleClass="outline-button"
                             maxWidth="Infinity"
                             onAction="#onBackToLogin"/>
 
                 </VBox>
-                <!-- ── End register-card ───────────────────────────────── -->
 
             </VBox>
-            <!-- ── End register-scroll-wrapper ───────────────────────── -->
 
         </ScrollPane>
     </GridPane>

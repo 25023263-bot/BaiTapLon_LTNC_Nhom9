@@ -1,7 +1,7 @@
 /* UBID login — premium auction theme */
 
 .root-pane {
-    -fx-font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+    -fx-font-family: "Be Vietnam Pro", "Noto Sans", "Segoe UI", "Arial Unicode MS", Arial, sans-serif;
     -fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #0a1424, #152a45);
 }
 
@@ -58,7 +58,7 @@
 }
 
 .brand-title {
-    -fx-font-family: "Georgia", "Palatino Linotype", "Times New Roman", serif;
+    -fx-font-family: "Be Vietnam Pro", "Noto Serif", "Georgia", serif;
     -fx-font-size: 72px;
     -fx-font-weight: bold;
     -fx-text-fill: #f5f0e6;
@@ -75,7 +75,7 @@
 }
 
 .tagline {
-    -fx-font-family: "Segoe UI", "Palatino Linotype", "Times New Roman", serif;
+    -fx-font-family: "Be Vietnam Pro", "Noto Serif", "Georgia", serif;
     -fx-font-size: 22px;
     -fx-text-fill: #ffffff;
 }

@@ -23,22 +23,20 @@
                 <Label styleClass="app-name" text="UBid"/>
             </HBox>
 
+            <!-- "Danh mục" đã được đổi thành "Kết quả" theo yêu cầu -->
             <HBox styleClass="nav-links" HBox.hgrow="NEVER">
-                <Button styleClass="nav-link-active" text="Home" onAction="#handleNavHome"/>
-                <Button styleClass="nav-link" text="Categories" onAction="#handleNavCategories"/>
-                <Button styleClass="nav-link" text="Results" onAction="#handleNavResults"/>
+                <Button styleClass="nav-link-active" text="Trang chủ" onAction="#handleNavHome"/>
+                <Button styleClass="nav-link" text="Kết quả" onAction="#handleNavResults"/>
             </HBox>
 
             <HBox styleClass="navbar-right" HBox.hgrow="ALWAYS" alignment="CENTER_RIGHT" spacing="12">
                 <Button styleClass="icon-btn" text="🔍" onAction="#handleSearch"/>
                 <Button styleClass="icon-btn" text="🔔" onAction="#handleNotifications"/>
                 <Region minWidth="8"/>
-                <!-- Logged out: một nút vàng -->
                 <Button fx:id="btnLogInProminent"
                         styleClass="btn-login-solid"
-                        text="Log In"
+                        text="Đăng nhập"
                         onAction="#handleLogin"/>
-                <!-- Logged in: avatar mở menu -->
                 <Button fx:id="btnUserAvatar"
                         styleClass="avatar-menu-btn"
                         maxWidth="40" maxHeight="40"
@@ -51,7 +49,9 @@
     <center>
         <StackPane fx:id="mainStack">
 
-            <!-- Lớp 1: nội dung Home cuộn -->
+            <!-- ═══════════════════════════════════════════════════════════
+                 LỚP 1: Nội dung Home chính (scroll)
+                 ═══════════════════════════════════════════════════════════ -->
             <ScrollPane fx:id="homeScrollPane" fitToWidth="true"
                         styleClass="scroll-pane"
                         hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
@@ -63,15 +63,15 @@
                             <Label styleClass="search-icon" text="🔍"/>
                             <TextField fx:id="searchField"
                                        styleClass="search-field"
-                                       promptText="Search products..."
+                                       promptText="Tìm kiếm sản phẩm..."
                                        HBox.hgrow="ALWAYS"
                                        onAction="#handleSearchQuery"/>
-                            <Label fx:id="resultCountLabel" styleClass="result-count" text="6 results"/>
+                            <Label fx:id="resultCountLabel" styleClass="result-count" text="6 kết quả"/>
                         </HBox>
                         <ComboBox fx:id="filterDropdown"
                                   styleClass="filter-dropdown"
-                                  promptText="Ending Soon"
-                                  minWidth="140"/>
+                                  promptText="Sắp hết hạn"
+                                  minWidth="160"/>
                     </HBox>
 
                     <ScrollPane styleClass="category-scroll"
@@ -82,23 +82,23 @@
                               styleClass="category-chips-container"
                               spacing="10" alignment="CENTER_LEFT">
                             <Button fx:id="chipAll" styleClass="chip-active"
-                                    text="✦ All" onAction="#handleCategoryAll"/>
-                            <Button styleClass="chip" text="⌚ Watches" onAction="#handleCategoryFilter"/>
-                            <Button styleClass="chip" text="💎 Jewelry" onAction="#handleCategoryFilter"/>
-                            <Button styleClass="chip" text="🎨 Art" onAction="#handleCategoryFilter"/>
-                            <Button styleClass="chip" text="🏺 Antiques" onAction="#handleCategoryFilter"/>
-                            <Button styleClass="chip" text="🚗 Cars" onAction="#handleCategoryFilter"/>
-                            <Button styleClass="chip" text="🏡 Home Decor" onAction="#handleCategoryFilter"/>
-                            <Button styleClass="chip" text="🏆 Collectibles" onAction="#handleCategoryFilter"/>
-                            <Button styleClass="chip" text="🏢 Real Estate" onAction="#handleCategoryFilter"/>
+                                    text="✦ Tất cả" onAction="#handleCategoryAll"/>
+                            <Button styleClass="chip" text="⌚ Đồng hồ" onAction="#handleCategoryFilter"/>
+                            <Button styleClass="chip" text="💎 Trang sức" onAction="#handleCategoryFilter"/>
+                            <Button styleClass="chip" text="🎨 Nghệ thuật" onAction="#handleCategoryFilter"/>
+                            <Button styleClass="chip" text="🏺 Đồ cổ" onAction="#handleCategoryFilter"/>
+                            <Button styleClass="chip" text="🚗 Xe hơi" onAction="#handleCategoryFilter"/>
+                            <Button styleClass="chip" text="🏡 Nội thất" onAction="#handleCategoryFilter"/>
+                            <Button styleClass="chip" text="🏆 Sưu tầm" onAction="#handleCategoryFilter"/>
+                            <Button styleClass="chip" text="🏢 Bất động sản" onAction="#handleCategoryFilter"/>
                         </HBox>
                     </ScrollPane>
 
                     <VBox spacing="16">
                         <VBox styleClass="section-header" spacing="4">
-                            <Label styleClass="section-title" text="🔥 TRENDING LIVE AUCTIONS"/>
+                            <Label styleClass="section-title" text="🔥 ĐẤU GIÁ NỔI BẬT"/>
                             <Label styleClass="section-subtitle"
-                                   text="Top real-time hottest auction items based on bidding activity"/>
+                                   text="Những sản phẩm đấu giá nóng nhất hiện tại dựa trên hoạt động đặt giá"/>
                         </VBox>
                         <Region styleClass="gold-divider" maxWidth="180"/>
                         <HBox fx:id="hotCardsContainer" spacing="20" alignment="TOP_LEFT" fillHeight="true"/>
@@ -107,14 +107,16 @@
                     <Region styleClass="separator-line" maxWidth="10000"/>
 
                     <VBox styleClass="all-products-section" spacing="16">
-                        <Label styleClass="all-products-title" text="All Auctions"/>
+                        <Label styleClass="all-products-title" text="Tất cả đấu giá"/>
                         <GridPane fx:id="allProductsGrid" hgap="16" vgap="16"/>
                     </VBox>
 
                 </VBox>
             </ScrollPane>
 
-            <!-- Lớp 2: tab Cá nhân -->
+            <!-- ═══════════════════════════════════════════════════════════
+                 LỚP 2: Tab "Cá nhân"
+                 ═══════════════════════════════════════════════════════════ -->
             <StackPane fx:id="profileOverlay"
                        visible="false"
                        managed="false"
@@ -146,10 +148,286 @@
                                 managed="false"
                                 onAction="#handleLogoutFromProfile"/>
                     </HBox>
-                    <VBox spacing="6" fx:id="profileExtrasBox" alignment="CENTER">
-                        <!-- controller có thể thêm nút/menu phụ nếu cần -->
-                    </VBox>
+                    <VBox spacing="6" fx:id="profileExtrasBox" alignment="CENTER"/>
                 </VBox>
+            </StackPane>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 LỚP 3: Tab "Sản phẩm của tôi" — dành cho Người bán
+                 Hiển thị danh sách sản phẩm + nút Đăng bán
+                 ═══════════════════════════════════════════════════════════ -->
+            <StackPane fx:id="myProductsOverlay"
+                       visible="false"
+                       managed="false"
+                       styleClass="my-products-overlay">
+
+                <VBox styleClass="my-products-panel">
+
+                    <!-- Header -->
+                    <HBox styleClass="my-products-header" alignment="CENTER_LEFT">
+                        <Label text="🏷" styleClass="my-products-header-icon"/>
+                        <VBox HBox.hgrow="ALWAYS" spacing="2">
+                            <Label text="Sản phẩm của tôi" styleClass="my-products-title"/>
+                            <Label fx:id="myProductsSubtitle" text="Quản lý và theo dõi sản phẩm đang đấu giá"
+                                   styleClass="my-products-subtitle"/>
+                        </VBox>
+                        <Button fx:id="btnListNewProduct"
+                                styleClass="btn-list-product"
+                                text="＋  Đăng bán sản phẩm"
+                                onAction="#handleListNewProduct"/>
+                    </HBox>
+
+                    <!-- Danh sách sản phẩm (scrollable) -->
+                    <ScrollPane fitToWidth="true" styleClass="scroll-pane" VBox.vgrow="ALWAYS"
+                                hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+                        <VBox fx:id="myProductsList" styleClass="my-products-list" spacing="12"/>
+                    </ScrollPane>
+
+                </VBox>
+            </StackPane>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 LỚP 4: Điều khoản Người bán — hiện khi Buyer bấm "Sản phẩm của tôi"
+                 Buyer phải đồng ý 3 điều khoản để nâng cấp thành Seller
+                 ═══════════════════════════════════════════════════════════ -->
+            <StackPane fx:id="sellerTermsOverlay"
+                       visible="false"
+                       managed="false"
+                       styleClass="modal-overlay">
+
+                <ScrollPane fitToWidth="true" styleClass="scroll-pane"
+                            hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+                            maxWidth="560">
+
+                    <VBox styleClass="modal-card" spacing="20" alignment="TOP_CENTER">
+
+                        <!-- Icon + tiêu đề -->
+                        <VBox alignment="CENTER" spacing="10">
+                            <Label text="🏷" styleClass="modal-big-icon"/>
+                            <Label text="Trở thành Người bán" styleClass="modal-title"/>
+                            <Label text="Để đăng bán sản phẩm trên UBid, bạn cần đọc và đồng ý các điều khoản dành cho Người bán dưới đây."
+                                   styleClass="modal-subtitle" wrapText="true" alignment="CENTER"
+                                   maxWidth="420"/>
+                        </VBox>
+
+                        <!-- ── 3 điều khoản (giống RegisterView) ── -->
+                        <VBox styleClass="seller-terms-section" spacing="10">
+
+                            <HBox styleClass="terms-header" alignment="CENTER_LEFT" spacing="10">
+                                <Label text="📋" styleClass="terms-header-icon"/>
+                                <VBox>
+                                    <Label text="ĐIỀU KHOẢN NGƯỜI BÁN" styleClass="terms-header-title"/>
+                                    <Label text="Đọc và chấp nhận tất cả điều khoản để tiếp tục"
+                                           styleClass="terms-header-sub" wrapText="true"/>
+                                </VBox>
+                            </HBox>
+
+                            <!-- Điều khoản 1 -->
+                            <VBox styleClass="terms-item">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <CheckBox fx:id="upgradeTermsMerchandise" styleClass="terms-check"/>
+                                    <VBox HBox.hgrow="ALWAYS" spacing="2">
+                                        <Label text="Chính sách về Hàng hóa" styleClass="terms-item-title"/>
+                                        <Label text="Quy định loại hàng được bán, tiêu chuẩn chất lượng và hàng cấm."
+                                               styleClass="terms-item-desc" wrapText="true"/>
+                                    </VBox>
+                                    <Button text="Xem" styleClass="terms-view-btn"
+                                            onAction="#onViewMerchandiseTermsUpgrade"/>
+                                </HBox>
+                                <Label fx:id="upgradeTermsMerchandiseError"
+                                       styleClass="error-label, terms-error"
+                                       text="⚠  Vui lòng chấp nhận chính sách hàng hóa"
+                                       visible="false" managed="false"/>
+                            </VBox>
+
+                            <Separator styleClass="terms-sep"/>
+
+                            <!-- Điều khoản 2 -->
+                            <VBox styleClass="terms-item">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <CheckBox fx:id="upgradeTermsContent" styleClass="terms-check"/>
+                                    <VBox HBox.hgrow="ALWAYS" spacing="2">
+                                        <Label text="Chính sách về Nội dung" styleClass="terms-item-title"/>
+                                        <Label text="Quy định mô tả sản phẩm, hình ảnh và nội dung đăng tải."
+                                               styleClass="terms-item-desc" wrapText="true"/>
+                                    </VBox>
+                                    <Button text="Xem" styleClass="terms-view-btn"
+                                            onAction="#onViewContentTermsUpgrade"/>
+                                </HBox>
+                                <Label fx:id="upgradeTermsContentError"
+                                       styleClass="error-label, terms-error"
+                                       text="⚠  Vui lòng chấp nhận chính sách nội dung"
+                                       visible="false" managed="false"/>
+                            </VBox>
+
+                            <Separator styleClass="terms-sep"/>
+
+                            <!-- Điều khoản 3 -->
+                            <VBox styleClass="terms-item">
+                                <HBox alignment="CENTER_LEFT" spacing="10">
+                                    <CheckBox fx:id="upgradeTermsPrivacy" styleClass="terms-check"/>
+                                    <VBox HBox.hgrow="ALWAYS" spacing="2">
+                                        <Label text="Chính sách Bảo mật Thông tin" styleClass="terms-item-title"/>
+                                        <Label text="Cách chúng tôi thu thập, sử dụng và bảo vệ thông tin cá nhân."
+                                               styleClass="terms-item-desc" wrapText="true"/>
+                                    </VBox>
+                                    <Button text="Xem" styleClass="terms-view-btn"
+                                            onAction="#onViewPrivacyTermsUpgrade"/>
+                                </HBox>
+                                <Label fx:id="upgradeTermsPrivacyError"
+                                       styleClass="error-label, terms-error"
+                                       text="⚠  Vui lòng chấp nhận chính sách bảo mật"
+                                       visible="false" managed="false"/>
+                            </VBox>
+
+                        </VBox>
+
+                        <!-- Nút hành động -->
+                        <VBox spacing="10">
+                            <Button text="✓  Đồng ý &amp; Trở thành Người bán"
+                                    styleClass="btn-login-solid"
+                                    maxWidth="Infinity"
+                                    onAction="#handleAcceptSellerTerms"/>
+                            <Button text="Hủy bỏ"
+                                    styleClass="btn-outline-gold"
+                                    maxWidth="Infinity"
+                                    onAction="#handleCancelSellerTerms"/>
+                        </VBox>
+
+                    </VBox>
+                </ScrollPane>
+            </StackPane>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 LỚP 5: Form "Đăng bán sản phẩm"
+                 Người bán điền thông tin, upload ảnh, mô tả sản phẩm
+                 ═══════════════════════════════════════════════════════════ -->
+            <StackPane fx:id="listProductOverlay"
+                       visible="false"
+                       managed="false"
+                       styleClass="modal-overlay">
+
+                <ScrollPane fitToWidth="true" styleClass="scroll-pane"
+                            hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+                            maxWidth="620">
+
+                    <VBox styleClass="modal-card" spacing="20">
+
+                        <!-- Header với nút quay lại -->
+                        <HBox alignment="CENTER_LEFT" spacing="12">
+                            <Button text="← Quay lại"
+                                    styleClass="btn-back"
+                                    onAction="#handleBackToMyProducts"/>
+                            <VBox HBox.hgrow="ALWAYS" spacing="2">
+                                <Label text="Đăng bán sản phẩm" styleClass="modal-title"/>
+                                <Label text="Điền đầy đủ thông tin để tạo phiên đấu giá"
+                                       styleClass="modal-subtitle"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- ── Thông tin cơ bản ── -->
+                        <VBox styleClass="form-section" spacing="14">
+                            <Label text="📦  THÔNG TIN SẢN PHẨM" styleClass="form-section-title"/>
+
+                            <VBox styleClass="field-group-dark" spacing="6">
+                                <Label text="Tên sản phẩm *" styleClass="form-field-label"/>
+                                <TextField fx:id="listProductTitleField"
+                                           styleClass="form-input"
+                                           promptText="Nhập tên sản phẩm rõ ràng, đầy đủ"/>
+                                <Label fx:id="listProductTitleError"
+                                       styleClass="form-error"
+                                       visible="false" managed="false"
+                                       text="⚠  Vui lòng nhập tên sản phẩm"/>
+                            </VBox>
+
+                            <VBox styleClass="field-group-dark" spacing="6">
+                                <Label text="Danh mục *" styleClass="form-field-label"/>
+                                <ComboBox fx:id="listProductCategoryCombo"
+                                          styleClass="form-combo"
+                                          promptText="Chọn danh mục sản phẩm"
+                                          maxWidth="Infinity"/>
+                                <Label fx:id="listProductCategoryError"
+                                       styleClass="form-error"
+                                       visible="false" managed="false"
+                                       text="⚠  Vui lòng chọn danh mục"/>
+                            </VBox>
+
+                            <VBox styleClass="field-group-dark" spacing="6">
+                                <Label text="Mô tả sản phẩm *" styleClass="form-field-label"/>
+                                <TextArea fx:id="listProductDescArea"
+                                          styleClass="form-textarea"
+                                          promptText="Mô tả chi tiết tình trạng, xuất xứ, đặc điểm nổi bật của sản phẩm..."
+                                          wrapText="true"
+                                          prefRowCount="4"/>
+                                <Label fx:id="listProductDescError"
+                                       styleClass="form-error"
+                                       visible="false" managed="false"
+                                       text="⚠  Vui lòng mô tả sản phẩm (ít nhất 20 ký tự)"/>
+                            </VBox>
+                        </VBox>
+
+                        <!-- ── Hình ảnh sản phẩm ── -->
+                        <VBox styleClass="form-section" spacing="14">
+                            <Label text="🖼  HÌNH ẢNH SẢN PHẨM" styleClass="form-section-title"/>
+
+                            <!-- Vùng upload ảnh — nội dung được fill từ controller
+                                 (icon mặc định khi trống, preview ảnh sau khi chọn) -->
+                            <StackPane fx:id="imageUploadBox"
+                                       styleClass="image-upload-box"
+                                       onMouseClicked="#handleImageUpload"
+                                       minHeight="160"
+                                       alignment="CENTER"/>
+
+                            <Label fx:id="listProductImageError"
+                                   styleClass="form-error"
+                                   visible="false" managed="false"
+                                   text="⚠  Vui lòng chọn ít nhất 1 hình ảnh"/>
+                        </VBox>
+
+                        <!-- ── Thông tin đấu giá ── -->
+                        <VBox styleClass="form-section" spacing="14">
+                            <Label text="💰  CÀI ĐẶT ĐẤU GIÁ" styleClass="form-section-title"/>
+
+                            <HBox spacing="14">
+                                <VBox HBox.hgrow="ALWAYS" styleClass="field-group-dark" spacing="6">
+                                    <Label text="Giá khởi điểm (VNĐ) *" styleClass="form-field-label"/>
+                                    <TextField fx:id="listProductPriceField"
+                                               styleClass="form-input"
+                                               promptText="Ví dụ: 500000"/>
+                                    <Label fx:id="listProductPriceError"
+                                           styleClass="form-error"
+                                           visible="false" managed="false"
+                                           text="⚠  Vui lòng nhập giá hợp lệ"/>
+                                </VBox>
+
+                                <VBox HBox.hgrow="ALWAYS" styleClass="field-group-dark" spacing="6">
+                                    <Label text="Ngày kết thúc *" styleClass="form-field-label"/>
+                                    <DatePicker fx:id="listProductEndDate"
+                                                styleClass="form-datepicker"
+                                                promptText="dd/mm/yyyy"
+                                                maxWidth="Infinity"/>
+                                    <Label fx:id="listProductDateError"
+                                           styleClass="form-error"
+                                           visible="false" managed="false"
+                                           text="⚠  Vui lòng chọn ngày kết thúc"/>
+                                </VBox>
+                            </HBox>
+                        </VBox>
+
+                        <!-- Nút submit -->
+                        <VBox spacing="10">
+                            <Button text="🏷  Đăng bán sản phẩm"
+                                    styleClass="btn-login-solid"
+                                    maxWidth="Infinity"
+                                    onAction="#handleSubmitProduct"/>
+                            <Label fx:id="submitProductError"
+                                   styleClass="form-error"
+                                   visible="false" managed="false"
+                                   text=""/>
+                        </VBox>
+
+                    </VBox>
+                </ScrollPane>
             </StackPane>
 
         </StackPane>
@@ -158,7 +436,8 @@
     <bottom>
         <HBox styleClass="bottom-nav" spacing="0" alignment="CENTER" maxWidth="Infinity">
             <ToggleButton fx:id="bottomNavHome" styleClass="bottom-nav-tab" text="Trang chủ"/>
-            <ToggleButton fx:id="bottomNavCategories" styleClass="bottom-nav-tab" text="Danh mục"/>
+            <!-- "Danh mục" đổi thành "Sản phẩm của tôi" — dành cho Người bán -->
+            <ToggleButton fx:id="bottomNavMyProducts" styleClass="bottom-nav-tab" text="Sản phẩm của tôi"/>
             <ToggleButton fx:id="bottomNavProfile" styleClass="bottom-nav-tab" text="Cá nhân"/>
         </HBox>
     </bottom>

@@ -8,12 +8,8 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleButton;
-import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -23,11 +19,12 @@ import java.util.function.Consumer;
  *
  * <h3>Trách nhiệm của controller này:</h3>
  * <ul>
- *   <li>Đọc dữ liệu từ các trường nhập liệu (username, email, password, …)</li>
- *   <li>Validate ở phía client (inline error labels, không dùng Alert cho lỗi field)</li>
+ *   <li>Đọc dữ liệu từ các trường nhập liệu</li>
+ *   <li>Validate ở phía client (inline error labels)</li>
+ *   <li>Hiện/ẩn phần điều khoản khi user chuyển vai trò BUYER ↔ SELLER</li>
+ *   <li>Mở Dialog xem nội dung từng điều khoản khi user bấm "Xem"</li>
  *   <li>Gọi {@link AuthService#register} với dữ liệu hợp lệ</li>
- *   <li>Thông báo kết quả cho {@link com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.RegisterCoordinator}
- *       thông qua callback</li>
+ *   <li>Thông báo kết quả cho Coordinator thông qua callback</li>
  * </ul>
  *
  * <h3>Điều controller KHÔNG làm:</h3>
@@ -42,7 +39,7 @@ public class RegisterController {
 
     @FXML private ToggleButton buyerToggle;
     @FXML private ToggleButton sellerToggle;
-    @FXML private ToggleGroup  roleGroup;   // inject từ <fx:define> trong FXML
+    @FXML private ToggleGroup  roleGroup;
 
     @FXML private TextField    fullNameField;
     @FXML private Label        fullNameError;
@@ -64,54 +61,63 @@ public class RegisterController {
     @FXML private PasswordField confirmPasswordField;
     @FXML private Label         confirmError;
 
+    // ── FXML Fields — Điều khoản Người Bán (MỚI) ─────────────────────────────
+
+    /**
+     * VBox bao toàn bộ phần điều khoản.
+     * visible=false, managed=false khi user chọn BUYER (không chiếm chỗ trong layout).
+     * visible=true, managed=true khi user chọn SELLER.
+     *
+     * Tại sao cần managed=false chứ không chỉ visible=false?
+     * → Trong JavaFX, visible=false ẩn node nhưng vẫn giữ chỗ trong layout
+     *   (giống opacity: 0 trong CSS). managed=false khiến layout bỏ qua
+     *   node hoàn toàn — tương đương display: none trong CSS.
+     */
+    @FXML private VBox     sellerTermsSection;
+
+    @FXML private CheckBox termsMerchandiseCheck;
+    @FXML private Label    termsMerchandiseError;
+
+    @FXML private CheckBox termsContentCheck;
+    @FXML private Label    termsContentError;
+
+    @FXML private CheckBox termsPrivacyCheck;
+    @FXML private Label    termsPrivacyError;
+
     // ── Dependencies & Callbacks ──────────────────────────────────────────────
 
-    /** AuthService được inject từ Coordinator — không tự khởi tạo trong controller. */
     private AuthService authService;
-
-    /**
-     * Gọi khi đăng ký thành công. Coordinator dùng callback này để đóng cửa sổ
-     * và chuyển về màn Login.
-     */
     private Consumer<User> onRegisterSuccess = u -> {};
-
-    /**
-     * Gọi khi user bấm "SIGN IN" để quay về màn Login.
-     * Coordinator sẽ xử lý việc mở cửa sổ Login.
-     */
     private Runnable onBackToLogin = () -> {};
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    /**
-     * JavaFX tự gọi sau khi FXML được nạp xong.
-     * Đây là nơi setup ban đầu: listener, giá trị mặc định, v.v.
-     *
-     * <p><b>Tại sao dùng Platform.runLater?</b>
-     * Khi initialize() chạy, cửa sổ chưa hiện ra. requestFocus() cần gọi SAU
-     * khi scene đã render, nên ta đẩy nó vào hàng đợi JavaFX Application Thread.</p>
-     */
     @FXML
     private void initialize() {
-        // Chọn BUYER mặc định khi mở form
+        // Chọn BUYER mặc định
         buyerToggle.setSelected(true);
 
-        // Đảm bảo luôn có 1 toggle được chọn (ToggleGroup mặc định cho phép bỏ chọn hết)
+        // Đảm bảo luôn có 1 toggle được chọn
         roleGroup.selectedToggleProperty().addListener((obs, oldToggle, newToggle) -> {
             if (newToggle == null) {
-                // Nếu user cố bỏ chọn hết → reselect cái cũ
                 oldToggle.setSelected(true);
+                return;
             }
+            // Khi chuyển vai trò → hiện/ẩn phần điều khoản
+            boolean isSeller = (newToggle == sellerToggle);
+            showSellerTerms(isSeller);
+
+            // Nếu chuyển từ SELLER về BUYER → xóa các lỗi điều khoản
+            if (!isSeller) clearAllTermsErrors();
         });
 
-        // Real-time strength bar: cập nhật khi user gõ password
+        // Real-time strength bar
         passwordField.textProperty().addListener((obs, oldText, newText) -> {
             updateStrengthBar(newText);
-            // Nếu đang hiển thị lỗi password, xóa đi khi user gõ lại
             if (!newText.isEmpty()) clearFieldError(passwordField, passwordError);
         });
 
-        // Real-time confirm check: cập nhật khi user gõ vào confirm field
+        // Real-time confirm check
         confirmPasswordField.textProperty().addListener((obs, oldText, newText) -> {
             if (!newText.isEmpty()) {
                 if (!newText.equals(passwordField.getText())) {
@@ -124,45 +130,45 @@ public class RegisterController {
             }
         });
 
-        // Focus vào trường đầu tiên khi cửa sổ hiện
+        // Xóa lỗi điều khoản khi user tích checkbox
+        // Tại sao làm vậy? UX tốt hơn — lỗi biến mất ngay khi người dùng thực hiện hành động đúng
+        termsMerchandiseCheck.selectedProperty().addListener((obs, o, checked) -> {
+            if (checked) hideLabel(termsMerchandiseError);
+        });
+        termsContentCheck.selectedProperty().addListener((obs, o, checked) -> {
+            if (checked) hideLabel(termsContentError);
+        });
+        termsPrivacyCheck.selectedProperty().addListener((obs, o, checked) -> {
+            if (checked) hideLabel(termsPrivacyError);
+        });
+
         Platform.runLater(() -> {
             if (fullNameField != null) fullNameField.requestFocus();
         });
     }
 
-    // ── Configuration (gọi bởi RegisterCoordinator) ───────────────────────────
+    // ── Configuration ─────────────────────────────────────────────────────────
 
     /**
      * Coordinator gọi method này SAU KHI nạp FXML, trước khi hiện cửa sổ.
-     *
-     * <p><b>Tại sao pattern này?</b>
-     * Constructor của controller do JavaFX tự gọi khi load FXML — ta không thể
-     * truyền dependency vào đó. Thay vào đó, ta dùng setter method sau khi có
-     * controller reference từ {@code FXMLLoader.getController()}.</p>
-     *
-     * @param authService     service xử lý logic đăng ký
-     * @param onSuccess       callback khi đăng ký thành công (nhận User vừa tạo)
-     * @param onBackToLogin   callback khi user muốn quay về màn Login
      */
     public void configure(AuthService authService,
                           Consumer<User> onSuccess,
                           Runnable onBackToLogin) {
         this.authService       = Objects.requireNonNull(authService, "authService không được null");
-        this.onRegisterSuccess = onSuccess    != null ? onSuccess    : u -> {};
+        this.onRegisterSuccess = onSuccess     != null ? onSuccess     : u -> {};
         this.onBackToLogin     = onBackToLogin != null ? onBackToLogin : () -> {};
     }
 
-    // ── Event Handlers (gọi bởi FXML qua onAction="...") ────────────────────
+    // ── Event Handlers ────────────────────────────────────────────────────────
 
     /**
-     * Xử lý khi user bấm "CREATE ACCOUNT".
+     * Xử lý khi user bấm "TẠO TÀI KHOẢN".
      *
-     * Luồng xử lý:
-     * 1. Validate tất cả trường → nếu có lỗi, hiện inline error và dừng lại
-     * 2. Gọi authService.register() với dữ liệu đã trim
-     * 3. Nếu thành công → gọi onRegisterSuccess callback
-     * 4. Nếu lỗi trùng username/email → hiện error vào đúng field
-     * 5. Nếu lỗi khác → hiện AlertHelper.showError()
+     * Luồng:
+     * 1. Validate tất cả fields (gồm cả điều khoản nếu là SELLER)
+     * 2. Gọi authService.register()
+     * 3. Callback thành công hoặc xử lý lỗi
      */
     @FXML
     private void onRegister(ActionEvent event) {
@@ -171,11 +177,9 @@ public class RegisterController {
             return;
         }
 
-        // Bước 1: Validate tất cả trường
         boolean valid = validateAllFields();
-        if (!valid) return; // Dừng lại, inline errors đã hiển thị
+        if (!valid) return;
 
-        // Bước 2: Thu thập dữ liệu
         String fullName = fullNameField.getText().trim();
         String username = usernameField.getText().trim();
         String email    = emailField.getText().trim();
@@ -183,18 +187,14 @@ public class RegisterController {
         String password = passwordField.getText();
         String role     = getSelectedRole();
 
-        // Bước 3: Gọi service
         try {
             User newUser = authService.register(username, email, password, fullName, phone, role);
-            // Thành công: thông báo coordinator xử lý tiếp (đóng cửa sổ, mở login, v.v.)
             onRegisterSuccess.accept(newUser);
 
         } catch (DuplicateUserException ex) {
-            // Lỗi trùng lặp → highlight đúng field
             handleDuplicateError(ex);
 
         } catch (IllegalArgumentException ex) {
-            // Lỗi validate từ service (vd: password quá yếu theo server-side check)
             AlertHelper.showError("Dữ liệu không hợp lệ", ex.getMessage());
 
         } catch (Exception ex) {
@@ -202,9 +202,105 @@ public class RegisterController {
         }
     }
 
-    /**
-     * Xử lý khi user bấm "SIGN IN" để quay về Login.
-     */
+    /** Xử lý khi bấm nút "Xem" bên cạnh Chính sách Hàng hóa */
+    @FXML
+    private void onViewMerchandiseTerms(ActionEvent event) {
+        showTermsDialog(
+                "Chính sách về Hàng hóa",
+                """
+                1. HÀNG HÓA ĐƯỢC PHÉP ĐĂNG BÁN
+                Người bán được phép đăng bán các mặt hàng hợp pháp, có nguồn gốc xuất xứ rõ ràng và không vi phạm pháp luật Việt Nam.
+    
+                2. HÀNG HÓA BỊ CẤM
+                Các mặt hàng sau đây bị nghiêm cấm đăng bán:
+                • Hàng giả, hàng nhái, hàng vi phạm sở hữu trí tuệ
+                • Vũ khí, đạn dược, chất nổ, chất độc hại
+                • Động vật hoang dã, mẫu vật được bảo vệ
+                • Tài liệu giả mạo, thông tin sai lệch
+                • Hàng hóa bị cấm theo quy định của pháp luật
+    
+                3. TIÊU CHUẨN CHẤT LƯỢNG
+                Người bán có trách nhiệm đảm bảo hàng hóa đúng với mô tả, ảnh chụp và tình trạng được công bố trong phiên đấu giá.
+    
+                4. TRÁCH NHIỆM VỀ NGUỒN GỐC
+                Người bán phải chứng minh được quyền sở hữu hoặc quyền bán đối với hàng hóa đăng bán khi được yêu cầu.
+    
+                5. XỬ LÝ VI PHẠM
+                Tài khoản vi phạm chính sách hàng hóa sẽ bị khóa vĩnh viễn và có thể bị truy cứu trách nhiệm pháp lý.
+                """
+        );
+    }
+
+    /** Xử lý khi bấm nút "Xem" bên cạnh Chính sách Nội dung */
+    @FXML
+    private void onViewContentTerms(ActionEvent event) {
+        showTermsDialog(
+                "Chính sách về Nội dung",
+                """
+                1. MÔ TẢ SẢN PHẨM
+                Mô tả sản phẩm phải trung thực, chính xác và đầy đủ. Không được cố ý cung cấp thông tin sai lệch để đánh lừa người mua.
+    
+                2. HÌNH ẢNH SẢN PHẨM
+                • Hình ảnh phải là ảnh thực tế của sản phẩm đang bán
+                • Không sử dụng hình ảnh vi phạm bản quyền
+                • Không chỉnh sửa ảnh để che giấu khuyết điểm của sản phẩm
+                • Ảnh phải rõ ràng, đủ ánh sáng và đúng góc nhìn
+    
+                3. NỘI DUNG BỊ CẤM
+                Nghiêm cấm đăng tải:
+                • Nội dung khiêu dâm, bạo lực
+                • Thông tin xúc phạm, phân biệt đối xử
+                • Quảng cáo dịch vụ bất hợp pháp
+                • Liên kết đến trang web độc hại
+    
+                4. NGÔN NGỮ SỬ DỤNG
+                Nội dung đăng tải phải sử dụng ngôn ngữ lịch sự, không dùng từ ngữ thô tục hay xúc phạm.
+    
+                5. CẬP NHẬT THÔNG TIN
+                Người bán có trách nhiệm cập nhật thông tin sản phẩm kịp thời khi có thay đổi về tình trạng, giá cả hoặc tính sẵn có.
+                """
+        );
+    }
+
+    /** Xử lý khi bấm nút "Xem" bên cạnh Chính sách Bảo mật */
+    @FXML
+    private void onViewPrivacyTerms(ActionEvent event) {
+        showTermsDialog(
+                "Chính sách Bảo mật Thông tin",
+                """
+                1. THÔNG TIN CHÚNG TÔI THU THẬP
+                Khi bạn đăng ký tài khoản Người Bán, chúng tôi thu thập:
+                • Thông tin định danh: họ tên
+                • Thông tin liên hệ: email, số điện thoại
+                • Thông tin tài khoản: tên đăng nhập (mật khẩu được mã hóa bằng BCrypt)
+                • Lịch sử giao dịch và hoạt động trên nền tảng
+    
+                2. MỤC ĐÍCH SỬ DỤNG
+                Thông tin được sử dụng để:
+                • Xác thực danh tính và quản lý tài khoản
+                • Xử lý các giao dịch đấu giá
+                • Liên hệ hỗ trợ khi cần thiết
+                • Cải thiện trải nghiệm người dùng
+                • Tuân thủ các yêu cầu pháp lý
+    
+                3. BẢO VỆ THÔNG TIN
+                • Mật khẩu được mã hóa, không ai có thể xem được kể cả quản trị viên
+                • Dữ liệu được lưu trữ trên máy chủ bảo mật
+                • Chúng tôi KHÔNG bán thông tin cá nhân cho bên thứ ba
+                • Truy cập dữ liệu được giới hạn cho nhân viên có thẩm quyền
+    
+                4. QUYỀN CỦA BẠN
+                Bạn có quyền:
+                • Yêu cầu xem, sửa đổi thông tin cá nhân
+                • Yêu cầu xóa tài khoản và dữ liệu liên quan
+                • Khiếu nại nếu thông tin bị sử dụng sai mục đích
+    
+                5. LIÊN HỆ
+                Mọi thắc mắc về bảo mật: privacy@ubid.vn
+                """
+        );
+    }
+
     @FXML
     private void onBackToLogin(ActionEvent event) {
         onBackToLogin.run();
@@ -213,20 +309,14 @@ public class RegisterController {
     // ── Validation ────────────────────────────────────────────────────────────
 
     /**
-     * Validate toàn bộ form. Hiển thị lỗi inline cho từng trường.
+     * Validate toàn bộ form.
      *
-     * <p><b>Tại sao validate ở controller lẫn service?</b>
-     * Client-side validation (ở đây) cho UX tốt — phản hồi ngay lập tức mà
-     * không cần gọi network/DB. Server-side validation (trong AuthService) là
-     * tầng bảo vệ cuối cùng — không thể bỏ qua vì controller có thể bị bypass.</p>
-     *
-     * @return true nếu tất cả trường hợp lệ
+     * Tại sao không return sớm khi gặp lỗi đầu tiên?
+     * → Để hiển thị TẤT CẢ lỗi cùng lúc, giúp người dùng không phải
+     *   submit nhiều lần mới thấy hết các lỗi.
      */
     private boolean validateAllFields() {
         boolean valid = true;
-
-        // ── Full Name (optional nhưng nếu nhập thì không rỗng hoàn toàn) ──
-        // Full name là optional, bỏ qua validation nếu muốn
 
         // ── Username ──
         String username = usernameField.getText().trim();
@@ -249,7 +339,7 @@ public class RegisterController {
             clearFieldError(emailField, emailError);
         }
 
-        // ── Phone (optional — chỉ validate format nếu không rỗng) ──
+        // ── Phone (optional) ──
         String phone = phoneField.getText().trim();
         if (!phone.isEmpty() && !phone.matches("^[0-9+\\-\\s()]{7,15}$")) {
             setFieldError(phoneField, phoneError, "Số điện thoại không hợp lệ.");
@@ -277,13 +367,45 @@ public class RegisterController {
             clearFieldError(confirmPasswordField, confirmError);
         }
 
+        // ── Điều khoản — chỉ validate khi user chọn SELLER ──
+        //
+        // Tại sao chỉ validate cho SELLER?
+        // → Người mua không cần chấp nhận điều khoản bán hàng.
+        //   Điều khoản này là cam kết đặc biệt của người có quyền đăng sản phẩm.
+        if (sellerToggle.isSelected()) {
+            valid = validateTerms() && valid;
+            // Chú ý: gọi validateTerms() TRƯỚC khi && với valid
+            // để đảm bảo validateTerms() luôn chạy (hiện lỗi) dù valid đã false
+        }
+
         return valid;
     }
 
     /**
-     * Xử lý lỗi trùng username hoặc email từ service.
-     * Highlight đúng trường bị trùng thay vì hiện Alert chung.
+     * Validate 3 checkbox điều khoản.
+     * Hiện error label riêng cho từng checkbox chưa tích.
+     *
+     * @return true nếu cả 3 đã được chấp nhận
      */
+    private boolean validateTerms() {
+        boolean allAccepted = true;
+
+        if (!termsMerchandiseCheck.isSelected()) {
+            showLabel(termsMerchandiseError);
+            allAccepted = false;
+        }
+        if (!termsContentCheck.isSelected()) {
+            showLabel(termsContentError);
+            allAccepted = false;
+        }
+        if (!termsPrivacyCheck.isSelected()) {
+            showLabel(termsPrivacyError);
+            allAccepted = false;
+        }
+
+        return allAccepted;
+    }
+
     private void handleDuplicateError(DuplicateUserException ex) {
         if (ex.getDuplicateField() == DuplicateUserException.Field.USERNAME) {
             setFieldError(usernameField, usernameError,
@@ -297,18 +419,20 @@ public class RegisterController {
     // ── UI Helpers ────────────────────────────────────────────────────────────
 
     /**
-     * Hiện error label và đánh dấu input field bị lỗi (viền đỏ).
-     *
-     * <p><b>Tại sao dùng managed=true/false?</b>
-     * Trong JavaFX, {@code visible=false} chỉ ẩn node nhưng vẫn chiếm chỗ
-     * trong layout. {@code managed=false} khiến layout bỏ qua node đó hoàn toàn
-     * (tương đương {@code display: none} trong CSS). Khi hiện lại, ta phải set
-     * cả hai về true.</p>
-     *
-     * @param field      TextField/PasswordField cần đánh dấu lỗi
-     * @param errorLabel Label hiển thị thông báo lỗi
-     * @param message    Nội dung lỗi
+     * Hiện/ẩn phần điều khoản tùy theo vai trò được chọn.
+     * managed=false → layout bỏ qua hoàn toàn, không để lại khoảng trắng.
      */
+    private void showSellerTerms(boolean show) {
+        sellerTermsSection.setVisible(show);
+        sellerTermsSection.setManaged(show);
+    }
+
+    private void clearAllTermsErrors() {
+        hideLabel(termsMerchandiseError);
+        hideLabel(termsContentError);
+        hideLabel(termsPrivacyError);
+    }
+
     private void setFieldError(TextField field, Label errorLabel, String message) {
         errorLabel.setText(message);
         errorLabel.setVisible(true);
@@ -318,9 +442,6 @@ public class RegisterController {
         }
     }
 
-    /**
-     * Xóa trạng thái lỗi của field và ẩn error label.
-     */
     private void clearFieldError(TextField field, Label errorLabel) {
         errorLabel.setVisible(false);
         errorLabel.setManaged(false);
@@ -328,18 +449,79 @@ public class RegisterController {
         field.getStyleClass().remove("input-error");
     }
 
+    private void showLabel(Label label) {
+        label.setVisible(true);
+        label.setManaged(true);
+    }
+
+    private void hideLabel(Label label) {
+        label.setVisible(false);
+        label.setManaged(false);
+    }
+
+    // ── Hiển thị Dialog nội dung điều khoản ──────────────────────────────────
+
     /**
-     * Cập nhật thanh ProgressBar độ mạnh mật khẩu theo thời gian thực.
+     * Hiện popup chứa nội dung điều khoản.
      *
-     * Độ mạnh được tính dựa trên:
-     * - Độ dài >= 8
-     * - Có chữ hoa
-     * - Có chữ thường
-     * - Có số
-     * - Có ký tự đặc biệt (bonus)
+     * Tại sao dùng Dialog thay vì màn hình riêng?
+     * → Điều khoản là thông tin phụ trợ, không phải bước chính trong luồng.
+     *   Dialog giữ user trong context đăng ký, tránh làm gián đoạn luồng UX.
+     *   User đọc xong bấm "Đã hiểu" và tiếp tục tick checkbox.
      *
-     * @param password Mật khẩu hiện tại (chưa được validate hoàn toàn)
+     * @param title   Tiêu đề dialog
+     * @param content Nội dung điều khoản (text thuần)
      */
+    private void showTermsDialog(String title, String content) {
+        // TextArea cho phép scroll khi nội dung dài, không edit được
+        TextArea textArea = new TextArea(content);
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefSize(500, 360);
+        // Áp dụng màu sắc theo theme dark của app
+        textArea.setStyle(
+                "-fx-control-inner-background: #0d1a30;" +
+                        "-fx-background-color: #0d1a30;" +
+                        "-fx-text-fill: #c5cedc;" +
+                        "-fx-font-size: 12.5px;" +
+                        "-fx-border-color: rgba(241, 196, 93, 0.20);" +
+                        "-fx-border-radius: 8;" +
+                        "-fx-background-radius: 8;" +
+                        "-fx-font-family: 'Be Vietnam Pro', 'Noto Sans', Arial, sans-serif;"
+        );
+
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle(title);
+        dialog.setHeaderText(null);
+        dialog.getDialogPane().setContent(textArea);
+
+        // Thêm nút "Đã hiểu" — ButtonData.OK_DONE để Enter trigger được
+        ButtonType confirmBtn = new ButtonType("Đã hiểu", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().add(confirmBtn);
+
+        // Style nút theo theme gold của app
+        dialog.getDialogPane().lookupButton(confirmBtn).setStyle(
+                "-fx-background-color: #f1c45d;" +
+                        "-fx-text-fill: #0a1424;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-font-size: 12px;" +
+                        "-fx-padding: 9 22 9 22;" +
+                        "-fx-background-radius: 20;" +
+                        "-fx-cursor: hand;"
+        );
+
+        // Style dialog pane theo theme tối
+        dialog.getDialogPane().setStyle(
+                "-fx-background-color: #0a1424;" +
+                        "-fx-border-color: rgba(241, 196, 93, 0.25);" +
+                        "-fx-border-width: 1;"
+        );
+
+        dialog.showAndWait();
+    }
+
+    // ── Strength Bar ──────────────────────────────────────────────────────────
+
     private void updateStrengthBar(String password) {
         if (password == null || password.isEmpty()) {
             strengthBar.setProgress(0);
@@ -350,13 +532,12 @@ public class RegisterController {
         }
 
         int score = 0;
-        if (password.length() >= 8)                         score++;
-        if (password.matches(".*[A-Z].*"))                  score++;
-        if (password.matches(".*[a-z].*"))                  score++;
-        if (password.matches(".*\\d.*"))                    score++;
-        if (password.matches(".*[^a-zA-Z0-9].*"))           score++; // special char bonus
+        if (password.length() >= 8)               score++;
+        if (password.matches(".*[A-Z].*"))        score++;
+        if (password.matches(".*[a-z].*"))        score++;
+        if (password.matches(".*\\d.*"))          score++;
+        if (password.matches(".*[^a-zA-Z0-9].*")) score++; // ký tự đặc biệt (bonus)
 
-        // Phân loại: yếu (1-2), trung bình (3), mạnh (4-5)
         strengthBar.getStyleClass().removeAll("weak", "medium", "strong");
         strengthLabel.setVisible(true);
         strengthLabel.setManaged(true);
@@ -380,13 +561,6 @@ public class RegisterController {
         }
     }
 
-    /**
-     * Kiểm tra password có đủ mạnh không.
-     * Logic này phải KHỚP với {@code PasswordHasher.isStrong()} trong AuthService
-     * để tránh trường hợp client validate pass nhưng server reject.
-     *
-     * <p>Rule: >= 8 ký tự, có chữ hoa, chữ thường, và số.</p>
-     */
     private boolean isStrongPassword(String password) {
         if (password == null || password.length() < 8) return false;
         return password.matches(".*[A-Z].*")
@@ -394,15 +568,7 @@ public class RegisterController {
                 && password.matches(".*\\d.*");
     }
 
-    /**
-     * Lấy role đang được chọn dưới dạng String để truyền vào AuthService.
-     * AuthService sẽ parse bằng {@code UserRole.fromString()}.
-     *
-     * @return "BUYER" hoặc "SELLER"
-     */
     private String getSelectedRole() {
-        // buyerToggle mặc định được chọn trong initialize(),
-        // và roleGroup listener đảm bảo luôn có 1 toggle được chọn.
         return sellerToggle.isSelected() ? "SELLER" : "BUYER";
     }
 }

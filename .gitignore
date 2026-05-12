@@ -1,17 +1,41 @@
+### Java & Build Tools ###
 target/
-!.mvn/wrapper/maven-wrapper.jar
+build/
+*.class
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+# Thêm log file để tránh rác khi chạy app
+*.log
+
+### Database (QUAN TRỌNG) ###
+# Loại bỏ file database cục bộ
+*.db
+*.sqlite
+*.sqlite3
+# Nếu có dùng folder db riêng thì ignore cả folder
+/db/
+
+### Project Specific ###
+# Ignore file cấu trúc app nếu nó sinh ra file nhị phân
 .kotlin
 
 ### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+.idea/
 *.iws
 *.iml
 *.ipr
+# Giữ lại các file cấu hình quan trọng nếu làm việc nhóm (tùy chọn)
+! .idea/runConfigurations/
+! .idea/codeStyles/
 
 ### Eclipse ###
 .apt_generated
@@ -28,12 +52,18 @@ target/
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
 ### VS Code ###
 .vscode/
+*.code-workspace
 
-### Mac OS ###
+### OS Specific ###
 .DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+### Environment Variables (Bảo mật) ###
+.env
+.env.local

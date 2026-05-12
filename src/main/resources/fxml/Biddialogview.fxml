@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!--
+    BidDialogView.fxml — Popup Đặt Giá Thầu
+    Mở bởi ItemDetailCoordinator khi user bấm "Đặt giá thầu ngay"
+-->
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:id="dialogRoot"
+      fx:controller="com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.BidDialogController"
+      stylesheets="@../css/bid-dialog.css"
+      styleClass="bid-root"
+      spacing="0"
+      prefWidth="520">
+
+    <!-- ═══════════════ HEADER ═══════════════ -->
+    <HBox styleClass="bid-header" alignment="CENTER_LEFT" spacing="0">
+        <Label text="Đặt giá thầu" styleClass="bid-header-title"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="✕" onAction="#handleClose" styleClass="bid-close-btn"/>
+    </HBox>
+
+    <Separator styleClass="bid-divider"/>
+
+    <!-- ═══════════════ BODY ═══════════════ -->
+    <VBox spacing="20" styleClass="bid-body">
+
+        <!-- Giá hiện tại + Giá tối thiểu -->
+        <HBox spacing="14">
+            <VBox spacing="6" styleClass="bid-price-card" HBox.hgrow="ALWAYS">
+                <Label text="Giá hiện tại" styleClass="bid-price-label"/>
+                <Label fx:id="lblCurrentPrice" text="247.000.000 đ" styleClass="bid-price-muted"/>
+            </VBox>
+            <VBox spacing="6" styleClass="bid-price-card" HBox.hgrow="ALWAYS">
+                <Label text="Giá tối thiểu" styleClass="bid-price-label"/>
+                <Label fx:id="lblMinPrice" text="248.000.000 đ" styleClass="bid-price-gold"/>
+            </VBox>
+        </HBox>
+
+        <!-- Nút chọn nhanh 2x2 -->
+        <GridPane hgap="12" vgap="12">
+            <columnConstraints>
+                <ColumnConstraints hgrow="ALWAYS" percentWidth="50"/>
+                <ColumnConstraints hgrow="ALWAYS" percentWidth="50"/>
+            </columnConstraints>
+            <Button fx:id="btnQ1" maxWidth="Infinity" onAction="#handleQuick1"
+                    styleClass="bid-quick-btn" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Button fx:id="btnQ2" maxWidth="Infinity" onAction="#handleQuick2"
+                    styleClass="bid-quick-btn" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+            <Button fx:id="btnQ3" maxWidth="Infinity" onAction="#handleQuick3"
+                    styleClass="bid-quick-btn" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <Button fx:id="btnQ4" maxWidth="Infinity" onAction="#handleQuick4"
+                    styleClass="bid-quick-btn" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+        </GridPane>
+
+        <!-- Nhập tay -->
+        <VBox spacing="8">
+            <Label text="Hoặc nhập giá tùy chỉnh (VNĐ)" styleClass="bid-custom-label"/>
+            <HBox styleClass="bid-input-wrapper" alignment="CENTER_LEFT" spacing="10">
+                <Label text="₫" styleClass="bid-currency-icon"/>
+                <TextField fx:id="tfAmount"
+                           promptText="Nhập số tiền..."
+                           styleClass="bid-input-field"
+                           HBox.hgrow="ALWAYS"/>
+            </HBox>
+            <!-- Thông báo lỗi validation, ẩn mặc định -->
+            <Label fx:id="lblError" text="" styleClass="bid-error-label" visible="false" managed="false"/>
+        </VBox>
+
+        <!-- Nút xác nhận -->
+        <Button text="Tiếp tục  →" onAction="#handleSubmit"
+                maxWidth="Infinity" styleClass="bid-submit-btn"/>
+
+        <!-- Ghi chú nhỏ -->
+        <Label text="🔒  Giao dịch được mã hoá và bảo mật 100%"
+               styleClass="bid-footer-note" alignment="CENTER" maxWidth="Infinity"/>
+
+    </VBox>
+</VBox>

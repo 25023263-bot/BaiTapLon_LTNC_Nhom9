@@ -6,7 +6,7 @@
 /* ── Root / Global ─────────────────────────────────────────── */
 .root {
     -fx-background-color: #0d0d0d;
-    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+    -fx-font-family: "Be Vietnam Pro", "Noto Sans", "Segoe UI", "Arial Unicode MS", Arial, sans-serif;
     -fx-text-fill: #e8e8e8;
 }
 
@@ -66,7 +66,7 @@
     -fx-text-fill: #c9a84c;
     -fx-font-size: 22px;
     -fx-font-weight: bold;
-    -fx-font-family: "Georgia", "Times New Roman", serif;
+    -fx-font-family: "Be Vietnam Pro", "Noto Serif", "Georgia", serif;
 }
 
 /* Nav links */
@@ -715,3 +715,336 @@
     -fx-min-height: 1;
     -fx-max-height: 1;
 }
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOME.CSS — Phần bổ sung cho tính năng "Sản phẩm của tôi"
+   Thêm vào cuối file home.css hiện tại
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ── "Sản phẩm của tôi" overlay ─────────────────────────────────────────── */
+
+.my-products-overlay {
+    -fx-background-color: #0d0d0d;
+}
+
+.my-products-panel {
+    -fx-background-color: #0d0d0d;
+    -fx-spacing: 0;
+    -fx-pref-width: infinity;
+    -fx-pref-height: infinity;
+}
+
+.my-products-header {
+    -fx-background-color: #0a0a0a;
+    -fx-padding: 20 32 20 32;
+    -fx-spacing: 14;
+    -fx-alignment: CENTER_LEFT;
+    -fx-border-color: #1e1e1e;
+    -fx-border-width: 0 0 1 0;
+}
+
+.my-products-header-icon {
+    -fx-font-size: 24px;
+    -fx-min-width: 32;
+}
+
+.my-products-title {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.my-products-subtitle {
+    -fx-text-fill: #888888;
+    -fx-font-size: 13px;
+}
+
+.my-products-list {
+    -fx-padding: 24 32 32 32;
+    -fx-background-color: transparent;
+}
+
+/* Card cho mỗi sản phẩm trong danh sách của Seller */
+.my-product-card {
+    -fx-background-color: #151515;
+    -fx-background-radius: 12;
+    -fx-border-color: #242424;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 16 20 16 20;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 8, 0, 0, 2);
+}
+
+.my-product-card:hover {
+    -fx-border-color: #3a3a3a;
+    -fx-background-color: #1a1a1a;
+}
+
+.my-product-card-img {
+    -fx-font-size: 36px;
+    -fx-min-width: 60;
+    -fx-pref-width: 60;
+    -fx-max-width: 60;
+    -fx-alignment: center;
+}
+
+.my-product-card-title {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+/* Badge trạng thái ACTIVE */
+.my-product-badge-live {
+    -fx-background-color: rgba(201, 168, 76, 0.15);
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 12 5 12;
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(201, 168, 76, 0.35);
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+/* Badge trạng thái ENDED/CANCELLED/PENDING */
+.my-product-badge-ended {
+    -fx-background-color: rgba(120, 120, 120, 0.12);
+    -fx-text-fill: #888888;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 12 5 12;
+    -fx-background-radius: 20;
+    -fx-border-color: #333;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+/* Nút "＋ Đăng bán sản phẩm" ở header */
+.btn-list-product {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-border-color: transparent;
+    -fx-padding: 10 20 10 20;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.3), 8, 0, 0, 0);
+}
+
+.btn-list-product:hover {
+    -fx-background-color: #e0bb5a;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.5), 12, 0, 0, 0);
+}
+
+.btn-list-product:pressed {
+    -fx-background-color: #b8973f;
+}
+
+
+/* ── Modal overlay chung (Điều khoản + Form đăng bán) ───────────────────── */
+
+/*
+ * Tại sao dùng rgba thay vì opacity trên node?
+ * → Nếu set opacity: 0.97 trên StackPane, nó sẽ ảnh hưởng CẢ child nodes.
+ *   Dùng background-color với rgba chỉ ảnh hưởng nền, giữ content 100% rõ.
+ */
+.modal-overlay {
+    -fx-background-color: rgba(8, 8, 8, 0.97);
+}
+
+/* Card trắng đục chứa nội dung modal */
+.modal-card {
+    -fx-background-color: #131313;
+    -fx-background-radius: 20;
+    -fx-border-color: #2a2a2a;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-padding: 36 40 40 40;
+    -fx-spacing: 24;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 30, 0, 0, 8);
+    -fx-max-width: 560;
+}
+
+.modal-big-icon {
+    -fx-font-size: 56px;
+}
+
+.modal-title {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
+
+.modal-subtitle {
+    -fx-text-fill: #888888;
+    -fx-font-size: 13px;
+    -fx-text-alignment: center;
+}
+
+
+/* ── "Sản phẩm" form — form-section, form inputs ────────────────────────── */
+
+.form-section {
+    -fx-background-color: rgba(255,255,255,0.02);
+    -fx-background-radius: 12;
+    -fx-border-color: #222222;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 20;
+    -fx-spacing: 14;
+}
+
+/* Tiêu đề nhỏ của mỗi section trong form */
+.form-section-title {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.15em;
+}
+
+/* Nhóm field: label + input + error */
+.field-group-dark {
+    -fx-spacing: 6;
+}
+
+.form-field-label {
+    -fx-text-fill: #aaaaaa;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* TextField trong form đăng bán */
+.form-input {
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: #e8e8e8;
+    -fx-prompt-text-fill: #555555;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 10 14 10 14;
+    -fx-font-size: 13px;
+}
+
+.form-input:focused {
+    -fx-border-color: #c9a84c;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.2), 8, 0, 0, 0);
+}
+
+/* TextArea trong form */
+.form-textarea {
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: #e8e8e8;
+    -fx-prompt-text-fill: #555555;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 10 14 10 14;
+    -fx-font-size: 13px;
+}
+
+.form-textarea:focused {
+    -fx-border-color: #c9a84c;
+}
+
+/* ComboBox trong form */
+.form-combo {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+.form-combo .list-cell {
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: #e8e8e8;
+    -fx-padding: 8 14 8 14;
+}
+
+.form-combo:focused {
+    -fx-border-color: #c9a84c;
+}
+
+/* DatePicker trong form */
+.form-datepicker {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+.form-datepicker .text-field {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e8e8e8;
+    -fx-prompt-text-fill: #555555;
+}
+
+/* Label lỗi trong form */
+.form-error {
+    -fx-text-fill: #ff7070;
+    -fx-font-size: 12px;
+}
+
+/* Vùng upload ảnh — dashed border, click để chọn file */
+/*
+ * Tại sao không dùng -fx-border-style: dashed?
+ * → JavaFX không hỗ trợ dashed border trực tiếp qua CSS.
+ *   Ta mô phỏng bằng cách set border màu nhạt + padding.
+ */
+.image-upload-box {
+    -fx-background-color: rgba(201, 168, 76, 0.04);
+    -fx-border-color: rgba(201, 168, 76, 0.25);
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-border-width: 1.5;
+    -fx-cursor: hand;
+    -fx-padding: 20;
+}
+
+.image-upload-box:hover {
+    -fx-background-color: rgba(201, 168, 76, 0.09);
+    -fx-border-color: rgba(201, 168, 76, 0.5);
+}
+
+.image-upload-icon {
+    -fx-font-size: 40px;
+}
+
+.image-upload-hint {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.image-upload-sub {
+    -fx-text-fill: #555555;
+    -fx-font-size: 11px;
+}
+
+/* Nút "← Quay lại" trong form */
+.btn-back {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #aaaaaa;
+    -fx-font-size: 13px;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 8 16 8 16;
+    -fx-cursor: hand;
+}
+
+.btn-back:hover {
+    -fx-background-color: #252525;
+    -fx-text-fill: #e8e8e8;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   END: Phần bổ sung "Sản phẩm của tôi"
+   ═══════════════════════════════════════════════════════════════════════════ */
