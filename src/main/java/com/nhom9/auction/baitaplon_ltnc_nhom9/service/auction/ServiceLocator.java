@@ -50,7 +50,13 @@ public class ServiceLocator {
         // 3. Services
         authService         = new AuthService(userRepo);
         auctionHouse        = new AuctionHouse(auctionRepo, bidRepo, userRepo, txRepo);
-        notificationService = new NotificationService(watchlistRepo);
+        // NotificationRepository — mới, lưu thông báo persistent vào DB
+        NotificationRepository notifRepo = new NotificationRepository();
+        // Dọn thông báo cũ hơn 30 ngày mỗi lần app start
+        try { notifRepo.deleteOlderThan(30); }
+        catch (Exception e) { /* không critical, bỏ qua */ }
+
+        notificationService = new NotificationService(watchlistRepo, bidRepo, notifRepo);
         auctionScheduler    = new AuctionScheduler(auctionRepo, auctionHouse);
         walletPayment       = new WalletPayment(userRepo);
         creditCardPayment   = new CreditCardPayment();

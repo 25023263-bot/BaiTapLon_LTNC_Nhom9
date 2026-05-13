@@ -1,0 +1,488 @@
+/* ============================================================
+   profile.css — UBid | Profile Page — Full-Screen 2-Column Layout
+   ============================================================ */
+
+/* ── Scroll & Root ─────────────────────────────────────────── */
+
+.profile-page-scroll {
+    -fx-background-color: #0d0d0d;
+    -fx-background: #0d0d0d;
+    -fx-padding: 0;
+}
+
+.profile-page-scroll > .viewport {
+    -fx-background-color: #0d0d0d;
+}
+
+.profile-page-root {
+    -fx-background-color: #0d0d0d;
+    -fx-min-width: 0;
+}
+
+/* ── HERO BANNER ───────────────────────────────────────────── */
+
+.profile-hero-banner {
+    -fx-background-color: linear-gradient(to bottom, #111111, #0d0d0d);
+    -fx-border-color: transparent transparent #1e1e1e transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.profile-hero-accent-bar {
+    -fx-background-color: linear-gradient(to right, #c9a84c, #f0d060, #c9a84c);
+}
+
+.profile-hero-content {
+    -fx-padding: 28 32 28 32;
+    -fx-background-color: transparent;
+}
+
+.profile-hero-avatar-wrap {
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.3), 20, 0, 0, 0);
+}
+
+.profile-hero-name {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+}
+
+.profile-hero-subtitle {
+    -fx-text-fill: #888888;
+    -fx-font-size: 13px;
+    -fx-wrap-text: true;
+}
+
+.profile-logout-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c9a84c;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 7 18 7 18;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.profile-logout-btn:hover {
+    -fx-background-color: rgba(201,168,76,0.1);
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.2), 8, 0, 0, 0);
+}
+
+/* ── BODY GRID ─────────────────────────────────────────────── */
+
+.profile-body-grid {
+    -fx-padding: 24 32 32 32;
+    -fx-background-color: #0d0d0d;
+}
+
+.profile-body-col-right {
+    -fx-background-color: transparent;
+}
+
+/* ── CARD CONTAINER ────────────────────────────────────────── */
+
+.profile-body-card {
+    -fx-background-color: #131313;
+    -fx-background-radius: 14;
+    -fx-border-color: #222222;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 14, 0, 0, 4);
+}
+
+.profile-card-header {
+    -fx-padding: 16 20 16 20;
+    -fx-background-color: #0f0f0f;
+    -fx-background-radius: 14 14 0 0;
+    -fx-border-color: transparent transparent #1e1e1e transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.profile-card-header-icon {
+    -fx-font-size: 16px;
+}
+
+.profile-card-header-title {
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.5;
+}
+
+.profile-card-divider {
+    -fx-background-color: #1e1e1e;
+    -fx-min-height: 1;
+    -fx-max-height: 1;
+}
+
+.profile-card-body {
+    -fx-padding: 4 0 4 0;
+    -fx-background-color: transparent;
+}
+
+/* ── FIELD ROWS ─────────────────────────────────────────────── */
+
+.profile-field-row {
+    -fx-padding: 14 20 14 20;
+    -fx-background-color: transparent;
+}
+
+.profile-field-row:hover {
+    -fx-background-color: rgba(255,255,255,0.02);
+}
+
+.profile-field-icon-wrap {
+    -fx-min-width: 28;
+    -fx-max-width: 28;
+    -fx-alignment: center;
+}
+
+.profile-field-icon {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 13px;
+}
+
+.profile-field-label {
+    -fx-text-fill: #555555;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1;
+}
+
+.profile-field-value {
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 14px;
+}
+
+.profile-field-separator {
+    -fx-background-color: #1a1a1a;
+    -fx-min-height: 1;
+    -fx-max-height: 1;
+}
+
+/* ── AVATAR ─────────────────────────────────────────────────── */
+
+.profile-large-avatar {
+    -fx-background-color: #1e1e1e;
+    -fx-background-radius: 50%;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 50%;
+    -fx-border-width: 2.5;
+    -fx-alignment: center;
+}
+
+.profile-avatar-glyph {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 36px;
+}
+
+/* ── WALLET CARD ─────────────────────────────────────────────── */
+
+.wallet-balance-card {
+    -fx-background-color: linear-gradient(to bottom right, #1a1508, #1e1b0a);
+    -fx-background-radius: 12;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 20 16 20 16;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.15), 16, 0, 0, 4);
+}
+
+.wallet-label {
+    -fx-text-fill: #9a7c2e;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1.2;
+}
+
+.wallet-amount {
+    -fx-text-fill: #f0d060;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.4), 8, 0, 0, 0);
+}
+
+.wallet-type-badge {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-background-color: rgba(201,168,76,0.12);
+    -fx-background-radius: 20;
+    -fx-padding: 3 10 3 10;
+}
+
+/* ── DEPOSIT BUTTON ──────────────────────────────────────────── */
+
+.btn-deposit {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 13 0 13 0;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.3), 10, 0, 0, 0);
+}
+
+.btn-deposit:hover {
+    -fx-background-color: #e0bb5a;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.5), 14, 0, 0, 0);
+}
+
+.btn-deposit:pressed {
+    -fx-background-color: #b89640;
+    -fx-effect: none;
+}
+
+/* ── QUICK AMOUNT BUTTONS ────────────────────────────────────── */
+
+.btn-quick-amount {
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: #2e2e2e;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-padding: 7 0 7 0;
+}
+
+.btn-quick-amount:hover {
+    -fx-background-color: rgba(201,168,76,0.1);
+    -fx-border-color: #c9a84c;
+}
+
+.btn-quick-amount:pressed {
+    -fx-background-color: rgba(201,168,76,0.2);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DEPOSIT DIALOG
+   ══════════════════════════════════════════════════════════════ */
+
+.deposit-overlay {
+    -fx-background-color: rgba(0,0,0,0.80);
+    -fx-padding: 20;
+}
+
+.deposit-dialog {
+    -fx-background-color: #141414;
+    -fx-background-radius: 18;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 18;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 32, 0, 0, 8);
+}
+
+.deposit-dialog-header {
+    -fx-background-color: #0f0f0f;
+    -fx-background-radius: 18 18 0 0;
+    -fx-border-color: #1e1e1e;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 18 20 18 24;
+}
+
+.deposit-dialog-title {
+    -fx-text-fill: #f0f0f0;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.deposit-close-btn {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #888888;
+    -fx-font-size: 13px;
+    -fx-background-radius: 50%;
+    -fx-border-color: transparent;
+    -fx-min-width: 30;
+    -fx-min-height: 30;
+    -fx-max-width: 30;
+    -fx-max-height: 30;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+}
+
+.deposit-close-btn:hover {
+    -fx-background-color: #2e2e2e;
+    -fx-text-fill: #e0e0e0;
+}
+
+.deposit-dialog-body {
+    -fx-padding: 24 24 28 24;
+}
+
+.deposit-step-box {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 12;
+    -fx-border-color: #242424;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 16;
+}
+
+.deposit-step-label {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.bank-info-card {
+    -fx-background-color: #0f1a10;
+    -fx-background-radius: 10;
+    -fx-border-color: #1e3822;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 14;
+}
+
+.bank-logo-badge {
+    -fx-background-color: #e8213c;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-padding: 6 10 6 10;
+    -fx-min-width: 44;
+    -fx-alignment: center;
+}
+
+.bank-name {
+    -fx-text-fill: #e8e8e8;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.bank-sub {
+    -fx-text-fill: #666666;
+    -fx-font-size: 11px;
+}
+
+.bank-divider {
+    -fx-background-color: #1e3822;
+    -fx-min-height: 1;
+    -fx-max-height: 1;
+}
+
+.bank-field-label {
+    -fx-text-fill: #5a8c62;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.bank-account-number {
+    -fx-text-fill: #5ee87a;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Courier New", "Consolas", monospace;
+    -fx-effect: dropshadow(gaussian, rgba(94,232,122,0.3), 6, 0, 0, 0);
+}
+
+.bank-account-name {
+    -fx-text-fill: #e8e8e8;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1;
+}
+
+.btn-copy {
+    -fx-background-color: #1e2e1f;
+    -fx-text-fill: #5ee87a;
+    -fx-font-size: 11px;
+    -fx-background-radius: 7;
+    -fx-border-color: #2a3e2b;
+    -fx-border-radius: 7;
+    -fx-border-width: 1;
+    -fx-cursor: hand;
+    -fx-padding: 6 10 6 10;
+}
+
+.btn-copy:hover {
+    -fx-background-color: #253025;
+    -fx-border-color: #5ee87a;
+}
+
+.deposit-input-wrapper {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 10;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 4 12 4 14;
+}
+
+.deposit-currency-prefix {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.deposit-input {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e8e8e8;
+    -fx-prompt-text-fill: #444444;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-border-color: transparent;
+    -fx-padding: 8 0 8 6;
+}
+
+.deposit-amount-hint {
+    -fx-text-fill: #555555;
+    -fx-font-size: 11px;
+}
+
+.deposit-status-icon { -fx-font-size: 36px; }
+
+.deposit-status-text {
+    -fx-text-fill: #aaaaaa;
+    -fx-font-size: 14px;
+    -fx-text-alignment: center;
+}
+
+.btn-confirm-deposit {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 13 0 13 0;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.3), 10, 0, 0, 0);
+}
+
+.btn-confirm-deposit:hover { -fx-background-color: #e0bb5a; }
+.btn-confirm-deposit:pressed { -fx-background-color: #b89640; -fx-effect: none; }
+.btn-confirm-deposit:disabled {
+    -fx-background-color: #2a2a2a;
+    -fx-text-fill: #555555;
+    -fx-effect: none;
+    -fx-cursor: default;
+}
+
+.deposit-disclaimer {
+    -fx-text-fill: #444444;
+    -fx-font-size: 11px;
+    -fx-text-alignment: center;
+    -fx-line-spacing: 3;
+}
+
+/* ── Backwards-compat stubs ─────────────────────────────────── */
+.profile-overlay { -fx-background-color: #0d0d0d; }
+.profile-backdrop { -fx-background-color: transparent; }
+.profile-scroll { -fx-background-color: transparent; -fx-background: transparent; }
+.profile-card-v2 { -fx-background-color: #111111; }
+.profile-header-section { -fx-padding: 0; }
+.profile-divider-line { -fx-background-color: #1e1e1e; -fx-min-height: 1; -fx-max-height: 1; }
+.profile-section { -fx-padding: 0; }
+.profile-section-title { -fx-text-fill: #c9a84c; -fx-font-size: 13px; -fx-font-weight: bold; }
+.profile-info-row { -fx-background-color: #171717; -fx-background-radius: 10; -fx-padding: 12 14; }
+.profile-info-icon { -fx-font-size: 18px; }
+.profile-info-label { -fx-text-fill: #666666; -fx-font-size: 11px; }
+.profile-info-value { -fx-text-fill: #e0e0e0; -fx-font-size: 14px; }
+.profile-title { -fx-text-fill: #f4f4f4; -fx-font-size: 20px; -fx-font-weight: bold; }
+.profile-hint { -fx-text-fill: #888888; -fx-font-size: 13px; }

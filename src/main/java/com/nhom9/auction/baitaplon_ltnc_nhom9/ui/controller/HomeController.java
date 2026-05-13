@@ -1,5 +1,6 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
 
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Notification;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.PhysicalItem;
@@ -8,6 +9,7 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.AuctionRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.UserRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification.NotificationService;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.HomeLoginCoordinator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.ItemDetailCoordinator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.SellerItemDetailCoordinator;
@@ -48,6 +50,12 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
+import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
 
 import java.io.File;
 import java.math.BigDecimal;
@@ -101,6 +109,23 @@ public class HomeController implements Initializable {
     @FXML private Label profileAvatarGlyph;
     @FXML private Button profileTabLoginButton;
     @FXML private Button profileLogoutButton;
+    @FXML private VBox  profileInfoSection;
+    @FXML private Label infoFullName;
+    @FXML private Label infoEmail;
+    @FXML private Label infoPhone;
+    @FXML private Label infoRole;
+    @FXML private Label infoCreatedAt;
+    @FXML private Region walletDivider;
+    @FXML private VBox  profileWalletSection;
+    @FXML private Label walletBalanceLabel;
+    @FXML private Label walletTypeLabel;
+    @FXML private VBox  depositOverlay;
+    @FXML private VBox  depositStatusBox;
+    @FXML private Label depositStatusIcon;
+    @FXML private Label depositStatusText;
+    @FXML private TextField depositAmountField;
+    @FXML private Label depositAmountHint;
+    @FXML private Button btnConfirmDeposit;
 
     // Bottom nav — "Danh mục" đã đổi thành "Sản phẩm của tôi"
     @FXML private ToggleButton bottomNavHome;
@@ -150,6 +175,13 @@ public class HomeController implements Initializable {
     @FXML private Label listProductImageError;
     @FXML private Label submitProductError;
 
+    // ── Notification bell & panel ─────────────────────────────────────────────
+    @FXML private Button    btnBell;        // bell icon (dùng để set style khi panel mở)
+    @FXML private Label     lblBellBadge;   // badge đỏ số chưa đọc
+    @FXML private StackPane notifOverlay;   // LỚP 7: backdrop + panel
+    @FXML private VBox      notifList;      // container danh sách thông báo
+    @FXML private Button    btnMarkAllRead; // "Đánh dấu tất cả đã đọc"
+
     // ── Trạng thái nội bộ ────────────────────────────────────────────────────
 
     private final AuctionRepository auctionRepo =
@@ -158,7 +190,13 @@ public class HomeController implements Initializable {
             ServiceLocator.getInstance().getBidRepo();
     private final UserRepository userRepo = new UserRepository();
 
+    /** NotificationService — lấy từ ServiceLocator (singleton) */
+    private final NotificationService notifService =
+            ServiceLocator.getInstance().getNotificationService();
+
     private ScheduledExecutorService timerScheduler;
+    /** Scheduler riêng cho badge polling — tách khỏi timerScheduler của countdown */
+    private ScheduledExecutorService badgePoller;
     private final Map<String, Label> timerLabels = new HashMap<>();
     private final Set<String> expiredHandled = new HashSet<>();
     private final List<AuctionItem> displayedItems = new ArrayList<>();
@@ -233,6 +271,7 @@ public class HomeController implements Initializable {
         });
         Platform.runLater(this::bootstrapCoordinatorIfPossible);
         buildAvatarMenu();
+        initNotifications();
     }
 
     /**
@@ -354,6 +393,22 @@ public class HomeController implements Initializable {
     private static void setVisible(javafx.scene.Node node, boolean v) {
         node.setVisible(v);
         node.setManaged(v);
+    }
+
+    /**
+     * Hiện một overlay *chồng lên* nội dung hiện tại (không ẩn view khác).
+     * Dùng cho notification panel — xuất hiện như dropdown, không thay view.
+     * Khác với showOnly() vốn ẩn toàn bộ rồi chỉ hiện 1 layer.
+     */
+    private static void showOverlay(StackPane overlay) {
+        overlay.setVisible(true);
+        overlay.setManaged(true);
+        overlay.toFront();
+    }
+
+    private static void hideOverlay(StackPane overlay) {
+        overlay.setVisible(false);
+        overlay.setManaged(false);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1658,6 +1713,8 @@ public class HomeController implements Initializable {
             profileLogoutButton.setVisible(true);
             profileLogoutButton.setManaged(true);
             updateProfileHeroMonogram(u.getUsername(), u.getFullName());
+            refreshProfileInfo(u);
+            refreshWalletSection(u);
         } else {
             profileTitleLabel.setText("Chưa đăng nhập");
             profileHintLabel.setText("Đăng nhập để xem hồ sơ, đấu giá của bạn và cài đặt tài khoản.");
@@ -1666,8 +1723,340 @@ public class HomeController implements Initializable {
             profileLogoutButton.setVisible(false);
             profileLogoutButton.setManaged(false);
             profileAvatarGlyph.setText("👤");
+            setVisible(profileInfoSection, false);
+            setVisible(profileWalletSection, false);
+            setVisible(walletDivider, false);
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+// A. CẬP NHẬT THÔNG TIN CÁ NHÂN
+// ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Điền thông tin cá nhân của user vào các Label trong profile tab.
+     *
+     * Tại sao tách thành method riêng?
+     * → refreshProfileTabContent() đã đủ dài. Mỗi "khối" UI (info, wallet)
+     *   nên có 1 method riêng — dễ maintain và test từng phần.
+     */
+    private void refreshProfileInfo(User u) {
+        boolean show = u != null;
+        setVisible(profileInfoSection, show);
+        if (!show) return;
+
+        infoFullName.setText(
+                u.getFullName() != null && !u.getFullName().isBlank()
+                        ? u.getFullName() : "Chưa cập nhật");
+        infoEmail.setText(
+                u.getEmail() != null ? u.getEmail() : "—");
+        infoPhone.setText(
+                u.getPhone() != null && !u.getPhone().isBlank()
+                        ? u.getPhone() : "Chưa cập nhật");
+        infoRole.setText(
+                u.getRole() != null ? formatRole(u.getRole().name()) : "—");
+        infoCreatedAt.setText(
+                u.getCreatedAt() != null
+                        ? u.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                        : "—");
+    }
+
+    /** Chuyển tên role thành tiếng Việt thân thiện hơn. */
+    private String formatRole(String roleName) {
+        return switch (roleName.toUpperCase()) {
+            case "BUYER"  -> "Người mua";
+            case "SELLER" -> "Người bán";
+            case "ADMIN"  -> "Quản trị viên";
+            default       -> roleName;
+        };
+    }
+
+// ─────────────────────────────────────────────────────────────────────────
+// B. CẬP NHẬT SỐ DƯ VÍ
+// ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Hiển thị số dư tương ứng với role của user.
+     *
+     * - Buyer  → walletBalance
+     * - Seller → earningsBalance
+     *
+     * Tại sao phân biệt?
+     * → Buyer và Seller dùng 2 trường tiền khác nhau (thiết kế hiện tại).
+     *   Hiển thị đúng trường giúp user không nhầm lẫn.
+     */
+    private void refreshWalletSection(User u) {
+        boolean show = u != null;
+        setVisible(walletDivider, show);
+        setVisible(profileWalletSection, show);
+        if (!show) return;
+
+        if (u instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer buyer) {
+            BigDecimal balance = buyer.getWalletBalance() != null
+                    ? buyer.getWalletBalance() : BigDecimal.ZERO;
+            walletBalanceLabel.setText(formatVnd(balance));
+            walletTypeLabel.setText("Ví Người mua");
+
+        } else if (u instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller seller) {
+            BigDecimal balance = seller.getEarningsBalance() != null
+                    ? seller.getEarningsBalance() : BigDecimal.ZERO;
+            walletBalanceLabel.setText(formatVnd(balance));
+            walletTypeLabel.setText("Thu nhập Người bán");
+
+        } else {
+            walletBalanceLabel.setText("—");
+            walletTypeLabel.setText("");
+        }
+    }
+
+    /** Format số tiền thành dạng "1.000.000 ₫" */
+    private String formatVnd(BigDecimal amount) {
+        if (amount == null) return "0 ₫";
+        // Dùng NumberFormat để có dấu chấm ngăn cách hàng nghìn
+        java.text.NumberFormat fmt = java.text.NumberFormat.getIntegerInstance(
+                new java.util.Locale("vi", "VN"));
+        return fmt.format(amount.longValue()) + " ₫";
+    }
+
+// ─────────────────────────────────────────────────────────────────────────
+// C. MỞ / ĐÓNG DEPOSIT DIALOG
+// ─────────────────────────────────────────────────────────────────────────
+
+    /** Bấm nút "Nạp tiền" → hiện dialog nạp tiền. */
+    @FXML
+    private void handleOpenDeposit() {
+        // Reset trạng thái dialog mỗi lần mở
+        depositAmountField.clear();
+        depositAmountHint.setText("Tối thiểu: 10.000 ₫");
+        depositAmountHint.setStyle("");
+        setVisible(depositStatusBox, false);
+        btnConfirmDeposit.setDisable(false);
+        btnConfirmDeposit.setText("Xác nhận đã chuyển khoản");
+
+        setVisible(depositOverlay, true);
+    }
+
+    /** Bấm nút "✕" → đóng dialog nạp tiền. */
+    @FXML
+    private void handleCloseDeposit() {
+        setVisible(depositOverlay, false);
+    }
+
+    /** Đóng profile overlay khi bấm vào backdrop. */
+    @FXML
+    private void handleProfileBackdropClick() {
+        // Đóng deposit dialog trước nếu đang mở
+        if (depositOverlay.isVisible()) {
+            setVisible(depositOverlay, false);
+            return;
+        }
+        // Về tab Home nếu bấm ngoài card profile
+        bottomNavHome.setSelected(true);
+        showOnly(homeScrollPane);
+    }
+
+// ─────────────────────────────────────────────────────────────────────────
+// D. NẠP TIỀN NHANH (Quick Amount)
+// ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Bấm nút gợi ý (50K / 100K / 500K / 1M) → tự điền số tiền và mở dialog.
+     *
+     * userData của Button lưu số tiền (đặt trong FXML: userData="50000").
+     */
+    @FXML
+    private void handleQuickDeposit(javafx.event.ActionEvent event) {
+        if (!(event.getSource() instanceof Button btn)) return;
+        String raw = btn.getUserData() != null ? btn.getUserData().toString() : "0";
+        depositAmountField.setText(raw);
+        handleOpenDeposit();
+    }
+
+// ─────────────────────────────────────────────────────────────────────────
+// E. SAO CHÉP SỐ TÀI KHOẢN
+// ─────────────────────────────────────────────────────────────────────────
+
+    @FXML
+    private void handleCopyAccountNumber() {
+        ClipboardContent content = new ClipboardContent();
+        content.putString("0366855207");
+        Clipboard.getSystemClipboard().setContent(content);
+
+        // Phản hồi ngắn — đổi text nút thành "✅ Đã sao chép"
+        // Tìm nút copy qua scene (đơn giản hơn inject @FXML thêm)
+        // Trong thực tế bạn có thể thêm @FXML private Button btnCopyAccount;
+        // Ở đây hiện toast hoặc alert nhẹ
+        showToast("Đã sao chép số tài khoản!");
+    }
+
+// ─────────────────────────────────────────────────────────────────────────
+// F. XÁC NHẬN NẠP TIỀN — Logic chính
+// ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Bấm "Xác nhận đã chuyển khoản":
+     *   1. Validate số tiền nhập
+     *   2. Hiện trạng thái "Đang xác nhận..."
+     *   3. Giả lập 2 giây xử lý (PauseTransition)
+     *   4. Cộng tiền vào session + cập nhật UI
+     *
+     * ⚠️  LƯU Ý CHO HỌC VIÊN:
+     * Hiện tại hệ thống chưa có backend thật, nên chúng ta giả lập 2 giây
+     * rồi tự động cộng tiền. Khi có backend thật, bước 3 sẽ là:
+     *   - Gọi API/DB để lưu giao dịch nạp tiền
+     *   - Server xác nhận → trả về số dư mới
+     *   - Update UI từ response
+     * Pattern PauseTransition → Platform.runLater() vẫn giữ nguyên,
+     * chỉ thay nội dung bên trong.
+     */
+    @FXML
+    private void handleConfirmDeposit() {
+        // ── Validate ─────────────────────────────────────────────────
+        String raw = depositAmountField.getText().trim().replaceAll("[^0-9]", "");
+        if (raw.isEmpty()) {
+            depositAmountHint.setText("⚠  Vui lòng nhập số tiền.");
+            depositAmountHint.setStyle("-fx-text-fill: #e05555;");
+            return;
+        }
+
+        BigDecimal amount;
+        try {
+            amount = new BigDecimal(raw);
+        } catch (NumberFormatException e) {
+            depositAmountHint.setText("⚠  Số tiền không hợp lệ.");
+            depositAmountHint.setStyle("-fx-text-fill: #e05555;");
+            return;
+        }
+
+        BigDecimal minimum = new BigDecimal("10000");
+        if (amount.compareTo(minimum) < 0) {
+            depositAmountHint.setText("⚠  Số tiền tối thiểu là 10.000 ₫.");
+            depositAmountHint.setStyle("-fx-text-fill: #e05555;");
+            return;
+        }
+
+        // ── Hiện trạng thái "đang xử lý" ────────────────────────────
+        btnConfirmDeposit.setDisable(true);
+        depositAmountField.setDisable(true);
+        depositStatusIcon.setText("⏳");
+        depositStatusText.setText("Đang xác nhận giao dịch...\nVui lòng chờ trong giây lát.");
+        setVisible(depositStatusBox, true);
+
+        // ── Giả lập 2 giây xử lý ────────────────────────────────────
+        // PauseTransition là cách đúng để delay trong JavaFX mà không block UI thread.
+        // KHÔNG dùng Thread.sleep() — nó sẽ đóng băng toàn bộ UI!
+        PauseTransition pause = new PauseTransition(Duration.seconds(2));
+        pause.setOnFinished(event -> Platform.runLater(() -> {
+            applyDepositSuccess(amount);
+        }));
+        pause.play();
+    }
+
+    /**
+     * Được gọi sau khi "xử lý" thành công.
+     * Cộng tiền vào User trong session và refresh UI.
+     */
+    private void applyDepositSuccess(BigDecimal amount) {
+        User u = UserSession.getInstance().getCurrentUser();
+        if (u == null) return;
+
+        // ── Bước 1: Cộng tiền vào object trong session (RAM) ──────────────
+        if (u instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer buyer) {
+            buyer.deposit(amount);
+
+            // ── Bước 2: Lưu số dư mới xuống DB ──────────────────────────
+            // Đây là bước quan trọng nhất! Nếu không gọi dòng này:
+            //   - Số dư chỉ tồn tại trong RAM (session)
+            //   - Khi restart app, DB vẫn = 0 → mất tiền
+            //   - AuctionHouse.loadBuyer() đọc từ DB → luôn thấy 0 đ → từ chối đặt giá
+            try {
+                userRepo.updateWalletBalance(buyer.getId(), buyer.getWalletBalance());
+            } catch (java.sql.SQLException e) {
+                // Rollback RAM: trừ lại số tiền vừa cộng
+                buyer.setWalletBalance(buyer.getWalletBalance().subtract(amount));
+                depositStatusIcon.setText("❌");
+                depositStatusText.setText("Lỗi lưu số dư. Vui lòng thử lại.\n" + e.getMessage());
+                btnConfirmDeposit.setDisable(false);
+                depositAmountField.setDisable(false);
+                return;
+            }
+
+        } else if (u instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller seller) {
+            BigDecimal newBalance = (seller.getEarningsBalance() != null
+                    ? seller.getEarningsBalance() : BigDecimal.ZERO).add(amount);
+            seller.setEarningsBalance(newBalance);
+
+            // Lưu xuống DB cho Seller
+            try {
+                userRepo.updateEarningsBalance(seller.getId(), newBalance);
+            } catch (java.sql.SQLException e) {
+                seller.setEarningsBalance(newBalance.subtract(amount)); // rollback
+                depositStatusIcon.setText("❌");
+                depositStatusText.setText("Lỗi lưu số dư. Vui lòng thử lại.\n" + e.getMessage());
+                btnConfirmDeposit.setDisable(false);
+                depositAmountField.setDisable(false);
+                return;
+            }
+        }
+
+        // Hiện thông báo thành công
+        depositStatusIcon.setText("✅");
+        depositStatusText.setText("Nạp tiền thành công!\n+" + formatVnd(amount) + " đã được cộng vào tài khoản.");
+
+        // Cho phép nhập lại / đóng
+        depositAmountField.setDisable(false);
+        btnConfirmDeposit.setText("Đóng");
+        btnConfirmDeposit.setDisable(false);
+        btnConfirmDeposit.setOnAction(e -> {
+            handleCloseDeposit();
+            // Refresh lại số dư hiển thị
+            refreshWalletSection(UserSession.getInstance().getCurrentUser());
+            // Reset nút về default
+            btnConfirmDeposit.setOnAction(ev -> handleConfirmDeposit());
+        });
+
+        // Refresh số dư ngay lập tức
+        refreshWalletSection(u);
+    }
+
+// ─────────────────────────────────────────────────────────────────────────
+// G. TOAST NOTIFICATION nhẹ (helper)
+// ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Hiện một thông báo nhỏ tạm thời ở góc màn hình.
+     *
+     * Nếu project đã có AlertHelper.showToast() thì dùng cái đó thay thế.
+     * Method này dùng Alert đơn giản để không phụ thuộc thêm.
+     */
+    private void showToast(String message) {
+        // Cách đơn giản: dùng Alert rồi tự đóng sau 1.5s
+        // Nếu muốn toast thật sự (không có nút OK), cần thêm Stage tuỳ chỉnh.
+        javafx.scene.control.Alert toast = new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.INFORMATION);
+        toast.setTitle("Thông báo");
+        toast.setHeaderText(null);
+        toast.setContentText(message);
+        toast.show();
+
+        PauseTransition close = new PauseTransition(Duration.millis(1500));
+        close.setOnFinished(e -> toast.close());
+        close.play();
+    }
+
+// ─────────────────────────────────────────────────────────────────────────
+// H. HELPER setVisible (nếu chưa có trong HomeController)
+// ─────────────────────────────────────────────────────────────────────────
+
+// Kiểm tra HomeController đã có method này chưa.
+// Nếu chưa, thêm vào:
+//
+// private void setVisible(Node node, boolean visible) {
+//     if (node == null) return;
+//     node.setVisible(visible);
+//     node.setManaged(visible);
+// }
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // FXML Handlers — navbar và misc
@@ -1701,7 +2090,149 @@ public class HomeController implements Initializable {
         );
     }
 
-    @FXML private void handleNotifications() { showInfoPlaceholder("Thông báo"); }
+    @FXML private void handleNotifications() {
+        User user = UserSession.getInstance().getCurrentUser();
+        if (user == null) {
+            showInfoPlaceholder("Vui lòng đăng nhập để xem thông báo");
+            return;
+        }
+        // Đánh dấu đã đọc ngay khi mở panel → badge về 0
+        notifService.markAllRead(user.getId());
+        refreshBadge(0);
+
+        renderNotifications(user.getId());
+        showOverlay(notifOverlay);
+    }
+
+    @FXML private void handleCloseNotifications() {
+        hideOverlay(notifOverlay);
+    }
+
+    @FXML private void handleMarkAllRead() {
+        User user = UserSession.getInstance().getCurrentUser();
+        if (user == null) return;
+        notifService.markAllRead(user.getId());
+        refreshBadge(0);
+        renderNotifications(user.getId()); // re-render để bỏ highlight unread
+    }
+
+    /**
+     * Đóng panel khi user click vào backdrop (bên ngoài panel).
+     * MouseEvent target là notifOverlay (backdrop) chứ không phải panel con.
+     */
+    @FXML private void handleNotifBackdropClick(javafx.scene.input.MouseEvent e) {
+        if (e.getTarget() == notifOverlay) hideOverlay(notifOverlay);
+    }
+
+    // ── Notification core logic ───────────────────────────────────────────────
+
+    /**
+     * Khởi tạo hệ thống thông báo:
+     *   1. Đăng ký uiListener → badge cập nhật ngay khi có bid mới (same JVM)
+     *   2. Polling badge mỗi 30s → đảm bảo đồng bộ nếu có session khác ghi DB
+     */
+    private void initNotifications() {
+        // 1. Real-time: nhận push từ AuctionHouse trong cùng JVM
+        notifService.addUiListener(event -> Platform.runLater(() -> {
+            User user = UserSession.getInstance().getCurrentUser();
+            if (user == null) return;
+            // Chỉ cập nhật badge, không mở panel tự động (không muốn làm phiền)
+            int count = notifService.unreadCount(user.getId());
+            refreshBadge(count);
+        }));
+
+        // 2. Polling mỗi 30s — đồng bộ từ DB phòng trường hợp nhiều máy
+        badgePoller = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "notif-badge-poll");
+            t.setDaemon(true);
+            return t;
+        });
+        badgePoller.scheduleAtFixedRate(() -> {
+            User user = UserSession.getInstance().getCurrentUser();
+            if (user == null) return;
+            int count = notifService.unreadCount(user.getId());
+            Platform.runLater(() -> refreshBadge(count));
+        }, 5, 30, TimeUnit.SECONDS); // delay 5s để app load xong
+    }
+
+    /**
+     * Cập nhật badge số trên bell icon.
+     * Badge ẩn khi count = 0, hiện và hiển thị số khi count > 0.
+     * Hiển thị "99+" khi count > 99 để badge không bị tràn chữ.
+     */
+    private void refreshBadge(int count) {
+        if (count <= 0) {
+            lblBellBadge.setVisible(false);
+            lblBellBadge.setManaged(false);
+        } else {
+            lblBellBadge.setText(count > 99 ? "99+" : String.valueOf(count));
+            lblBellBadge.setVisible(true);
+            lblBellBadge.setManaged(true);
+        }
+    }
+
+    /**
+     * Render danh sách thông báo vào notifList VBox.
+     * Mỗi item: [icon] [message + time] với style khác nhau cho read/unread.
+     */
+    private void renderNotifications(int userId) {
+        notifList.getChildren().clear();
+        List<Notification> items = notifService.getNotifications(userId);
+
+        if (items.isEmpty()) {
+            Label empty = new Label("Không có thông báo nào");
+            empty.getStyleClass().add("notif-empty-label");
+            empty.setMaxWidth(Double.MAX_VALUE);
+            empty.setAlignment(Pos.CENTER);
+            notifList.getChildren().add(empty);
+            return;
+        }
+
+        for (Notification n : items) {
+            HBox row = buildNotifRow(n, userId);
+            notifList.getChildren().add(row);
+        }
+    }
+
+    /**
+     * Tạo 1 row thông báo.
+     * Layout: [icon 32px] [VBox: message + time]
+     * Click vào row → markRead + navigate đến phiên (nếu có auctionId)
+     */
+    private HBox buildNotifRow(Notification n, int userId) {
+        // Icon loại thông báo
+        Label icon = new Label(n.getIcon());
+        icon.getStyleClass().add("notif-item-icon");
+
+        // Message
+        Label msg = new Label(n.getMessage());
+        msg.getStyleClass().add("notif-item-message");
+        msg.setWrapText(true);
+        msg.setMaxWidth(270);
+
+        // Time
+        Label time = new Label(n.getFormattedTime());
+        time.getStyleClass().add("notif-item-time");
+
+        VBox content = new VBox(4, msg, time);
+        HBox.setHgrow(content, Priority.ALWAYS);
+
+        HBox row = new HBox(12, icon, content);
+        row.getStyleClass().add("notif-item");
+        if (!n.isRead()) row.getStyleClass().add("notif-item-unread");
+
+        // Click handler: đánh dấu đã đọc
+        row.setOnMouseClicked(e -> {
+            if (n.isRead()) return;
+            notifService.markRead(n.getId(), userId);
+            row.getStyleClass().remove("notif-item-unread");
+            // Refresh badge (giảm 1, nhưng gọi lại service cho chính xác)
+            int newCount = notifService.unreadCount(userId);
+            refreshBadge(newCount);
+        });
+
+        return row;
+    }
 
     @FXML
     private void handleLogin() {
@@ -1851,5 +2382,8 @@ public class HomeController implements Initializable {
     public void shutdown() {
         if (timerScheduler != null && !timerScheduler.isShutdown())
             timerScheduler.shutdownNow();
+        if (badgePoller != null && !badgePoller.isShutdown())
+            badgePoller.shutdownNow();
+        notifService.removeUiListener(null); // cleanup listener (no-op nếu null)
     }
 }

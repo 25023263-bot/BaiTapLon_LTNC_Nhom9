@@ -31,7 +31,18 @@
 
             <HBox styleClass="navbar-right" HBox.hgrow="ALWAYS" alignment="CENTER_RIGHT" spacing="12">
                 <Button styleClass="icon-btn" text="🔍" onAction="#handleSearch"/>
-                <Button styleClass="icon-btn" text="🔔" onAction="#handleNotifications"/>
+                <!-- Bell icon + badge đỏ (badge ẩn khi = 0, hiện khi > 0) -->
+                <StackPane styleClass="bell-wrapper">
+                    <Button fx:id="btnBell" styleClass="icon-btn" text="🔔"
+                            onAction="#handleNotifications"/>
+                    <Label fx:id="lblBellBadge"
+                           styleClass="bell-badge"
+                           text="0"
+                           visible="false"
+                           managed="false"
+                           StackPane.alignment="TOP_RIGHT"
+                           translateX="6" translateY="-4"/>
+                </StackPane>
                 <Region minWidth="8"/>
                 <Button fx:id="btnLogInProminent"
                         styleClass="btn-login-solid"
@@ -113,40 +124,277 @@
             <!-- ═══════════════════════════════════════════════════════════
                  LỚP 2: Tab "Cá nhân"
                  ═══════════════════════════════════════════════════════════ -->
+            <!--
+    StackPane fx:id="profileOverlay" — giữ nguyên thuộc tính bên ngoài,
+    chỉ thay NỘI DUNG bên trong.
+-->
             <StackPane fx:id="profileOverlay"
                        visible="false"
                        managed="false"
-                       styleClass="profile-overlay">
+                       styleClass="profile-overlay"
+                       xmlns="http://javafx.com/javafx"
+                       xmlns:fx="http://javafx.com/fxml">
 
-                <VBox styleClass="profile-card" spacing="16" alignment="CENTER" maxWidth="420">
-                    <StackPane styleClass="profile-large-avatar">
-                        <Label fx:id="profileAvatarGlyph" styleClass="profile-avatar-glyph" text="👤"/>
-                    </StackPane>
-                    <VBox spacing="8" alignment="CENTER">
-                        <Label fx:id="profileTitleLabel" styleClass="profile-title" text="Cá nhân"/>
-                        <Label fx:id="profileHintLabel"
-                               wrapText="true"
-                               alignment="CENTER"
-                               styleClass="profile-hint"
-                               text="Đăng nhập để quản lý đấu giá, thông báo và ví."/>
+                <!-- ══════════════════════════════════════════════════════════
+                     PROFILE PAGE — Full-screen layout, 2-column design
+                     ══════════════════════════════════════════════════════════ -->
+                <ScrollPane styleClass="profile-page-scroll" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+                    <VBox styleClass="profile-page-root" spacing="0">
+
+                        <!-- ── HERO BANNER ──────────────────────────────────── -->
+                        <VBox styleClass="profile-hero-banner" spacing="0">
+                            <!-- Gold accent top bar -->
+                            <Region styleClass="profile-hero-accent-bar" minHeight="3" maxHeight="3"/>
+
+                            <HBox styleClass="profile-hero-content" spacing="28" alignment="CENTER_LEFT">
+                                <!-- Avatar -->
+                                <StackPane styleClass="profile-hero-avatar-wrap">
+                                    <StackPane styleClass="profile-large-avatar" minWidth="90" minHeight="90" maxWidth="90" maxHeight="90">
+                                        <Label fx:id="profileAvatarGlyph" styleClass="profile-avatar-glyph" text="👤"/>
+                                    </StackPane>
+                                </StackPane>
+
+                                <!-- Name + role + actions -->
+                                <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                    <Label fx:id="profileTitleLabel" styleClass="profile-hero-name" text="Cá nhân"/>
+                                    <Label fx:id="profileHintLabel"
+                                           wrapText="true"
+                                           styleClass="profile-hero-subtitle"
+                                           text="Đăng nhập để quản lý đấu giá, thông báo và ví."/>
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                        <Button fx:id="profileTabLoginButton"
+                                                styleClass="btn-login-solid"
+                                                text="Đăng nhập"
+                                                visible="false" managed="false"
+                                                onAction="#handleLogin"/>
+                                        <Button fx:id="profileLogoutButton"
+                                                styleClass="profile-logout-btn"
+                                                text="Đăng xuất"
+                                                visible="false" managed="false"
+                                                onAction="#handleLogoutFromProfile"/>
+                                    </HBox>
+                                </VBox>
+                            </HBox>
+                        </VBox>
+
+                        <!-- ── MAIN CONTENT: 2-column grid ─────────────────── -->
+                        <HBox styleClass="profile-body-grid" spacing="20" alignment="TOP_LEFT">
+
+                            <!-- LEFT COLUMN: Thông tin cá nhân -->
+                            <VBox fx:id="profileInfoSection" styleClass="profile-body-card" spacing="0"
+                                  visible="false" managed="false" HBox.hgrow="ALWAYS">
+
+                                <!-- Card header -->
+                                <HBox styleClass="profile-card-header" spacing="10" alignment="CENTER_LEFT">
+                                    <Label styleClass="profile-card-header-icon" text="👤"/>
+                                    <Label styleClass="profile-card-header-title" text="Thông tin cá nhân"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                </HBox>
+                                <Region styleClass="profile-card-divider"/>
+
+                                <!-- Info rows inside card -->
+                                <VBox styleClass="profile-card-body" spacing="0">
+
+                                    <!-- Họ tên -->
+                                    <HBox styleClass="profile-field-row" spacing="14" alignment="CENTER_LEFT">
+                                        <VBox styleClass="profile-field-icon-wrap" alignment="CENTER">
+                                            <Label styleClass="profile-field-icon" text="✦"/>
+                                        </VBox>
+                                        <VBox spacing="3" HBox.hgrow="ALWAYS">
+                                            <Label styleClass="profile-field-label" text="HỌ VÀ TÊN"/>
+                                            <Label fx:id="infoFullName" styleClass="profile-field-value" text="—"/>
+                                        </VBox>
+                                    </HBox>
+                                    <Region styleClass="profile-field-separator"/>
+
+                                    <!-- Email -->
+                                    <HBox styleClass="profile-field-row" spacing="14" alignment="CENTER_LEFT">
+                                        <VBox styleClass="profile-field-icon-wrap" alignment="CENTER">
+                                            <Label styleClass="profile-field-icon" text="✉"/>
+                                        </VBox>
+                                        <VBox spacing="3" HBox.hgrow="ALWAYS">
+                                            <Label styleClass="profile-field-label" text="EMAIL"/>
+                                            <Label fx:id="infoEmail" styleClass="profile-field-value" text="—"/>
+                                        </VBox>
+                                    </HBox>
+                                    <Region styleClass="profile-field-separator"/>
+
+                                    <!-- Số điện thoại -->
+                                    <HBox styleClass="profile-field-row" spacing="14" alignment="CENTER_LEFT">
+                                        <VBox styleClass="profile-field-icon-wrap" alignment="CENTER">
+                                            <Label styleClass="profile-field-icon" text="📞"/>
+                                        </VBox>
+                                        <VBox spacing="3" HBox.hgrow="ALWAYS">
+                                            <Label styleClass="profile-field-label" text="SỐ ĐIỆN THOẠI"/>
+                                            <Label fx:id="infoPhone" styleClass="profile-field-value" text="—"/>
+                                        </VBox>
+                                    </HBox>
+                                    <Region styleClass="profile-field-separator"/>
+
+                                    <!-- Vai trò -->
+                                    <HBox styleClass="profile-field-row" spacing="14" alignment="CENTER_LEFT">
+                                        <VBox styleClass="profile-field-icon-wrap" alignment="CENTER">
+                                            <Label styleClass="profile-field-icon" text="🏷"/>
+                                        </VBox>
+                                        <VBox spacing="3" HBox.hgrow="ALWAYS">
+                                            <Label styleClass="profile-field-label" text="VAI TRÒ"/>
+                                            <Label fx:id="infoRole" styleClass="profile-field-value" text="—"/>
+                                        </VBox>
+                                    </HBox>
+                                    <Region styleClass="profile-field-separator"/>
+
+                                    <!-- Ngày tham gia -->
+                                    <HBox styleClass="profile-field-row" spacing="14" alignment="CENTER_LEFT">
+                                        <VBox styleClass="profile-field-icon-wrap" alignment="CENTER">
+                                            <Label styleClass="profile-field-icon" text="📅"/>
+                                        </VBox>
+                                        <VBox spacing="3" HBox.hgrow="ALWAYS">
+                                            <Label styleClass="profile-field-label" text="NGÀY THAM GIA"/>
+                                            <Label fx:id="infoCreatedAt" styleClass="profile-field-value" text="—"/>
+                                        </VBox>
+                                    </HBox>
+
+                                </VBox>
+                            </VBox>
+
+                            <!-- RIGHT COLUMN: Ví & Nạp tiền -->
+                            <VBox styleClass="profile-body-col-right" spacing="20" minWidth="300" maxWidth="360">
+
+                                <!-- Wallet card -->
+                                <VBox fx:id="profileWalletSection" styleClass="profile-body-card" spacing="0"
+                                      visible="false" managed="false">
+
+                                    <HBox styleClass="profile-card-header" spacing="10" alignment="CENTER_LEFT">
+                                        <Label styleClass="profile-card-header-icon" text="💰"/>
+                                        <Label styleClass="profile-card-header-title" text="Số dư &amp; Ví"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                    </HBox>
+                                    <Region styleClass="profile-card-divider"/>
+
+                                    <VBox styleClass="profile-card-body" spacing="16">
+                                        <!-- Balance display -->
+                                        <VBox styleClass="wallet-balance-card" spacing="6" alignment="CENTER">
+                                            <Label styleClass="wallet-label" text="SỐ DƯ HIỆN TẠI"/>
+                                            <Label fx:id="walletBalanceLabel" styleClass="wallet-amount" text="0 ₫"/>
+                                            <Label fx:id="walletTypeLabel" styleClass="wallet-type-badge" text="Ví"/>
+                                        </VBox>
+
+                                        <!-- Deposit button -->
+                                        <Button fx:id="btnDeposit"
+                                                styleClass="btn-deposit"
+                                                text="＋  Nạp tiền"
+                                                maxWidth="Infinity"
+                                                onAction="#handleOpenDeposit"/>
+
+                                        <!-- Quick amounts -->
+                                        <HBox spacing="8" alignment="CENTER">
+                                            <Button styleClass="btn-quick-amount" text="50K"
+                                                    onAction="#handleQuickDeposit" userData="50000" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                            <Button styleClass="btn-quick-amount" text="100K"
+                                                    onAction="#handleQuickDeposit" userData="100000" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                            <Button styleClass="btn-quick-amount" text="500K"
+                                                    onAction="#handleQuickDeposit" userData="500000" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                            <Button styleClass="btn-quick-amount" text="1M"
+                                                    onAction="#handleQuickDeposit" userData="1000000" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                        </HBox>
+                                    </VBox>
+                                </VBox>
+
+                                <!-- Hidden wallet divider (kept for controller compatibility) -->
+                                <Region fx:id="walletDivider" visible="false" managed="false" minHeight="0" maxHeight="0"/>
+
+                                <!-- Extras box -->
+                                <VBox fx:id="profileExtrasBox" spacing="10" alignment="TOP_LEFT"/>
+
+                            </VBox>
+
+                        </HBox>
+
                     </VBox>
-                    <HBox spacing="10" alignment="CENTER">
-                        <Button fx:id="profileTabLoginButton"
-                                styleClass="btn-login-solid"
-                                text="Đăng nhập"
-                                visible="false"
-                                managed="false"
-                                onAction="#handleLogin"/>
-                        <Button fx:id="profileLogoutButton"
-                                styleClass="btn-outline-gold"
-                                text="Đăng xuất"
-                                visible="false"
-                                managed="false"
-                                onAction="#handleLogoutFromProfile"/>
-                    </HBox>
-                    <VBox spacing="6" fx:id="profileExtrasBox" alignment="CENTER"/>
+                </ScrollPane>
+
+                <!-- ══════════════════════════════════════════════════════════════
+                     DEPOSIT DIALOG — hiện đè lên profile page
+                     ══════════════════════════════════════════════════════════════ -->
+                <VBox fx:id="depositOverlay"
+                      styleClass="deposit-overlay"
+                      visible="false" managed="false"
+                      alignment="CENTER">
+
+                    <VBox styleClass="deposit-dialog" spacing="0" maxWidth="420">
+
+                        <!-- Header dialog -->
+                        <HBox styleClass="deposit-dialog-header" alignment="CENTER_LEFT" spacing="12">
+                            <Label styleClass="deposit-dialog-title" text="Nạp tiền vào tài khoản" HBox.hgrow="ALWAYS"/>
+                            <Button styleClass="deposit-close-btn" text="✕" onAction="#handleCloseDeposit"/>
+                        </HBox>
+
+                        <VBox styleClass="deposit-dialog-body" spacing="20">
+
+                            <!-- Bước 1 -->
+                            <VBox styleClass="deposit-step-box" spacing="12">
+                                <Label styleClass="deposit-step-label" text="Bước 1 — Chuyển khoản đến tài khoản sau"/>
+                                <VBox styleClass="bank-info-card" spacing="10">
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                        <Label styleClass="bank-logo-badge" text="MB"/>
+                                        <VBox spacing="2">
+                                            <Label styleClass="bank-name" text="MBBank"/>
+                                            <Label styleClass="bank-sub" text="Ngân hàng Quân đội"/>
+                                        </VBox>
+                                    </HBox>
+                                    <Region styleClass="bank-divider"/>
+                                    <HBox alignment="CENTER_LEFT" spacing="8">
+                                        <VBox HBox.hgrow="ALWAYS" spacing="2">
+                                            <Label styleClass="bank-field-label" text="Số tài khoản"/>
+                                            <Label fx:id="bankAccountNumber" styleClass="bank-account-number" text="0366855207"/>
+                                        </VBox>
+                                        <Button styleClass="btn-copy" text="📋 Sao chép" onAction="#handleCopyAccountNumber"/>
+                                    </HBox>
+                                    <HBox alignment="CENTER_LEFT" spacing="8">
+                                        <VBox spacing="2">
+                                            <Label styleClass="bank-field-label" text="Chủ tài khoản"/>
+                                            <Label styleClass="bank-account-name" text="NGUYEN VAN HIEP"/>
+                                        </VBox>
+                                    </HBox>
+                                </VBox>
+                            </VBox>
+
+                            <!-- Bước 2 -->
+                            <VBox styleClass="deposit-step-box" spacing="10">
+                                <Label styleClass="deposit-step-label" text="Bước 2 — Nhập số tiền bạn muốn nạp (VNĐ)"/>
+                                <HBox styleClass="deposit-input-wrapper" alignment="CENTER_LEFT" spacing="8">
+                                    <Label styleClass="deposit-currency-prefix" text="₫"/>
+                                    <TextField fx:id="depositAmountField"
+                                               styleClass="deposit-input"
+                                               promptText="Nhập số tiền..."
+                                               HBox.hgrow="ALWAYS"/>
+                                </HBox>
+                                <Label fx:id="depositAmountHint" styleClass="deposit-amount-hint" text="Tối thiểu: 10.000 ₫"/>
+                            </VBox>
+
+                            <!-- Trạng thái -->
+                            <VBox fx:id="depositStatusBox" spacing="8" alignment="CENTER" visible="false" managed="false">
+                                <Label fx:id="depositStatusIcon" styleClass="deposit-status-icon" text="⏳"/>
+                                <Label fx:id="depositStatusText" styleClass="deposit-status-text"
+                                       text="Đang xác nhận giao dịch..." wrapText="true" alignment="CENTER"/>
+                            </VBox>
+
+                            <!-- Nút xác nhận -->
+                            <Button fx:id="btnConfirmDeposit"
+                                    styleClass="btn-confirm-deposit"
+                                    text="Xác nhận đã chuyển khoản"
+                                    maxWidth="Infinity"
+                                    onAction="#handleConfirmDeposit"/>
+
+                            <Label styleClass="deposit-disclaimer"
+                                   text="🔒  Hệ thống sẽ tự động cộng số dư sau khi xác nhận giao dịch."
+                                   wrapText="true" alignment="CENTER"/>
+                        </VBox>
+                    </VBox>
                 </VBox>
+
             </StackPane>
+
 
             <!-- ═══════════════════════════════════════════════════════════
                  LỚP 3: Tab "Sản phẩm của tôi" — dành cho Người bán
@@ -318,6 +566,49 @@
                                 hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
                         <VBox fx:id="resultsList" styleClass="results-list" spacing="12"/>
                     </ScrollPane>
+                </VBox>
+            </StackPane>
+
+            <!-- ═══════════════════════════════════════════════════════════
+                 LỚP 7: Notification Panel — hiện khi user click bell icon
+                 Backdrop mờ toàn màn hình, panel neo ở góc phải dưới navbar
+                 ═══════════════════════════════════════════════════════════ -->
+            <StackPane fx:id="notifOverlay"
+                       visible="false"
+                       managed="false"
+                       styleClass="notif-backdrop"
+                       onMouseClicked="#handleNotifBackdropClick">
+
+                <VBox styleClass="notif-panel"
+                      maxWidth="360"
+                      StackPane.alignment="TOP_RIGHT"
+                      translateX="-12"
+                      translateY="12">
+
+                    <!-- Header -->
+                    <HBox styleClass="notif-panel-header" alignment="CENTER_LEFT" spacing="8">
+                        <Label text="🔔" styleClass="notif-panel-icon"/>
+                        <Label text="Thông báo" styleClass="notif-panel-title"
+                               HBox.hgrow="ALWAYS"/>
+                        <Button fx:id="btnMarkAllRead"
+                                styleClass="notif-mark-all-btn"
+                                text="Đánh dấu tất cả đã đọc"
+                                onAction="#handleMarkAllRead"/>
+                        <Button styleClass="notif-close-btn"
+                                text="✕"
+                                onAction="#handleCloseNotifications"/>
+                    </HBox>
+
+                    <!-- Danh sách thông báo (scrollable) -->
+                    <ScrollPane fitToWidth="true"
+                                styleClass="notif-scroll"
+                                hbarPolicy="NEVER"
+                                vbarPolicy="AS_NEEDED"
+                                VBox.vgrow="ALWAYS"
+                                maxHeight="420">
+                        <VBox fx:id="notifList" styleClass="notif-list"/>
+                    </ScrollPane>
+
                 </VBox>
             </StackPane>
 

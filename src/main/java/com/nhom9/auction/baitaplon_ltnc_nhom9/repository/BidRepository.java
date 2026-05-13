@@ -146,6 +146,30 @@ public class BidRepository {
         return list;
     }
 
+    /**
+     * Trả về tập hợp buyer_id DISTINCT đã từng bid vào một phiên.
+     *
+     * Dùng trong NotificationService.onNewBid() để tìm người cần notify "OUTBID":
+     *   - Lấy tất cả buyer đã bid
+     *   - Loại trừ người vừa bid (không tự notify mình)
+     *   - Loại trừ seller (đã được notify riêng qua NEW_BID)
+     *
+     * Tại sao dùng Set<Integer> thay vì List?
+     * → Đảm bảo mỗi buyer chỉ nhận 1 thông báo dù đã bid nhiều lần.
+     */
+    public java.util.Set<Integer> findDistinctBuyerIds(int auctionId) throws SQLException {
+        java.util.Set<Integer> ids = new java.util.HashSet<>();
+        String sql = "SELECT DISTINCT buyer_id FROM bids WHERE auction_id = ?";
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, auctionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) ids.add(rs.getInt("buyer_id"));
+            }
+        }
+        return ids;
+    }
+
     public Optional<Bid> findAutoBid(int auctionId, int buyerId) throws SQLException {
         String sql = """
                 SELECT b.*, u.username AS buyer_username

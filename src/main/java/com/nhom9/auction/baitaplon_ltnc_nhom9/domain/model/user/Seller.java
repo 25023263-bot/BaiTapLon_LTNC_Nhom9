@@ -99,6 +99,39 @@ public class Seller extends User {
         return "Người bán – có thể đăng vật phẩm, quản lý phiên đấu giá.";
     }
 
+    /**
+     * Tạo một Buyer tạm thời đại diện cho Seller khi tham gia đấu giá.
+     *
+     * <p>Tại sao cần method này?</p>
+     * <p>Hệ thống dùng kế thừa để phân biệt vai trò (Seller/Buyer extends User),
+     * nên một Seller không thể tự nhiên đặt bid vì {@code AuctionHouse.loadBuyer()}
+     * yêu cầu đối tượng phải là {@code Buyer}. Method này tạo ra một Buyer
+     * "proxy" mang đầy đủ thông tin của Seller, dùng {@code earningsBalance}
+     * làm ví để kiểm tra số dư khi đặt bid.</p>
+     *
+     * <p><b>Lưu ý:</b> Buyer trả về chỉ dùng cho mục đích đặt bid.
+     * Khi thanh toán thực sự, hệ thống sẽ trừ tiền qua {@code userRepo}
+     * dựa trên {@code id} — vì vậy cột nào bị trừ (wallet hay earnings)
+     * phụ thuộc vào logic trong {@code UserRepository}.</p>
+     *
+     * @return Buyer proxy mang thông tin của Seller này
+     */
+    public Buyer asBuyer() {
+        Buyer proxy = new Buyer();
+        proxy.setId(this.id);
+        proxy.setUsername(this.username);
+        proxy.setEmail(this.email);
+        proxy.setPasswordHash(this.passwordHash);
+        proxy.setFullName(this.fullName);
+        proxy.setPhone(this.phone);
+        proxy.setActive(this.active);
+        proxy.setCreatedAt(this.createdAt);
+        proxy.setUpdatedAt(this.updatedAt);
+        // Seller dùng earningsBalance (tiền kiếm được từ bán hàng) làm ví để đặt bid
+        proxy.setWalletBalance(this.earningsBalance != null ? this.earningsBalance : BigDecimal.ZERO);
+        return proxy;
+    }
+
     // ─── Getters / Setters ───────────────────────────────────────────────────
 
     public BigDecimal getEarningsBalance()                  { return earningsBalance; }

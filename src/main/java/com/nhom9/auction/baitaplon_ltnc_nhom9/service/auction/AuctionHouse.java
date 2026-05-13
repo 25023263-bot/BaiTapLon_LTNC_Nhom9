@@ -351,12 +351,35 @@ public class AuctionHouse implements Auctionable {
         }
     }
 
+    /**
+     * Tải thông tin người dùng dưới dạng Buyer để phục vụ việc đặt bid.
+     *
+     * <p>Hỗ trợ 2 trường hợp:</p>
+     * <ul>
+     *   <li>{@code Buyer}: trả về trực tiếp.</li>
+     *   <li>{@code Seller}: cho phép đặt bid ở sản phẩm của người khác
+     *       (việc tự bid cho sản phẩm của mình đã bị chặn tại validateBidder).
+     *       Trả về Buyer proxy qua Seller.asBuyer(), dùng earningsBalance
+     *       của Seller làm số dư để kiểm tra.</li>
+     * </ul>
+     *
+     * <p>Admin và các role khác không được phép đặt bid.</p>
+     */
     private Buyer loadBuyer(int buyerId) throws Exception {
         User user = userRepo.findById(buyerId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy buyer #" + buyerId));
-        if (!(user instanceof Buyer))
-            throw new IllegalStateException("User #" + buyerId + " không phải Buyer.");
-        return (Buyer) user;
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy user #" + buyerId));
+
+        if (user instanceof Buyer buyer) {
+            return buyer;
+        }
+
+        if (user instanceof Seller seller) {
+            // Seller được phép đặt bid cho sản phẩm của người khác.
+            // validateBidder() đã chặn trường hợp tự bid cho sản phẩm của mình.
+            return seller.asBuyer();
+        }
+
+        throw new IllegalStateException("User #" + buyerId + " không có quyền đặt bid.");
     }
 
     private Seller loadSeller(int sellerId) throws Exception {

@@ -16,12 +16,12 @@ import javafx.stage.Window;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.AuctionRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionHouse;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.UserSession;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -57,6 +57,7 @@ public final class ItemDetailCoordinator {
     private final Window owner;
     private final AuctionRepository auctionRepo = ServiceLocator.getInstance().getAuctionRepo();
     private final BidRepository     bidRepo     = ServiceLocator.getInstance().getBidRepo();
+    private final AuctionHouse      auctionHouse = ServiceLocator.getInstance().getAuctionHouse();
 
     public ItemDetailCoordinator(Window owner) {
         this.owner = Objects.requireNonNull(owner, "owner không được null");
@@ -220,91 +221,61 @@ public final class ItemDetailCoordinator {
 
     /**
      * Được gọi khi user bấm "Tiếp tục" trong BidDialog và giá hợp lệ.
-     * TODO: thay bằng BidService.placeBid() khi có backend.
+     *
+     * Trước đây: ghi bid thẳng vào DB qua bidRepo + auctionRepo → bỏ qua AuctionHouse
+     * → NotificationService.onNewBid() không bao giờ được gọi → không có thông báo.
+     *
+     * Fix: gọi auctionHouse.placeBid() — nó đã xử lý đầy đủ:
+     *   1. Validate giá (race condition check)
+     *   2. Lưu bid vào DB
+     *   3. updateCurrentBid trong bảng auctions
+     *   4. extendIfLastMinute (anti-snipe)
+     *   5. notifyNewBid → NotificationService.onNewBid() → seller + previous bidders
      */
     private void onBidConfirmed(AuctionItem item, double amount, ItemDetailController detailCtrl) {
         NumberFormat nf = NumberFormat.getIntegerInstance(new Locale("vi", "VN"));
         String formatted = nf.format(Math.round(amount)) + " đ";
 
-        int buyerId = UserSession.getInstance().getCurrentUserId();
+        int buyerId   = UserSession.getInstance().getCurrentUserId();
         int auctionId = Integer.parseInt(item.id());
 
-        // ── Lớp bảo vệ thứ 2: kiểm tra lại trước khi ghi vào DB ────────────
-        //
-        // Tại sao cần kiểm tra ở đây dù HomeController đã kiểm tra rồi?
-        // → Coordinator là "cửa ngõ" cuối trước khi dữ liệu vào DB.
-        //   Nếu sau này có thêm đường khác mở BidDialog (ví dụ từ màn search,
-        //   notification, deep-link...), kiểm tra ở đây đảm bảo rule LUÔN được
-        //   áp dụng, bất kể user đến từ đâu. Đây là nguyên tắc "Fail-Safe":
-        //   nếu mọi lớp trên đều bỏ sót, lớp này vẫn chặn được.
+        // Guard: seller không tự bid sản phẩm mình
         if (buyerId == item.sellerId()) {
-            AlertHelper.showError(
-                    "Không thể đặt giá",
-                    "Người bán không được đặt giá cho sản phẩm của chính mình."
-            );
+            AlertHelper.showError("Không thể đặt giá",
+                    "Người bán không được đặt giá cho sản phẩm của chính mình.");
             return;
         }
 
         try {
-            // ── Kiểm tra lại giá cao nhất tại thời điểm submit ──────────────
-            // Trường hợp: 2 user cùng mở dialog, user A đặt xong trước.
-            // User B đã validate trên UI nhưng giá freshCurrentBid có thể
-            // đã lỗi thời khi submit → cần kiểm tra lại lần nữa ở đây.
-            List<Bid> latestBids = bidRepo.findByAuctionId(auctionId);
-            if (!latestBids.isEmpty()) {
-                double actualHighest = latestBids.get(0).getAmount().doubleValue();
-                if (amount <= actualHighest) {
-                    AlertHelper.showError(
-                            "Giá đặt quá thấp",
-                            "Giá cao nhất hiện tại là " + nf.format(Math.round(actualHighest)) + " đ.\n"
-                                    + "Vui lòng đặt giá cao hơn mức này."
-                    );
-                    return;
-                }
-            }
+            // Một lần gọi duy nhất — AuctionHouse lo toàn bộ:
+            // validate → save bid → update price → anti-snipe → notify
+            Bid saved = auctionHouse.placeBid(auctionId, buyerId, BigDecimal.valueOf(amount));
 
-            // Lưu lượt bid vào bảng bids
-            Bid bid = new Bid();
-            bid.setAuctionId(auctionId);
-            bid.setBuyerId(buyerId);
-            bid.setAmount(BigDecimal.valueOf(amount));
-            bid.setBidTime(LocalDateTime.now());
-            bid.setAutoBid(false);
-            bidRepo.save(bid);
-
-            // Cập nhật giá hiện tại và người dẫn đầu trong bảng auctions
-            auctionRepo.updateCurrentBid(auctionId, BigDecimal.valueOf(amount), buyerId);
-
-            // Refresh giá + lịch sử trên màn chi tiết
-            detailCtrl.refreshAfterBid(amount, bidRepo.countByAuctionId(auctionId),
+            // Refresh UI sau khi bid thành công
+            detailCtrl.refreshAfterBid(
+                    saved.getAmount().doubleValue(),
+                    bidRepo.countByAuctionId(auctionId),
                     bidRepo.findByAuctionId(auctionId));
 
-            // ── Anti-snipe: đọc lại end_time từ DB sau khi AuctionHouse có thể đã gia hạn ──
-            //
-            // Tại sao đọc lại thay vì tự tính?
-            //   AuctionHouse.extendIfLastMinute() chạy trong service layer và ghi
-            //   end_time mới vào DB. Coordinator không biết liệu extension có xảy ra
-            //   hay không — cách duy nhất chính xác là đọc lại từ DB.
-            //   Nếu không có extension, end_time giống cũ → refreshEndTime() chỉ reset
-            //   timer về đúng giá trị (vô hại). Nếu có extension → timer cập nhật đúng.
+            // Anti-snipe: đọc lại endTime mới từ DB (nếu đã được gia hạn)
             try {
-                auctionRepo.findById(auctionId).ifPresent(freshItem -> {
-                    LocalDateTime freshEndTime = freshItem.getEndTime();
-                    Platform.runLater(() -> detailCtrl.refreshEndTime(freshEndTime));
-                });
+                auctionRepo.findById(auctionId).ifPresent(freshItem ->
+                        Platform.runLater(() ->
+                                detailCtrl.refreshEndTime(freshItem.getEndTime())));
             } catch (Exception ex) {
-                LOG.log(Level.WARNING, "Không thể đọc endTime mới từ DB sau bid", ex);
-                // Không cần báo lỗi cho user — timer cũ vẫn chạy bình thường
+                LOG.log(Level.WARNING, "Không thể đọc endTime mới sau bid", ex);
             }
 
-            AlertHelper.showInfo(
-                    "Đặt giá thành công!",
+            AlertHelper.showInfo("Đặt giá thành công!",
                     "Sản phẩm : " + item.title() + "\n"
                             + "Giá đặt  : " + formatted + "\n\n"
-                            + "Hệ thống sẽ thông báo kết quả khi phiên đấu giá kết thúc."
-            );
+                            + "Hệ thống sẽ thông báo kết quả khi phiên đấu giá kết thúc.");
+
+        } catch (IllegalArgumentException e) {
+            // AuctionHouse ném khi giá không hợp lệ hoặc phiên không ACTIVE
+            AlertHelper.showError("Không thể đặt giá", e.getMessage());
         } catch (Exception e) {
-            LOG.log(Level.SEVERE, "Lỗi khi lưu bid", e);
+            LOG.log(Level.SEVERE, "Lỗi khi đặt giá", e);
             AlertHelper.showError("Lỗi đặt giá", "Không thể lưu lượt đặt giá: " + e.getMessage());
         }
     }
