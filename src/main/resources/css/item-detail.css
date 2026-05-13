@@ -1,11 +1,12 @@
 /* ============================================================
    item-detail.css — UBid Auction Item Detail Screen
+   Layout 2 cột: trái (ảnh+mô tả) | phải (info+chart+lịch sử)
+   Toàn bộ fit trong 960×700, không scroll ngang.
    ============================================================ */
 
 /* ─── Root ───────────────────────────────────────────────────── */
 .detail-root {
     -fx-background-color: #050509;
-    -fx-padding: 0;
     -fx-font-family: "Be Vietnam Pro", "Noto Sans", "Segoe UI", "Arial Unicode MS", Arial, sans-serif;
     -fx-text-fill: #f5f5f5;
 }
@@ -13,88 +14,73 @@
 /* ─── Navbar ─────────────────────────────────────────────────── */
 .detail-navbar {
     -fx-background-color: #050509;
-    -fx-padding: 14 32 14 32;
-    -fx-border-color: #1e1e1e;
+    -fx-padding: 12 24 12 24;
+    -fx-border-color: #1a1a28;
     -fx-border-width: 0 0 1 0;
+    -fx-spacing: 14;
 }
 
 .detail-logo {
     -fx-text-fill: #d9b65c;
-    -fx-font-size: 20px;
+    -fx-font-size: 19px;
     -fx-font-weight: bold;
-    -fx-font-family: "Be Vietnam Pro", "Noto Serif", "Georgia", serif;
 }
 
 .detail-back-btn {
     -fx-background-color: transparent;
     -fx-text-fill: #c9a84c;
-    -fx-font-size: 13px;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
     -fx-border-color: transparent;
     -fx-cursor: hand;
-}
-.detail-back-btn:hover {
-    -fx-text-fill: #f3d06d;
-}
-
-/* ─── ScrollPane — nền tối, ẩn viền, thanh cuộn kiểu tối ───── */
-.detail-scroll-pane {
-    -fx-background-color: #050509;
-    -fx-background: #050509;
-    -fx-border-color: transparent;
     -fx-padding: 0;
 }
+.detail-back-btn:hover { -fx-text-fill: #f3d06d; }
 
-/* Viewport bên trong ScrollPane phải trong suốt để nền VBox hiện ra */
-.detail-scroll-pane > .viewport {
-    -fx-background-color: transparent;
-}
-
-/* Thanh cuộn dọc */
-.detail-scroll-pane .scroll-bar:vertical {
-    -fx-background-color: #0e0e16;
-    -fx-pref-width: 8;
-}
-.detail-scroll-pane .scroll-bar:vertical .thumb {
-    -fx-background-color: #2e2e44;
-    -fx-background-radius: 4;
-}
-.detail-scroll-pane .scroll-bar:vertical .thumb:hover {
-    -fx-background-color: #d9b65c;
-}
-/* Ẩn các nút mũi tên trên thanh cuộn — trông gọn hơn */
-.detail-scroll-pane .scroll-bar .increment-button,
-.detail-scroll-pane .scroll-bar .decrement-button {
-    -fx-pref-height: 0;
-    -fx-pref-width: 0;
-    -fx-opacity: 0;
-}
-
-/* ─── Main layout ────────────────────────────────────────────── */
-.detail-main {
+/* ─── Body 2 cột ─────────────────────────────────────────────── */
+.detail-body {
     -fx-background-color: #050509;
-    -fx-padding: 24 32 40 32;
+    -fx-spacing: 0;
+    /* fill height của BorderPane center */
+    -fx-pref-height: 9999;
 }
 
-/* ─── Image area ─────────────────────────────────────────────── */
+/* ─── CỘT TRÁI ───────────────────────────────────────────────── */
+.detail-left-panel {
+    -fx-min-width: 260;
+    -fx-pref-width: 280;
+    -fx-max-width: 300;
+    -fx-background-color: #07070f;
+    -fx-border-color: #1a1a28;
+    -fx-border-width: 0 1 0 0;
+    -fx-padding: 18 16 18 18;
+    /* fill toàn bộ chiều cao */
+    -fx-pref-height: 9999;
+}
+
+/* Ảnh chính */
 .detail-main-image {
-    -fx-background-color: linear-gradient(to bottom right, #211923, #100f18);
-    -fx-background-radius: 16;
-    -fx-min-height: 260;
-    -fx-max-height: 260;
+    -fx-background-color: linear-gradient(to bottom right, #1c1523, #0f0e1c);
+    -fx-background-radius: 14;
+    -fx-min-height: 200;
+    -fx-pref-height: 220;
+    -fx-max-height: 240;
     -fx-alignment: center;
 }
 
 .detail-main-image-label {
     -fx-text-fill: #f5f5f5;
-    -fx-font-size: 32px;
+    -fx-font-size: 36px;
 }
 
+/* Thumbnails */
+.detail-thumb-row { -fx-spacing: 6; }
+
 .detail-thumb {
-    -fx-background-color: #181821;
+    -fx-background-color: #131320;
     -fx-background-radius: 10;
-    -fx-min-width: 72;
-    -fx-min-height: 54;
+    -fx-min-width: 56;
+    -fx-min-height: 44;
     -fx-alignment: center;
     -fx-cursor: hand;
 }
@@ -104,130 +90,194 @@
     -fx-border-width: 1.5;
 }
 
-/* ─── Info: breadcrumb / title ───────────────────────────────── */
+/* Card mô tả */
+.detail-desc-card {
+    -fx-background-color: #0d0d18;
+    -fx-background-radius: 12;
+    -fx-border-color: #1e1e2e;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 12 14 12 14;
+    /* grow để lấp đầy cột trái */
+    -fx-pref-height: 9999;
+}
+
+/* ScrollPane bên trong desc card */
+.detail-inner-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+.detail-inner-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.detail-inner-scroll .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-pref-width: 6;
+}
+.detail-inner-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: #2e2e44;
+    -fx-background-radius: 4;
+}
+.detail-inner-scroll .scroll-bar .increment-button,
+.detail-inner-scroll .scroll-bar .decrement-button {
+    -fx-pref-height: 0; -fx-pref-width: 0; -fx-opacity: 0;
+}
+
+/* ─── CỘT PHẢI ───────────────────────────────────────────────── */
+.detail-right-panel {
+    -fx-background-color: #050509;
+    -fx-padding: 18 20 18 20;
+    -fx-pref-height: 9999;
+}
+
+/* ─── Breadcrumb / Title / Pills ─────────────────────────────── */
 .detail-breadcrumb {
     -fx-text-fill: #9a8f7a;
-    -fx-font-size: 11px;
+    -fx-font-size: 10px;
 }
 
 .detail-title {
     -fx-text-fill: #f8f5ee;
-    -fx-font-size: 20px;
+    -fx-font-size: 17px;
     -fx-font-weight: bold;
 }
 
-/* ─── Pills (meta) ───────────────────────────────────────────── */
-.detail-meta-row { -fx-spacing: 8; }
+.detail-meta-row { -fx-spacing: 6; }
 
 .detail-meta-pill {
-    -fx-background-color: #151621;
+    -fx-background-color: #13131e;
     -fx-background-radius: 999;
-    -fx-padding: 4 10 4 10;
+    -fx-padding: 3 9 3 9;
 }
 .detail-meta-pill-label {
     -fx-text-fill: #c3b48c;
-    -fx-font-size: 11px;
+    -fx-font-size: 10.5px;
 }
 
 /* ─── Timer ──────────────────────────────────────────────────── */
 .detail-timer-box {
-    -fx-background-color: #10101a;
-    -fx-background-radius: 14;
-    -fx-padding: 10 14 10 14;
-    -fx-spacing: 8;
+    -fx-background-color: #0d0d18;
+    -fx-background-radius: 12;
+    -fx-border-color: #1e1e2e;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 10 12 10 12;
 }
 .detail-timer-label {
     -fx-text-fill: #a7a7c0;
-    -fx-font-size: 11px;
+    -fx-font-size: 10px;
 }
 .detail-timer-segment {
     -fx-background-color: #181821;
-    -fx-background-radius: 10;
-    -fx-min-width: 48;
+    -fx-background-radius: 8;
+    -fx-min-width: 42;
     -fx-alignment: center;
-    -fx-padding: 6 0 4 0;
+    -fx-padding: 5 0 4 0;
 }
 .detail-timer-value {
     -fx-text-fill: #f4f4f8;
-    -fx-font-size: 16px;
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
 }
 .detail-timer-unit {
-    -fx-text-fill: #7b7b94;
-    -fx-font-size: 10px;
+    -fx-text-fill: #6b6b84;
+    -fx-font-size: 9px;
 }
 
 /* ─── Price boxes ────────────────────────────────────────────── */
 .detail-price-box {
-    -fx-background-color: #10111a;
-    -fx-background-radius: 14;
-    -fx-padding: 12 14 12 14;
+    -fx-background-color: #0d0d18;
+    -fx-background-radius: 12;
+    -fx-border-color: #1e1e2e;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 10 14 10 14;
+    -fx-alignment: center-left;
+}
+.detail-price-box-highlight {
+    -fx-background-color: #100e00;
+    -fx-background-radius: 12;
+    -fx-border-color: #3a2e0a;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 10 14 10 14;
+    -fx-alignment: center-left;
 }
 .detail-price-label {
     -fx-text-fill: #8e8eaa;
-    -fx-font-size: 11px;
+    -fx-font-size: 10px;
 }
 .detail-price-value-muted {
     -fx-text-fill: #bcbccc;
-    -fx-font-size: 18px;
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
 }
 .detail-price-value-main {
     -fx-text-fill: #f6d078;
-    -fx-font-size: 22px;
+    -fx-font-size: 20px;
     -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(246,208,120,0.3), 10, 0, 0, 0);
 }
 
-/* ─── Stat chips ─────────────────────────────────────────────── */
+/* ─── Bid area (chips + nút) ─────────────────────────────────── */
+.detail-bid-area {
+    -fx-background-color: #0a0a14;
+    -fx-background-radius: 12;
+    -fx-border-color: #1a1a28;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 10 14 10 14;
+}
+
 .detail-stat-chip {
-    -fx-background-color: #14141f;
+    -fx-background-color: #111120;
     -fx-background-radius: 999;
-    -fx-padding: 4 10 4 10;
+    -fx-padding: 3 9 3 9;
 }
 .detail-stat-chip-label {
     -fx-text-fill: #9f9fbc;
-    -fx-font-size: 11px;
+    -fx-font-size: 10.5px;
 }
 
-/* ─── Primary bid button ─────────────────────────────────────── */
 .detail-primary-btn {
     -fx-background-color: linear-gradient(to right, #f2d67e, #d9b65c);
     -fx-background-radius: 999;
     -fx-text-fill: #201b0b;
-    -fx-font-size: 14px;
+    -fx-font-size: 13.5px;
     -fx-font-weight: bold;
-    -fx-padding: 10 26 10 26;
+    -fx-padding: 9 24 9 24;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(242,214,126,0.4), 18, 0, 0, 4);
+    -fx-effect: dropshadow(gaussian, rgba(242,214,126,0.4), 16, 0, 0, 3);
 }
 .detail-primary-btn:hover {
     -fx-background-color: linear-gradient(to right, #ffe18c, #e0c167);
 }
 
-/* ─── Guarantee pills ────────────────────────────────────────── */
 .detail-guarantee-pill {
-    -fx-background-color: #101017;
+    -fx-background-color: #0d0d18;
     -fx-background-radius: 999;
-    -fx-padding: 6 12 6 12;
+    -fx-padding: 4 10 4 10;
 }
 .detail-guarantee-label {
-    -fx-text-fill: #c9c9dd;
-    -fx-font-size: 11px;
+    -fx-text-fill: #9090aa;
+    -fx-font-size: 10.5px;
 }
 
-/* ─── Section cards (mô tả + lịch sử) ───────────────────────── */
+/* ─── Section cards ──────────────────────────────────────────── */
 .detail-section-card {
     -fx-background-color: #0d0d18;
-    -fx-background-radius: 16;
+    -fx-background-radius: 12;
     -fx-border-color: #1e1e2e;
     -fx-border-width: 1;
-    -fx-border-radius: 16;
-    -fx-padding: 18 20 18 20;
+    -fx-border-radius: 12;
+    -fx-padding: 12 14 12 14;
 }
 
 .detail-section-title {
     -fx-text-fill: #f0f0f8;
-    -fx-font-size: 13px;
+    -fx-font-size: 12.5px;
     -fx-font-weight: bold;
 }
 
@@ -236,124 +286,128 @@
     -fx-pref-height: 1;
 }
 
-/* Badge "X lượt" ở góc phải header lịch sử */
 .detail-section-badge {
     -fx-background-color: #1e1e2e;
     -fx-background-radius: 999;
-    -fx-padding: 2 10 2 10;
+    -fx-padding: 2 9 2 9;
     -fx-text-fill: #8888a8;
-    -fx-font-size: 11px;
+    -fx-font-size: 10px;
 }
 
+/* ─── Chart ──────────────────────────────────────────────────── */
+.detail-chart-container {
+    -fx-background-color: #070710;
+    -fx-background-radius: 10;
+    -fx-alignment: center;
+}
+
+.detail-chart-live-badge {
+    -fx-text-fill: #8888a8;
+    -fx-font-size: 10px;
+    -fx-background-color: #13131e;
+    -fx-background-radius: 999;
+    -fx-padding: 2 8 2 8;
+}
+
+.detail-chart-empty-label {
+    -fx-text-fill: #44445a;
+    -fx-font-size: 11px;
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+
+/* ─── Mô tả ──────────────────────────────────────────────────── */
 .detail-description {
-    -fx-text-fill: #b5b5c9;
-    -fx-font-size: 12.5px;
+    -fx-text-fill: #a8a8be;
+    -fx-font-size: 12px;
     -fx-wrap-text: true;
     -fx-line-spacing: 2;
 }
 
 /* ─── Bid history rows ───────────────────────────────────────── */
-
-/* Row thường */
 .history-row {
     -fx-background-color: #111120;
-    -fx-background-radius: 12;
+    -fx-background-radius: 10;
     -fx-border-color: #1e1e2e;
     -fx-border-width: 1;
-    -fx-border-radius: 12;
-    -fx-padding: 10 14 10 14;
-    -fx-cursor: default;
+    -fx-border-radius: 10;
+    -fx-padding: 8 12 8 12;
 }
-.history-row:hover {
-    -fx-background-color: #161628;
-}
+.history-row:hover { -fx-background-color: #161628; }
 
-/* Row dẫn đầu — viền vàng nhẹ */
 .history-row-lead {
-    -fx-background-color: #181508;
-    -fx-background-radius: 12;
-    -fx-border-color: #4a3a10;
+    -fx-background-color: #161204;
+    -fx-background-radius: 10;
+    -fx-border-color: #3d2e08;
     -fx-border-width: 1;
-    -fx-border-radius: 12;
-    -fx-padding: 10 14 10 14;
-    -fx-effect: dropshadow(gaussian, rgba(217,182,92,0.15), 12, 0, 0, 0);
+    -fx-border-radius: 10;
+    -fx-padding: 8 12 8 12;
+    -fx-effect: dropshadow(gaussian, rgba(217,182,92,0.12), 10, 0, 0, 0);
 }
-.history-row-lead:hover {
-    -fx-background-color: #1e1a0a;
-}
+.history-row-lead:hover { -fx-background-color: #1a1508; }
 
-/* Avatar wrapper (StackPane) */
 .history-avatar-wrap {
     -fx-background-radius: 999;
     -fx-alignment: center;
 }
-
-/* Avatar chữ cái — người thường */
 .history-avatar {
     -fx-background-color: #252538;
     -fx-background-radius: 999;
     -fx-text-fill: #a0a0c0;
-    -fx-font-size: 15px;
+    -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-min-width: 40;
-    -fx-min-height: 40;
-    -fx-max-width: 40;
-    -fx-max-height: 40;
+    -fx-min-width: 36; -fx-min-height: 36;
+    -fx-max-width: 36; -fx-max-height: 36;
     -fx-alignment: center;
 }
-
-/* Avatar chữ cái — người dẫn đầu (nền vàng) */
 .history-avatar-lead {
     -fx-background-color: linear-gradient(to bottom right, #f2d67e, #c9a84c);
     -fx-background-radius: 999;
     -fx-text-fill: #1c1608;
-    -fx-font-size: 15px;
-    -fx-font-weight: bold;
-    -fx-min-width: 40;
-    -fx-min-height: 40;
-    -fx-max-width: 40;
-    -fx-max-height: 40;
-    -fx-alignment: center;
-    -fx-effect: dropshadow(gaussian, rgba(217,182,92,0.5), 10, 0, 0, 0);
-}
-
-/* Tên người đặt */
-.history-name {
-    -fx-text-fill: #e0e0f0;
-    -fx-font-size: 13px;
-    -fx-font-weight: bold;
-}
-
-/* Phụ đề — người thường */
-.history-sub {
-    -fx-text-fill: #55556a;
-    -fx-font-size: 11px;
-}
-
-/* Phụ đề — người dẫn đầu */
-.history-sub-lead {
-    -fx-text-fill: #c9a84c;
-    -fx-font-size: 11px;
-    -fx-font-weight: bold;
-}
-
-/* Giá tiền — người thường */
-.history-price {
-    -fx-text-fill: #c8c8dc;
-    -fx-font-size: 13px;
-    -fx-font-weight: bold;
-}
-
-/* Giá tiền — người dẫn đầu (vàng) */
-.history-price-lead {
-    -fx-text-fill: #f6d078;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
+    -fx-min-width: 36; -fx-min-height: 36;
+    -fx-max-width: 36; -fx-max-height: 36;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(217,182,92,0.45), 8, 0, 0, 0);
 }
 
-/* Thời gian */
-.history-time {
-    -fx-text-fill: #48485e;
-    -fx-font-size: 11px;
-    -fx-alignment: center-right;
+.history-name  { -fx-text-fill: #e0e0f0; -fx-font-size: 12.5px; -fx-font-weight: bold; }
+.history-sub   { -fx-text-fill: #4a4a5e; -fx-font-size: 10.5px; }
+.history-sub-lead { -fx-text-fill: #c9a84c; -fx-font-size: 10.5px; -fx-font-weight: bold; }
+.history-price { -fx-text-fill: #c0c0d8; -fx-font-size: 12.5px; -fx-font-weight: bold; }
+.history-price-lead { -fx-text-fill: #f6d078; -fx-font-size: 13px; -fx-font-weight: bold; }
+.history-time  { -fx-text-fill: #42425a; -fx-font-size: 10px; -fx-alignment: center-right; }
+
+/* ─── ScrollPane bao cột phải ────────────────────────────────── */
+/*
+    fitToWidth=true nên viewport luôn rộng bằng ScrollPane.
+    Không scroll ngang. Scroll dọc khi nội dung vượt chiều cao window.
+*/
+.detail-right-scroll {
+    -fx-background-color: #050509;
+    -fx-background: #050509;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    /* fill toàn bộ chiều cao HBox */
+    -fx-pref-height: 9999;
+}
+.detail-right-scroll > .viewport {
+    -fx-background-color: #050509;
+}
+/* Thanh cuộn dọc mỏng, kiểu tối */
+.detail-right-scroll .scroll-bar:vertical {
+    -fx-background-color: #0a0a14;
+    -fx-pref-width: 7;
+}
+.detail-right-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: #2a2a42;
+    -fx-background-radius: 4;
+}
+.detail-right-scroll .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #d9b65c;
+}
+.detail-right-scroll .scroll-bar .increment-button,
+.detail-right-scroll .scroll-bar .decrement-button {
+    -fx-pref-height: 0; -fx-pref-width: 0; -fx-opacity: 0;
 }

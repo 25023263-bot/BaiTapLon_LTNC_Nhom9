@@ -6,9 +6,11 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.PhysicalItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.AuctionRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.UserRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.HomeLoginCoordinator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.ItemDetailCoordinator;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.SellerItemDetailCoordinator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.UserSession;
 
@@ -54,8 +56,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.ResourceBundle;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -86,7 +90,6 @@ public class HomeController implements Initializable {
     @FXML private HBox categoryChipsContainer;
     @FXML private TextField searchField;
     @FXML private Label resultCountLabel;
-    @FXML private ComboBox<String> filterDropdown;
     @FXML private Button chipAll;
     @FXML private Button btnLogInProminent;
     @FXML private Button btnUserAvatar;
@@ -111,6 +114,12 @@ public class HomeController implements Initializable {
     @FXML private Button btnListNewProduct;
     @FXML private VBox myProductsList;
 
+    // -- "Ket qua dau gia" overlay --
+
+    @FXML private StackPane resultsOverlay;
+    @FXML private Label     resultsSubtitle;
+    @FXML private VBox      resultsList;
+
     // ── "Điều khoản Người bán" overlay (Buyer muốn nâng cấp) ─────────────────
 
     @FXML private StackPane sellerTermsOverlay;
@@ -129,6 +138,9 @@ public class HomeController implements Initializable {
     @FXML private TextArea listProductDescArea;
     @FXML private TextField listProductPriceField;
     @FXML private DatePicker listProductEndDate;
+    @FXML private ComboBox<String> listProductEndHour;    // 00 – 23
+    @FXML private ComboBox<String> listProductEndMinute;  // 00, 05, 10 … 55
+    @FXML private Label     lblEndTimePreview;            // hiện "Kết thúc: 25/05 lúc 14:30"
     @FXML private StackPane imageUploadBox;
     @FXML private Label listProductTitleError;
     @FXML private Label listProductCategoryError;
@@ -144,14 +156,19 @@ public class HomeController implements Initializable {
             ServiceLocator.getInstance().getAuctionRepo();
     private final BidRepository bidRepo =
             ServiceLocator.getInstance().getBidRepo();
+    private final UserRepository userRepo = new UserRepository();
 
     private ScheduledExecutorService timerScheduler;
     private final Map<String, Label> timerLabels = new HashMap<>();
+    private final Set<String> expiredHandled = new HashSet<>();
     private final List<AuctionItem> displayedItems = new ArrayList<>();
     private Button activeChipButton;
+    /** Danh mục đang lọc; null = tất cả */
+    private String activeCategory = null;
 
     private HomeLoginCoordinator loginCoordinator;
     private ItemDetailCoordinator itemDetailCoordinator;
+    private SellerItemDetailCoordinator sellerItemDetailCoordinator;
     private ContextMenu avatarMenu;
 
     /** Đường dẫn ảnh người bán đã chọn */
@@ -167,11 +184,14 @@ public class HomeController implements Initializable {
             String category,
             String categoryEmoji,
             double currentBid,
+            double startingPrice,
+            String description,
             int bidCount,
             boolean isLive,
             LocalDateTime endTime,
             String imagePlaceholderEmoji,
-            String imageUrl             // đường dẫn ảnh thật lưu trong DB
+            String imageUrl,            // đường dẫn ảnh thật lưu trong DB
+            int sellerId                // ID người bán — dùng để ẩn nút "Đặt giá" với chủ SP
     ) {}
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -180,9 +200,10 @@ public class HomeController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        setupFilterDropdown();
         setupListProductForm();
         activeChipButton = chipAll;
+        // Đóng các phiên hết hạn ngay khi app khởi động
+        try { auctionRepo.closeExpiredAuctions(); } catch (Exception ignored) {}
         loadHotAuctions();
         loadAllAuctions();
         startCountdownTimers();
@@ -206,6 +227,7 @@ public class HomeController implements Initializable {
                 loginCoordinator = new HomeLoginCoordinator(stage);
                 loginCoordinator.setOnAuthStateChanged(this::refreshLoginUiChrome);
                 itemDetailCoordinator = new ItemDetailCoordinator(stage);
+                sellerItemDetailCoordinator = new SellerItemDetailCoordinator(stage);
                 refreshLoginUiChrome();
             }
         });
@@ -214,28 +236,72 @@ public class HomeController implements Initializable {
     }
 
     /**
-     * Thiết lập ComboBox danh mục và DatePicker trong form đăng bán.
+     * Thiết lập ComboBox danh mục, giờ, phút và DatePicker trong form đăng bán.
      *
-     * Tại sao làm ở đây thay vì trong FXML?
-     * → FXML chỉ định nghĩa cấu trúc layout; dữ liệu động (danh sách options)
-     *   nên được điền từ controller để dễ bảo trì và sau này có thể load từ DB.
+     * Tại sao populate ComboBox giờ/phút ở đây thay vì trong FXML?
+     * → Dữ liệu động (0–23 cho giờ, bước 5 phút cho phút) cần vòng lặp — không
+     *   thể khai báo tĩnh trong FXML. Controller là nơi đúng để làm điều này.
+     *
+     * Tại sao bước phút là 5 phút thay vì từng phút (0–59)?
+     * → 60 option trong dropdown rất khó dùng. Bước 5 phút cho 12 lựa chọn gọn,
+     *   đủ độ chính xác cho một phiên đấu giá (không ai cần kết thúc đúng lúc 14:37).
      */
     private void setupListProductForm() {
+        // ── Danh mục sản phẩm ────────────────────────────────────────────────
         if (listProductCategoryCombo != null) {
             listProductCategoryCombo.getItems().addAll(
-                    "⌚ Đồng hồ",
-                    "💎 Trang sức",
-                    "🎨 Nghệ thuật",
-                    "🏺 Đồ cổ",
-                    "🚗 Xe hơi",
-                    "🏡 Nội thất",
-                    "🏆 Sưu tầm",
-                    "🏢 Bất động sản",
-                    "📱 Điện tử",
-                    "👗 Thời trang",
-                    "📦 Khác"
+                    "⌚ Đồng hồ", "💎 Trang sức", "🎨 Nghệ thuật", "🏺 Đồ cổ",
+                    "🚗 Xe hơi", "🏡 Nội thất", "🏆 Sưu tầm", "🏢 Bất động sản",
+                    "📱 Điện tử", "👗 Thời trang", "📦 Khác"
             );
         }
+
+        // ── Giờ: 00 → 23 ─────────────────────────────────────────────────────
+        if (listProductEndHour != null) {
+            for (int h = 0; h < 24; h++) {
+                listProductEndHour.getItems().add(String.format("%02d", h));
+            }
+            // Mặc định: giờ hiện tại + 1, capped ở 23
+            int defaultHour = Math.min(java.time.LocalTime.now().getHour() + 1, 23);
+            listProductEndHour.setValue(String.format("%02d", defaultHour));
+        }
+
+        // ── Phút: 00, 05, 10, … 55 ───────────────────────────────────────────
+        if (listProductEndMinute != null) {
+            for (int m = 0; m < 60; m += 5) {
+                listProductEndMinute.getItems().add(String.format("%02d", m));
+            }
+            listProductEndMinute.setValue("00");
+        }
+
+        // ── Preview thời gian kết thúc (cập nhật realtime) ───────────────────
+        //
+        // Mỗi khi user thay đổi ngày, giờ hoặc phút → preview cập nhật ngay,
+        // giúp user xác nhận thời gian mà không cần submit rồi mới biết sai.
+        // Đây là UX pattern "immediate feedback" — phổ biến trong form phức tạp.
+        Runnable updatePreview = () -> {
+            if (lblEndTimePreview == null) return;
+            var date = listProductEndDate != null ? listProductEndDate.getValue() : null;
+            var hour = listProductEndHour != null ? listProductEndHour.getValue() : null;
+            var min  = listProductEndMinute != null ? listProductEndMinute.getValue() : null;
+            if (date != null && hour != null && min != null) {
+                String preview = String.format("→ Kết thúc: %02d/%02d lúc %s:%s",
+                        date.getDayOfMonth(), date.getMonthValue(), hour, min);
+                lblEndTimePreview.setText(preview);
+                lblEndTimePreview.setVisible(true);
+                lblEndTimePreview.setManaged(true);
+            } else {
+                lblEndTimePreview.setVisible(false);
+                lblEndTimePreview.setManaged(false);
+            }
+        };
+
+        if (listProductEndDate != null)
+            listProductEndDate.valueProperty().addListener((obs, o, n) -> updatePreview.run());
+        if (listProductEndHour != null)
+            listProductEndHour.valueProperty().addListener((obs, o, n) -> updatePreview.run());
+        if (listProductEndMinute != null)
+            listProductEndMinute.valueProperty().addListener((obs, o, n) -> updatePreview.run());
     }
 
     private void bootstrapCoordinatorIfPossible() {
@@ -246,6 +312,7 @@ public class HomeController implements Initializable {
             loginCoordinator = new HomeLoginCoordinator(stage);
             loginCoordinator.setOnAuthStateChanged(this::refreshLoginUiChrome);
             itemDetailCoordinator = new ItemDetailCoordinator(stage);
+            sellerItemDetailCoordinator = new SellerItemDetailCoordinator(stage);
             refreshLoginUiChrome();
         }
     }
@@ -262,6 +329,7 @@ public class HomeController implements Initializable {
         setVisible(myProductsOverlay,  false);
         setVisible(sellerTermsOverlay, false);
         setVisible(listProductOverlay, false);
+        setVisible(resultsOverlay,     false);
     }
 
     /** Ẩn tất cả rồi chỉ hiện overlay được chỉ định */
@@ -276,6 +344,8 @@ public class HomeController implements Initializable {
         sellerTermsOverlay.setManaged(false);
         listProductOverlay.setVisible(false);
         listProductOverlay.setManaged(false);
+        resultsOverlay.setVisible(false);
+        resultsOverlay.setManaged(false);
 
         node.setVisible(true);
         node.setManaged(true);
@@ -451,6 +521,32 @@ public class HomeController implements Initializable {
         row.getChildren().addAll(imgLabel, info, statusBadge);
         card.getChildren().add(row);
 
+        // Card có thể click → mở màn hình chi tiết/quản lý sản phẩm cho Seller.
+        //
+        // Tại sao phải convert sang UI record ở đây?
+        // → buildMyProductCard() nhận domain AuctionItem (có getter/setter, từ DB),
+        //   nhưng coordinator và SellerItemDetailController dùng HomeController.AuctionItem
+        //   (UI record, immutable). Phải convert rõ ràng để tránh lỗi kiểu dữ liệu.
+        //   Dùng toUiItem() đã có sẵn — không cần viết lại logic.
+        int bidCountForCard = 0;
+        try { bidCountForCard = bidRepo.countByAuctionId(item.getId()); }
+        catch (Exception ignored) {}
+        final AuctionItem uiItem = toUiItem(item, bidCountForCard);
+
+        card.setOnMouseClicked(e -> {
+            if (sellerItemDetailCoordinator == null) bootstrapCoordinatorIfPossible();
+            if (sellerItemDetailCoordinator != null) {
+                sellerItemDetailCoordinator.open(uiItem, () -> {
+                    // Callback sau khi Seller đóng màn quản lý (đã edit hoặc xóa):
+                    // Reload cả Home lẫn "Sản phẩm của tôi" để đồng bộ dữ liệu mới nhất
+                    loadHotAuctions();
+                    loadAllAuctions();
+                    loadMyProducts();
+                });
+            }
+        });
+        card.setStyle(card.getStyle() + "; -fx-cursor: hand;");
+
         return card;
     }
 
@@ -573,10 +669,39 @@ public class HomeController implements Initializable {
 
         if (!valid) return;
 
-        // ── Nâng cấp role (in-memory; sau này gọi DB) ────────────────────────
+        // ── Nâng cấp role: lưu vào DB trước, rồi cập nhật UserSession ────────
+        //
+        // Thứ tự quan trọng:
+        //   1. Gọi DB trước — nếu DB lỗi thì UserSession không đổi → user biết có lỗi
+        //   2. Sau khi DB thành công → mới cập nhật UserSession trong RAM
+        //   3. Tạo đối tượng Seller mới thay thế Buyer cũ trong session
+        //      vì domain model dùng inheritance (Seller extends User),
+        //      không thể chỉ setRole() trên Buyer object
         User currentUser = UserSession.getInstance().getCurrentUser();
-        currentUser.setRole(UserRole.SELLER);
-        // TODO: userRepository.updateRole(currentUser.getId(), UserRole.SELLER);
+        try {
+            userRepo.upgradeToSeller(currentUser.getId());
+        } catch (Exception e) {
+            Alert err = new Alert(Alert.AlertType.ERROR);
+            err.setTitle("UBid");
+            err.setHeaderText("Lỗi nâng cấp tài khoản");
+            err.setContentText("Không thể lưu vào cơ sở dữ liệu: " + e.getMessage()
+                    + "\nVui lòng thử lại.");
+            err.showAndWait();
+            return;
+        }
+
+        // DB đã cập nhật thành công → cập nhật object trong RAM
+        // Tạo Seller mới kế thừa toàn bộ thông tin từ Buyer cũ
+        com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller newSeller =
+                new com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller();
+        newSeller.setId(currentUser.getId());
+        newSeller.setUsername(currentUser.getUsername());
+        newSeller.setEmail(currentUser.getEmail());
+        newSeller.setFullName(currentUser.getFullName());
+        newSeller.setPhone(currentUser.getPhone());
+        newSeller.setRole(UserRole.SELLER);
+        newSeller.setActive(currentUser.isActive());
+        UserSession.getInstance().login(newSeller);  // thay thế Buyer bằng Seller trong session
 
         // Thông báo thành công
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -614,11 +739,57 @@ public class HomeController implements Initializable {
                     + "Thông tin giao dịch được mã hóa và lưu trữ an toàn theo tiêu chuẩn quốc tế."); }
 
     private void showTermsDialog(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("UBid — " + title);
-        alert.setHeaderText(title);
-        alert.setContentText(content);
-        alert.showAndWait();
+        Stage dialog = new Stage();
+        dialog.initModality(javafx.stage.Modality.WINDOW_MODAL);
+        dialog.initOwner(rootPane.getScene().getWindow());
+        dialog.setTitle("UBid \u2014 " + title);
+        dialog.setResizable(false);
+
+        Label lblIcon = new Label("\ud83d\udccb");
+        lblIcon.setStyle("-fx-font-size: 28px;");
+        Label lblTitle = new Label(title);
+        lblTitle.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #f0e6c8;");
+        lblTitle.setWrapText(true);
+        VBox header = new VBox(10, lblIcon, lblTitle);
+        header.setAlignment(javafx.geometry.Pos.CENTER);
+        header.setStyle("-fx-padding: 28 32 20 32;");
+
+        javafx.scene.control.Separator sep = new javafx.scene.control.Separator();
+        sep.setStyle("-fx-background-color: #2a2a3e;");
+
+        Label lblContent = new Label(content);
+        lblContent.setWrapText(true);
+        lblContent.setStyle("-fx-font-size: 13.5px; -fx-text-fill: #a0a0c0; -fx-line-spacing: 4;");
+        VBox contentBox = new VBox(lblContent);
+        contentBox.setStyle("-fx-padding: 0 32 0 32;");
+        ScrollPane scroll = new ScrollPane(contentBox);
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setPrefHeight(220);
+        scroll.setStyle("-fx-background-color: #13131f; -fx-background: #13131f; -fx-border-color: transparent;");
+
+        Button btnClose = new Button("  \u0110\u00e3 hi\u1ec3u");
+        btnClose.setMaxWidth(Double.MAX_VALUE);
+        btnClose.setStyle(
+                "-fx-background-color: linear-gradient(to right,#c9a84c,#d9b65c);" +
+                        "-fx-background-radius:10;-fx-text-fill:#0e0e18;" +
+                        "-fx-font-size:14px;-fx-font-weight:bold;-fx-padding:13 0 13 0;-fx-cursor:hand;");
+        btnClose.setOnAction(e -> dialog.close());
+        VBox footer = new VBox(btnClose);
+        footer.setStyle("-fx-padding: 20 32 28 32;");
+
+        VBox root = new VBox(header, sep, scroll, footer);
+        root.setStyle(
+                "-fx-background-color:#0e0e18;" +
+                        "-fx-background-radius:16;-fx-border-radius:16;" +
+                        "-fx-border-color:#252538;-fx-border-width:1.5;");
+        root.setPrefWidth(500);
+
+        javafx.scene.Scene scene = new javafx.scene.Scene(root);
+        scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
+        dialog.setScene(scene);
+        dialog.showAndWait();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -716,8 +887,10 @@ public class HomeController implements Initializable {
         String category   = listProductCategoryCombo.getValue();
         String desc       = listProductDescArea.getText().trim();
         BigDecimal price  = new BigDecimal(listProductPriceField.getText().trim());
-        // Kết thúc vào 23:59:59 của ngày người bán chọn
-        LocalDateTime endTime = listProductEndDate.getValue().atTime(23, 59, 59);
+        // Kết thúc vào đúng giờ:phút mà người bán chọn
+        int endHour   = Integer.parseInt(listProductEndHour.getValue());
+        int endMinute = Integer.parseInt(listProductEndMinute.getValue());
+        LocalDateTime endTime = listProductEndDate.getValue().atTime(endHour, endMinute, 0);
         // Đường dẫn ảnh (null-safe: nếu chưa chọn thì lưu chuỗi rỗng)
         String imagePath = selectedProductImage != null
                 ? selectedProductImage.getAbsolutePath() : "";
@@ -814,15 +987,33 @@ public class HomeController implements Initializable {
             valid = false;
         }
 
-        // Ngày kết thúc — phải sau hôm nay
+        // Ngày + Giờ kết thúc — phải sau thời điểm hiện tại
         if (listProductEndDate.getValue() == null) {
+            listProductDateError.setText("⚠  Vui lòng chọn ngày kết thúc");
             showError(listProductDateError);
             valid = false;
-        } else if (!listProductEndDate.getValue().isAfter(LocalDate.now())) {
-            listProductDateError.setText("⚠  Ngày kết thúc phải sau hôm nay");
+        } else if (listProductEndHour.getValue() == null
+                || listProductEndMinute.getValue() == null) {
+            listProductDateError.setText("⚠  Vui lòng chọn giờ kết thúc");
             showError(listProductDateError);
             valid = false;
-        } else hideError(listProductDateError);
+        } else {
+            // Kết hợp ngày + giờ + phút → so sánh với thời điểm hiện tại
+            // Tại sao phải kiểm tra LocalDateTime thay vì chỉ LocalDate?
+            // → Người bán có thể chọn HÔM NAY nhưng giờ đã qua (ví dụ: 10h sáng
+            //   nhưng bây giờ đã 14h) → phải kiểm tra đủ ngày + giờ + phút.
+            int h = Integer.parseInt(listProductEndHour.getValue());
+            int m = Integer.parseInt(listProductEndMinute.getValue());
+            LocalDateTime chosenEnd = listProductEndDate.getValue().atTime(h, m, 0);
+            // Yêu cầu tối thiểu: còn ít nhất 5 phút nữa mới kết thúc
+            if (!chosenEnd.isAfter(LocalDateTime.now().plusMinutes(5))) {
+                listProductDateError.setText("⚠  Thời gian kết thúc phải sau thời điểm hiện tại ít nhất 5 phút");
+                showError(listProductDateError);
+                valid = false;
+            } else {
+                hideError(listProductDateError);
+            }
+        }
 
         // Hình ảnh (bắt buộc)
         if (selectedProductImage == null) {
@@ -856,6 +1047,16 @@ public class HomeController implements Initializable {
         listProductDescArea.clear();
         listProductPriceField.clear();
         listProductEndDate.setValue(null);
+        // Reset giờ/phút về default (giờ hiện tại + 1, phút = 00)
+        if (listProductEndHour != null) {
+            int defaultHour = Math.min(java.time.LocalTime.now().getHour() + 1, 23);
+            listProductEndHour.setValue(String.format("%02d", defaultHour));
+        }
+        if (listProductEndMinute != null) listProductEndMinute.setValue("00");
+        if (lblEndTimePreview != null) {
+            lblEndTimePreview.setVisible(false);
+            lblEndTimePreview.setManaged(false);
+        }
         selectedProductImage = null;
         // Khôi phục lại ô upload về trạng thái ban đầu (xóa preview nếu có)
         imageUploadBox.getChildren().clear();
@@ -900,16 +1101,6 @@ public class HomeController implements Initializable {
     // Auction data loading (giữ nguyên từ version cũ)
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void setupFilterDropdown() {
-        filterDropdown.getItems().addAll(
-                "Sắp hết hạn",
-                "Nhiều lượt đấu nhất",
-                "Giá thấp nhất",
-                "Giá cao nhất",
-                "Mới nhất");
-        filterDropdown.setValue("Sắp hết hạn");
-        filterDropdown.setOnAction(e -> handleFilterChange());
-    }
 
     private AuctionItem toUiItem(
             com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem dbItem,
@@ -918,17 +1109,22 @@ public class HomeController implements Initializable {
         boolean isLive = dbItem.getStatus() == AuctionStatus.ACTIVE;
         // imageUrl lấy từ DB; nếu null hoặc rỗng thì để chuỗi rỗng
         String imageUrl = dbItem.getImageUrl() != null ? dbItem.getImageUrl() : "";
+        String description = dbItem.getDescription() != null ? dbItem.getDescription() : "";
+        double startingPrice = dbItem.getStartingPrice() != null ? dbItem.getStartingPrice().doubleValue() : 0;
         return new AuctionItem(
                 String.valueOf(dbItem.getId()),
                 dbItem.getTitle(),
                 dbItem.getCategory(),
                 emoji,
                 dbItem.getCurrentPrice().doubleValue(),
+                startingPrice,
+                description,
                 bidCount,
                 isLive,
                 dbItem.getEndTime(),
                 emoji,
-                imageUrl
+                imageUrl,
+                dbItem.getSellerId()   // ← truyền sellerId để UI ẩn nút "Đặt giá" với chủ sản phẩm
         );
     }
 
@@ -950,13 +1146,13 @@ public class HomeController implements Initializable {
 
     private void loadHotAuctions() {
         hotCardsContainer.getChildren().clear();
-        displayedItems.clear();
+        synchronized (displayedItems) { displayedItems.clear(); }
         List<AuctionItem> items = loadFromDb(AuctionStatus.ACTIVE);
         items = items.stream()
-                .sorted((a, b) -> Double.compare(b.currentBid(), a.currentBid()))
+                .sorted((a, b) -> Integer.compare(b.bidCount(), a.bidCount()))
                 .limit(3)
                 .toList();
-        displayedItems.addAll(items);
+        synchronized (displayedItems) { displayedItems.addAll(items); }
         for (AuctionItem item : items) {
             VBox card = buildHotCard(item);
             HBox.setHgrow(card, Priority.ALWAYS);
@@ -975,9 +1171,11 @@ public class HomeController implements Initializable {
             allProductsGrid.getColumnConstraints().add(cc);
         }
         List<AuctionItem> items = loadFromDb(AuctionStatus.ACTIVE);
-        for (AuctionItem item : items) {
-            boolean alreadyCached = displayedItems.stream().anyMatch(c -> c.id().equals(item.id()));
-            if (!alreadyCached) displayedItems.add(item);
+        synchronized (displayedItems) {
+            for (AuctionItem item : items) {
+                boolean alreadyCached = displayedItems.stream().anyMatch(c -> c.id().equals(item.id()));
+                if (!alreadyCached) displayedItems.add(item);
+            }
         }
         for (int i = 0; i < items.size(); i++) {
             VBox card = buildSmallCard(items.get(i));
@@ -1061,11 +1259,26 @@ public class HomeController implements Initializable {
 
         VBox cardFooter = new VBox();
         cardFooter.getStyleClass().add("card-footer");
-        Button bidBtn = new Button("Đặt giá");
-        bidBtn.getStyleClass().add("btn-bid");
-        bidBtn.setMaxWidth(Double.MAX_VALUE);
-        bidBtn.setOnAction(e -> handlePlaceBid(item.id()));
-        cardFooter.getChildren().add(bidBtn);
+
+        // Người bán không được đặt giá cho sản phẩm của chính mình
+        // → kiểm tra sellerId của sản phẩm với userId hiện tại
+        boolean isOwner = UserSession.getInstance().isLoggedIn()
+                && UserSession.getInstance().getCurrentUserId() == item.sellerId();
+
+        if (isOwner) {
+            Label ownerLabel = new Label("🏷  Sản phẩm của bạn");
+            ownerLabel.setStyle("-fx-text-fill: #888; -fx-font-size: 12px; " +
+                    "-fx-padding: 10 0 10 0; -fx-alignment: center;");
+            ownerLabel.setMaxWidth(Double.MAX_VALUE);
+            ownerLabel.setAlignment(javafx.geometry.Pos.CENTER);
+            cardFooter.getChildren().add(ownerLabel);
+        } else {
+            Button bidBtn = new Button("Đặt giá");
+            bidBtn.getStyleClass().add("btn-bid");
+            bidBtn.setMaxWidth(Double.MAX_VALUE);
+            bidBtn.setOnAction(e -> handlePlaceBid(item.id()));
+            cardFooter.getChildren().add(bidBtn);
+        }
 
         card.getChildren().addAll(imageStack, cardBody, cardFooter);
         return card;
@@ -1101,11 +1314,24 @@ public class HomeController implements Initializable {
 
         VBox footer = new VBox();
         footer.getStyleClass().add("card-sm-footer");
-        Button bidBtn = new Button("Đặt giá");
-        bidBtn.getStyleClass().add("btn-bid-sm");
-        bidBtn.setMaxWidth(Double.MAX_VALUE);
-        bidBtn.setOnAction(e -> handlePlaceBid(item.id()));
-        footer.getChildren().add(bidBtn);
+
+        boolean isOwner = UserSession.getInstance().isLoggedIn()
+                && UserSession.getInstance().getCurrentUserId() == item.sellerId();
+
+        if (isOwner) {
+            Label ownerLabel = new Label("🏷  Của bạn");
+            ownerLabel.setStyle("-fx-text-fill: #888; -fx-font-size: 11px; " +
+                    "-fx-padding: 8 0 8 0; -fx-alignment: center;");
+            ownerLabel.setMaxWidth(Double.MAX_VALUE);
+            ownerLabel.setAlignment(javafx.geometry.Pos.CENTER);
+            footer.getChildren().add(ownerLabel);
+        } else {
+            Button bidBtn = new Button("Đặt giá");
+            bidBtn.getStyleClass().add("btn-bid-sm");
+            bidBtn.setMaxWidth(Double.MAX_VALUE);
+            bidBtn.setOnAction(e -> handlePlaceBid(item.id()));
+            footer.getChildren().add(bidBtn);
+        }
 
         card.getChildren().addAll(imgPane, body, footer);
         return card;
@@ -1115,32 +1341,185 @@ public class HomeController implements Initializable {
     // Timer
     // ─────────────────────────────────────────────────────────────────────────
 
+    // ── Ket qua dau gia ──────────────────────────────────────────────────
+
+    /**
+     * Load tat ca phien da ket thuc (CLOSED hoac EXPIRED) va hien thi
+     * trong resultsOverlay.
+     *
+     * CLOSED  : co nguoi thang (highest bidder)
+     * EXPIRED : het gio nhung khong ai bid
+     */
+    private void loadResultAuctions() {
+        resultsList.getChildren().clear();
+
+        List<AuctionItem> closed  = loadFromDb(AuctionStatus.CLOSED);
+        List<AuctionItem> expired = loadFromDb(AuctionStatus.EXPIRED);
+        List<AuctionItem> all = new ArrayList<>();
+        all.addAll(closed);
+        all.addAll(expired);
+
+        // Sap xep: moi ket thuc nhat len tren
+        all.sort((a, b) -> {
+            if (a.endTime() == null) return 1;
+            if (b.endTime() == null) return -1;
+            return b.endTime().compareTo(a.endTime());
+        });
+
+        if (all.isEmpty()) {
+            Label empty = new Label("Chưa có phiên đấu giá nào kết thúc.");
+            empty.setStyle("-fx-text-fill: #666; -fx-font-size: 14px; -fx-padding: 32;");
+            resultsList.getChildren().add(empty);
+        } else {
+            for (AuctionItem item : all) {
+                String winnerName  = null;
+                double finalAmount = item.currentBid();
+                try {
+                    var leadingBid = bidRepo.findLeadingBid(Integer.parseInt(item.id()));
+                    if (leadingBid.isPresent()) {
+                        winnerName  = leadingBid.get().getBuyerUsername();
+                        finalAmount = leadingBid.get().getAmount().doubleValue();
+                    }
+                } catch (Exception ignored) {}
+
+                HBox card = buildResultCard(item, winnerName, finalAmount);
+                resultsList.getChildren().add(card);
+            }
+        }
+
+        resultsSubtitle.setText(all.size() + " phiên đấu giá đã kết thúc");
+    }
+
+    /**
+     * Xay dung mot card ket qua dang ngang: [anh | thong tin san pham + nguoi thang].
+     *
+     * @param item        AuctionItem da ket thuc
+     * @param winner      username nguoi thang (null neu khong co bid)
+     * @param finalAmount gia cuoi cung
+     */
+    private HBox buildResultCard(AuctionItem item, String winner, double finalAmount) {
+        HBox card = new HBox();
+        card.getStyleClass().add("result-card");
+
+        // -- Anh ben trai --
+        StackPane imagePane = new StackPane();
+        imagePane.getStyleClass().add("result-card-image");
+        javafx.scene.Node imgNode = buildImageNode(item.imageUrl(), item.imagePlaceholderEmoji(), 140, 120);
+        imagePane.getChildren().add(imgNode);
+
+        // -- Body ben phai --
+        VBox body = new VBox(6);
+        body.getStyleClass().add("result-card-body");
+        HBox.setHgrow(body, Priority.ALWAYS);
+
+        Label categoryLabel = new Label(item.categoryEmoji() + "  " + item.category());
+        categoryLabel.getStyleClass().add("result-card-category");
+
+        Label titleLabel = new Label(item.title());
+        titleLabel.getStyleClass().add("result-card-title");
+        titleLabel.setWrapText(true);
+
+        VBox priceBox = new VBox(2);
+        Label priceLbl = new Label("Giá cuối cùng");
+        priceLbl.getStyleClass().add("result-final-price-label");
+        Label priceVal = new Label(formatPrice(finalAmount));
+        priceVal.getStyleClass().add("result-final-price-value");
+        priceBox.getChildren().addAll(priceLbl, priceVal);
+
+        Label winnerBadge;
+        if (winner != null) {
+            winnerBadge = new Label("&#55356;&#57286;  Người thắng: " + winner);
+            winnerBadge.getStyleClass().add("result-winner-badge");
+        } else {
+            winnerBadge = new Label("⏰  Hết hạn – không có lượt đấu");
+            winnerBadge.getStyleClass().add("result-expired-badge");
+        }
+
+        body.getChildren().addAll(categoryLabel, titleLabel, priceBox, winnerBadge);
+        card.getChildren().addAll(imagePane, body);
+        return card;
+    }
+
     private void startCountdownTimers() {
         timerScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "ubid-timer");
             t.setDaemon(true);
             return t;
         });
+
+        // ─────────────────────────────────────────────────────────────────
+        // THIẾT KẾ MỚI: tách "tick đồng hồ" khỏi "kiểm tra expire"
+        //
+        // Vấn đề của thiết kế cũ:
+        //   - Mỗi giây gọi loadFromDb(ACTIVE) → tốn kết nối DB liên tục
+        //   - Race condition: khi item expire, closeExpiredAuctions() chưa
+        //     kịp commit xong thì loadFromDb() kế tiếp vẫn trả về item đó
+        //     → expiredHandled đã có id đó → needsRefresh = false → không reload
+        //
+        // Giải pháp:
+        //   1. Đếm ngược DỰA TRÊN endTime đã load vào displayedItems (trong RAM)
+        //      → không cần gọi DB mỗi giây
+        //   2. Khi secondsLeft <= 0: close DB TRƯỚC (synchronous trên timer thread)
+        //      rồi reload UI sau trên FX thread — đảm bảo thứ tự đúng
+        //   3. reload() được gọi MỘT LẦN duy nhất nhờ expiredHandled
+        // ─────────────────────────────────────────────────────────────────
         timerScheduler.scheduleAtFixedRate(() -> {
-            List<AuctionItem> allItems = loadFromDb(AuctionStatus.ACTIVE);
-            for (AuctionItem item : allItems) {
-                if (!item.isLive() || item.endTime() == null) continue;
+            // Snapshot displayedItems để tránh ConcurrentModificationException
+            // (displayedItems có thể bị FX thread modify khi loadHotAuctions chạy)
+            List<AuctionItem> snapshot;
+            synchronized (displayedItems) {
+                snapshot = List.copyOf(displayedItems);
+            }
+
+            boolean needsRefresh = false;
+
+            for (AuctionItem item : snapshot) {
+                if (item.endTime() == null) continue;
+
                 long secondsLeft = java.time.Duration.between(
                         LocalDateTime.now(), item.endTime()).getSeconds();
-                String display;
+
                 if (secondsLeft <= 0) {
-                    display = "Đã kết thúc";
+                    // ── Item vừa hết hạn ─────────────────────────────────────
+                    // expiredHandled đảm bảo chỉ trigger 1 lần cho mỗi item
+                    if (!expiredHandled.contains(item.id())) {
+                        expiredHandled.add(item.id());
+                        needsRefresh = true;
+                    }
+                    // Cập nhật label "Đã kết thúc" ngay lập tức
+                    final String endedText = "Đã kết thúc";
+                    Label hot = timerLabels.get(item.id());
+                    if (hot != null) Platform.runLater(() -> hot.setText(endedText));
+                    Label sm = timerLabels.get(item.id() + "_sm");
+                    if (sm != null) Platform.runLater(() -> sm.setText("⏱  " + endedText));
                 } else {
+                    // ── Cập nhật đồng hồ đếm ngược bình thường ──────────────
                     long h = secondsLeft / 3600;
                     long m = (secondsLeft % 3600) / 60;
                     long s = secondsLeft % 60;
-                    display = String.format("%02d:%02d:%02d", h, m, s);
+                    final String fd = String.format("%02d:%02d:%02d", h, m, s);
+                    Label hot = timerLabels.get(item.id());
+                    if (hot != null) Platform.runLater(() -> hot.setText(fd));
+                    Label sm = timerLabels.get(item.id() + "_sm");
+                    if (sm != null) Platform.runLater(() -> sm.setText("⏱  " + fd));
                 }
-                String fd = display;
-                Label hot = timerLabels.get(item.id());
-                if (hot != null) Platform.runLater(() -> hot.setText(fd));
-                Label sm = timerLabels.get(item.id() + "_sm");
-                if (sm != null) Platform.runLater(() -> sm.setText("⏱  " + fd));
+            }
+
+            if (needsRefresh) {
+                // ── Thứ tự quan trọng: close DB TRƯỚC trên timer thread ──────
+                // Lý do: nếu gọi closeExpiredAuctions() bên trong Platform.runLater()
+                // thì nó chạy trên FX thread — có thể bị delay bởi render cycle.
+                // Gọi ở đây (timer thread) đảm bảo DB đã được commit TRƯỚC KHI
+                // FX thread gọi loadFromDb() để reload UI.
+                try { auctionRepo.closeExpiredAuctions(); } catch (Exception ignored) {}
+
+                Platform.runLater(() -> {
+                    // clear timerLabels trước khi build lại card (tránh label cũ mồ côi)
+                    timerLabels.clear();
+                    loadHotAuctions();
+                    loadAllAuctions();
+                    loadResultAuctions();
+                });
             }
         }, 0, 1, TimeUnit.SECONDS);
     }
@@ -1190,6 +1569,19 @@ public class HomeController implements Initializable {
             updateProfileHeroMonogram(u.getUsername(), u.getFullName());
         }
         refreshProfileTabContent(logged);
+
+        // Khi auth state thay đổi (đăng nhập / đăng xuất / đổi tài khoản),
+        // PHẢI rebuild lại toàn bộ card vì mỗi card tính isOwner tại thời điểm build:
+        //
+        //   boolean isOwner = UserSession.getCurrentUserId() == item.sellerId()
+        //
+        // Nếu không rebuild → card từ phiên Yana vẫn hiện "Sản phẩm của bạn"
+        // dù buyer mới đăng nhập có userId khác hoàn toàn.
+        // loadHotAuctions() + loadAllAuctions() build lại card từ đầu → isOwner
+        // được tính lại với userId của user hiện tại → đúng.
+        timerLabels.clear();
+        loadHotAuctions();
+        loadAllAuctions();
 
         // Nếu đang ở tab "Sản phẩm của tôi" và auth state thay đổi → refresh
         if (bottomNavMyProducts.isSelected()) {
@@ -1282,13 +1674,31 @@ public class HomeController implements Initializable {
     // ─────────────────────────────────────────────────────────────────────────
 
     @FXML private void handleNavHome()    { bottomNavHome.setSelected(true); }
-    @FXML private void handleNavResults() { showInfoPlaceholder("Kết quả đấu giá"); }
+    @FXML private void handleNavResults() {
+        showOnly(resultsOverlay);
+        bottomNavHome.setSelected(false);
+        bottomNavMyProducts.setSelected(false);
+        bottomNavProfile.setSelected(false);
+        loadResultAuctions();
+    }
     @FXML private void handleSearch()     { searchField.requestFocus(); }
 
     @FXML
     private void handleSearchQuery() {
-        String q = searchField.getText().trim();
-        if (!q.isEmpty()) System.out.println("[Search] " + q);
+        String query = searchField.getText().trim().toLowerCase();
+        if (query.isEmpty()) { applyFilters(); return; }
+        List<AuctionItem> base = (activeCategory == null || activeCategory.isEmpty())
+                ? displayedItems
+                : displayedItems.stream()
+                .filter(item -> item.category() != null
+                        && item.category().toLowerCase().contains(activeCategory.toLowerCase()))
+                .toList();
+        renderFilteredItems(
+                base.stream()
+                        .filter(item -> item.title().toLowerCase().contains(query)
+                                || item.category().toLowerCase().contains(query))
+                        .toList()
+        );
     }
 
     @FXML private void handleNotifications() { showInfoPlaceholder("Thông báo"); }
@@ -1314,11 +1724,58 @@ public class HomeController implements Initializable {
     @FXML
     private void handleCategoryAll() {
         setActiveChip(chipAll);
-        loadAllAuctions();
+        activeCategory = null;
+        searchField.clear();
+        applyFilters();
     }
 
-    @FXML private void handleCategoryFilter() { System.out.println("[Category] chip"); }
-    private void handleFilterChange() { System.out.println("[Filter] " + filterDropdown.getValue()); }
+    @FXML
+    private void handleCategoryFilter(javafx.event.ActionEvent event) {
+        if (!(event.getSource() instanceof Button clickedChip)) return;
+        setActiveChip(clickedChip);
+        String chipText = clickedChip.getText().trim();
+        activeCategory = chipText.replaceAll("^\\S+\\s*", "").trim();
+        searchField.clear();
+        applyFilters();
+    }
+
+    private void applyFilters() {
+        List<AuctionItem> filtered;
+        if (activeCategory == null || activeCategory.isEmpty()) {
+            filtered = displayedItems;
+        } else {
+            final String cat = activeCategory;
+            filtered = displayedItems.stream()
+                    .filter(item -> item.category() != null
+                            && item.category().toLowerCase().contains(cat.toLowerCase()))
+                    .toList();
+        }
+        renderFilteredItems(filtered);
+    }
+
+    private void renderFilteredItems(List<AuctionItem> items) {
+        allProductsGrid.getChildren().clear();
+        allProductsGrid.getColumnConstraints().clear();
+        int columns = 3;
+        for (int i = 0; i < columns; i++) {
+            ColumnConstraints cc = new ColumnConstraints();
+            cc.setPercentWidth(100.0 / columns);
+            cc.setHgrow(Priority.ALWAYS);
+            allProductsGrid.getColumnConstraints().add(cc);
+        }
+        for (int i = 0; i < items.size(); i++) {
+            VBox card = buildSmallCard(items.get(i));
+            allProductsGrid.add(card, i % columns, i / columns);
+        }
+        if (items.isEmpty()) {
+            Label empty = new Label("Không tìm thấy kết quả nào 🔍");
+            empty.setStyle("-fx-text-fill: #888; -fx-font-size: 14px; -fx-padding: 40 0;");
+            allProductsGrid.add(empty, 0, 0);
+            GridPane.setColumnSpan(empty, columns);
+        }
+        if (resultCountLabel != null)
+            resultCountLabel.setText(items.size() + " kết quả");
+    }
 
     private void handlePlaceBid(String auctionId) {
         if (!UserSession.getInstance().isLoggedIn()) {
@@ -1328,7 +1785,29 @@ public class HomeController implements Initializable {
         if (itemDetailCoordinator == null) bootstrapCoordinatorIfPossible();
         AuctionItem item = findAuctionById(auctionId);
         if (item == null) { showInfoPlaceholder("Đấu giá " + auctionId); return; }
-        if (itemDetailCoordinator != null) itemDetailCoordinator.openForAuction(item);
+
+        // ── Chặn người bán tự đặt giá sản phẩm của mình ─────────────────────
+        //
+        // Tại sao kiểm tra lại ở đây, dù UI đã ẩn nút "Đặt giá"?
+        // → Nguyên tắc "Defense in Depth" (bảo vệ nhiều lớp):
+        //   UI chỉ là lớp hiển thị, có thể bị bypass (race condition, bug render...).
+        //   Logic nghiệp vụ PHẢI được kiểm tra ở tầng controller/service,
+        //   không được chỉ dựa vào việc ẩn/hiện nút trên UI.
+        if (UserSession.getInstance().getCurrentUserId() == item.sellerId()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("UBid");
+            alert.setHeaderText("Không thể đặt giá");
+            alert.setContentText("Bạn không thể đặt giá cho sản phẩm của chính mình.");
+            alert.showAndWait();
+            return;
+        }
+
+        if (itemDetailCoordinator != null) {
+            itemDetailCoordinator.openForAuction(item); // showAndWait — block đến khi đóng
+            // Sau khi đóng màn chi tiết, reload Home để cập nhật giá + lượt bid
+            loadHotAuctions();
+            loadAllAuctions();
+        }
     }
 
     private AuctionItem findAuctionById(String id) {

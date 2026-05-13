@@ -103,7 +103,27 @@ public final class AppConfig {
 
     public static final int MAX_AUCTION_DURATION_DAYS = 30;
 
-    public static final int LAST_MINUTE_EXTENSION_SECONDS = 60;
+    // ─────────────────────────────────────────────────────────
+    // Anti-sniping Algorithm
+    //
+    // Nếu có bid mới trong khoảng ANTI_SNIPE_WINDOW_SECONDS cuối
+    // → tự động gia hạn thêm ANTI_SNIPE_EXTENSION_SECONDS.
+    //
+    // Ví dụ (giá trị mặc định):
+    //   - Kết thúc dự kiến: 20:00:00
+    //   - 19:59:50 có bid (còn 10s < window 30s)
+    //   → Gia hạn đến 20:01:00 (thêm 60s)
+    // ─────────────────────────────────────────────────────────
+
+    /** Cửa sổ kiểm tra (giây): nếu bid vào trong khoảng này trước khi hết → gia hạn. */
+    public static final int ANTI_SNIPE_WINDOW_SECONDS = 30;
+
+    /** Số giây gia hạn thêm mỗi lần anti-snipe kích hoạt. */
+    public static final int ANTI_SNIPE_EXTENSION_SECONDS = 60;
+
+    /** @deprecated Dùng {@link #ANTI_SNIPE_EXTENSION_SECONDS} thay thế. */
+    @Deprecated
+    public static final int LAST_MINUTE_EXTENSION_SECONDS = ANTI_SNIPE_EXTENSION_SECONDS;
 
     // ─────────────────────────────────────────────────────────
     // Pagination
@@ -122,4 +142,3 @@ public final class AppConfig {
     public static final String CURRENCY_SYMBOL =
             "đ";
 }
-

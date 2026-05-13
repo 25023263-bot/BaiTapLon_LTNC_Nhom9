@@ -365,6 +365,18 @@ public class AuctionRepository {
         }
     }
 
+    /**
+     * Tự động đóng các phiên ACTIVE đã quá end_time → CLOSED.
+     * Gọi khi app khởi động và mỗi khi timer phát hiện có phiên hết hạn.
+     */
+    public void closeExpiredAuctions() throws SQLException {
+        String sql = "UPDATE auctions SET status='CLOSED' WHERE status='ACTIVE' AND end_time <= " + DbUtil.nowSql();
+        try (Connection conn = db();
+             Statement st = conn.createStatement()) {
+            st.executeUpdate(sql);
+        }
+    }
+
     public void updateStatus(int auctionId, AuctionStatus status) throws SQLException {
         String sql = "UPDATE auctions SET status=? WHERE id=?";
         try (Connection conn = db();
@@ -382,6 +394,23 @@ public class AuctionRepository {
             ps.setDouble(1, price.doubleValue());
             ps.setInt   (2, leadingBidderId);
             ps.setInt   (3, auctionId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Cập nhật chỉ cột end_time — dùng riêng cho anti-snipe extension.
+     * Nhẹ hơn update(item) vì không cần load/ghi toàn bộ record.
+     *
+     * @param auctionId  ID phiên đấu giá cần gia hạn
+     * @param newEndTime thời điểm kết thúc mới
+     */
+    public void updateEndTime(int auctionId, LocalDateTime newEndTime) throws SQLException {
+        String sql = "UPDATE auctions SET end_time=? WHERE id=?";
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, DbUtil.toDbString(newEndTime));
+            ps.setInt   (2, auctionId);
             ps.executeUpdate();
         }
     }

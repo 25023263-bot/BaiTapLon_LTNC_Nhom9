@@ -294,6 +294,59 @@ public class UserRepository {
         }
     }
 
+    /**
+     * Nâng cấp một Buyer thành Seller trong DB.
+     *
+     * Thực hiện 2 bước trong cùng một transaction:
+     *   1. UPDATE bảng users: đổi cột role từ 'BUYER' → 'SELLER'
+     *   2. INSERT vào bảng sellers: tạo row với giá trị mặc định
+     *      (earnings = 0, totalSold = 0, rating = 0)
+     *
+     * Tại sao dùng transaction?
+     * → Nếu bước 1 thành công nhưng bước 2 lỗi, DB sẽ có user với role=SELLER
+     *   nhưng không có row trong bảng sellers → crash khi load user đó.
+     *   Transaction đảm bảo hoặc cả 2 bước đều thành công, hoặc rollback về trạng thái cũ.
+     *
+     * @param userId ID của Buyer cần nâng cấp
+     * @throws SQLException nếu DB lỗi hoặc userId không tồn tại
+     */
+    public void upgradeToSeller(int userId) throws SQLException {
+        try (Connection conn = db()) {
+            conn.setAutoCommit(false);
+            try {
+                // Bước 1: đổi role trong bảng users
+                String updateRole = "UPDATE users SET role=?, updated_at=? WHERE id=?";
+                try (PreparedStatement ps = conn.prepareStatement(updateRole)) {
+                    ps.setString(1, UserRole.SELLER.name());
+                    ps.setString(2, DbUtil.toDbString(LocalDateTime.now()));
+                    ps.setInt   (3, userId);
+                    ps.executeUpdate();
+                }
+
+                // Bước 2: tạo row trong bảng sellers nếu chưa có
+                // (dùng kiểm tra trước để tránh duplicate key error)
+                if (!DbUtil.rowExists(conn, "sellers", "user_id", userId)) {
+                    String insertSeller =
+                            "INSERT INTO sellers (user_id, earnings_balance, total_sold, rating, rating_count) " +
+                                    "VALUES (?, 0, 0, 0, 0)";
+                    try (PreparedStatement ps = conn.prepareStatement(insertSeller)) {
+                        ps.setInt(1, userId);
+                        ps.executeUpdate();
+                    }
+                }
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        }
+    }
+
+
+
     public void updateWalletBalance(int buyerId, BigDecimal balance) throws SQLException {
         String sql = "UPDATE buyers SET wallet_balance=? WHERE user_id=?";
         try (Connection conn = db();

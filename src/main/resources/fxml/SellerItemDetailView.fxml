@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!--
+    SellerItemDetailView.fxml
+    Màn hình chi tiết sản phẩm dành cho NGƯỜI BÁN.
+
+    Layout:
+      ┌─────────── Navbar (← Quay lại | UBid | Badge) ───────────┐
+      │                                                            │
+      │  ┌──── Ảnh (340px) ────┐  ┌──── Thông tin + Timer ───┐   │
+      │  │                     │  │ Tên sản phẩm             │   │
+      │  │    imageContainer   │  │ Badge trạng thái         │   │
+      │  │                     │  │ ┌─── Timer countdown ──┐ │   │
+      │  └─────────────────────┘  │ │ DD  HH  MM  SS       │ │   │
+      │                           │ └──────────────────────┘ │   │
+      │                           │ Giá khởi / Giá hiện tại  │   │
+      │                           │ [Chỉnh sửa] [Xóa]        │   │
+      │                           │ ⚠ Warning (nếu đã bid)   │   │
+      │                           └──────────────────────────┘   │
+      │                                                            │
+      │  ┌─── Edit Form (ẩn mặc định) ──────────────────────┐    │
+      │  │ Tên  | Mô tả | Ngày kết thúc | Ảnh mới           │    │
+      │  │ [Lưu]  [Hủy]                                      │    │
+      │  └───────────────────────────────────────────────────┘    │
+      │                                                            │
+      │  ┌─── Lịch sử đấu giá ──────────────────────────────┐    │
+      │  │ [Avatar] Tên          Giá    Thời gian            │    │
+      │  └───────────────────────────────────────────────────┘    │
+      └────────────────────────────────────────────────────────────┘
+-->
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:id="rootPane"
+            fx:controller="com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.SellerItemDetailController"
+            stylesheets="@../css/seller-item-detail.css"
+            styleClass="seller-root">
+
+    <!-- ═══════════ NAVBAR ═══════════ -->
+    <top>
+        <HBox spacing="16" alignment="CENTER_LEFT" styleClass="seller-navbar">
+            <Button text="← Quay lại" onAction="#handleBack" styleClass="seller-back-btn"/>
+            <Label text="UBid" styleClass="seller-logo"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label text="🏷  Quản lý sản phẩm"
+                   style="-fx-text-fill: #c9a84c; -fx-font-size: 12px; -fx-font-weight: bold;"/>
+        </HBox>
+    </top>
+
+    <!-- ═══════════ MAIN ═══════════ -->
+    <center>
+        <ScrollPane fitToWidth="true"
+                    hbarPolicy="NEVER"
+                    vbarPolicy="AS_NEEDED"
+                    styleClass="seller-scroll">
+            <VBox spacing="24" styleClass="seller-main">
+
+                <!-- ─── PHẦN 1: Ảnh + Thông tin ─── -->
+                <HBox spacing="28">
+
+                    <!-- Trái: ảnh sản phẩm -->
+                    <VBox spacing="10" prefWidth="340" minWidth="260">
+                        <StackPane fx:id="imageContainer"
+                                   styleClass="seller-image-box"
+                                   minHeight="220">
+                            <!-- Controller sẽ thêm ImageView hoặc emoji Label vào đây -->
+                            <Label fx:id="lblImageGlyph" text="📦"
+                                   styleClass="seller-image-glyph"/>
+                        </StackPane>
+                    </VBox>
+
+                    <!-- Phải: thông tin + nút -->
+                    <VBox spacing="14" HBox.hgrow="ALWAYS">
+
+                        <!-- Tên + badge trạng thái -->
+                        <VBox spacing="6">
+                            <Label fx:id="lblTitle"
+                                   text="Tên sản phẩm"
+                                   wrapText="true"
+                                   styleClass="seller-title"/>
+                            <Label fx:id="lblStatusBadge"
+                                   text="● Đang đấu giá"
+                                   styleClass="seller-badge-live"/>
+                        </VBox>
+
+                        <!-- Countdown timer -->
+                        <VBox spacing="6" styleClass="seller-timer-box">
+                            <Label text="Thời gian còn lại" styleClass="seller-timer-label"/>
+                            <HBox spacing="8">
+                                <VBox alignment="CENTER" styleClass="seller-timer-segment">
+                                    <Label fx:id="lblDays"    text="00" styleClass="seller-timer-value"/>
+                                    <Label text="Ngày" styleClass="seller-timer-unit"/>
+                                </VBox>
+                                <VBox alignment="CENTER" styleClass="seller-timer-segment">
+                                    <Label fx:id="lblHours"   text="00" styleClass="seller-timer-value"/>
+                                    <Label text="Giờ" styleClass="seller-timer-unit"/>
+                                </VBox>
+                                <VBox alignment="CENTER" styleClass="seller-timer-segment">
+                                    <Label fx:id="lblMinutes" text="00" styleClass="seller-timer-value"/>
+                                    <Label text="Phút" styleClass="seller-timer-unit"/>
+                                </VBox>
+                                <VBox alignment="CENTER" styleClass="seller-timer-segment">
+                                    <Label fx:id="lblSeconds" text="00" styleClass="seller-timer-value"/>
+                                    <Label text="Giây" styleClass="seller-timer-unit"/>
+                                </VBox>
+                            </HBox>
+                        </VBox>
+
+                        <!-- Giá -->
+                        <HBox spacing="12">
+                            <VBox spacing="4" styleClass="seller-price-box" HBox.hgrow="ALWAYS">
+                                <Label text="GIÁ KHỞI ĐIỂM"        styleClass="seller-price-label"/>
+                                <Label fx:id="lblStartingPrice" text="---" styleClass="seller-price-muted"/>
+                            </VBox>
+                            <VBox spacing="4" styleClass="seller-price-box" HBox.hgrow="ALWAYS">
+                                <Label text="GIÁ ĐẶT CAO NHẤT"     styleClass="seller-price-label"/>
+                                <Label fx:id="lblCurrentPrice"  text="---" styleClass="seller-price-main"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- Thống kê lượt bid -->
+                        <Label fx:id="lblBidCount"
+                               text="0 lượt đấu giá"
+                               style="-fx-text-fill: #a0a0c0; -fx-font-size: 13px;"/>
+
+                        <!-- Warning khi không cho sửa/xóa -->
+                        <Label fx:id="lblEditWarning"
+                               text=""
+                               wrapText="true"
+                               styleClass="seller-warning"
+                               visible="false" managed="false"/>
+
+                        <!-- Nút hành động -->
+                        <HBox spacing="12">
+                            <Button fx:id="btnEdit"
+                                    text="✏  Chỉnh sửa"
+                                    onAction="#handleEdit"
+                                    styleClass="seller-btn-edit"/>
+                            <Button fx:id="btnDelete"
+                                    text="🗑  Xóa sản phẩm"
+                                    onAction="#handleDelete"
+                                    styleClass="seller-btn-delete"/>
+                        </HBox>
+
+                        <!-- Nút Save/Cancel — ẩn mặc định, hiện khi edit -->
+                        <HBox spacing="12" visible="false" managed="false">
+                            <Button fx:id="btnSave"
+                                    text="💾  Lưu thay đổi"
+                                    onAction="#handleSave"
+                                    styleClass="seller-btn-save"
+                                    visible="false" managed="false"/>
+                            <Button fx:id="btnCancelEdit"
+                                    text="Hủy"
+                                    onAction="#handleCancelEdit"
+                                    styleClass="seller-btn-cancel"
+                                    visible="false" managed="false"/>
+                        </HBox>
+
+                    </VBox>
+                </HBox>
+
+                <!-- ─── PHẦN 2: Form chỉnh sửa (ẩn mặc định) ─── -->
+                <VBox fx:id="editFormPane"
+                      spacing="14"
+                      styleClass="seller-edit-form"
+                      visible="false" managed="false">
+
+                    <Label text="✏  Chỉnh sửa thông tin sản phẩm"
+                           styleClass="seller-section-title"/>
+                    <Separator styleClass="seller-sep"/>
+
+                    <!-- Tên sản phẩm -->
+                    <VBox spacing="4">
+                        <Label text="Tên sản phẩm" styleClass="seller-form-label"/>
+                        <TextField fx:id="editTitleField"
+                                   promptText="Nhập tên sản phẩm..."
+                                   styleClass="seller-form-field"/>
+                    </VBox>
+
+                    <!-- Mô tả -->
+                    <VBox spacing="4">
+                        <Label text="Mô tả" styleClass="seller-form-label"/>
+                        <TextArea fx:id="editDescArea"
+                                  promptText="Mô tả chi tiết sản phẩm..."
+                                  prefRowCount="4"
+                                  wrapText="true"
+                                  styleClass="seller-form-area"/>
+                    </VBox>
+
+                    <!-- Ngày kết thúc -->
+                    <VBox spacing="4">
+                        <Label text="Ngày kết thúc đấu giá" styleClass="seller-form-label"/>
+                        <DatePicker fx:id="editEndDatePicker"
+                                    promptText="Chọn ngày..."
+                                    styleClass="seller-form-field"/>
+                    </VBox>
+
+                    <!-- Upload ảnh mới -->
+                    <VBox spacing="4">
+                        <Label text="Ảnh sản phẩm (không bắt buộc)" styleClass="seller-form-label"/>
+                        <StackPane fx:id="editImageBox"
+                                   onMouseClicked="#handleEditImageUpload"
+                                   styleClass="seller-upload-box"
+                                   minHeight="100">
+                            <Label fx:id="editImageHint"
+                                   text="Bấm để thay ảnh (không bắt buộc)"
+                                   style="-fx-text-fill: #666; -fx-font-size: 12px;"/>
+                        </StackPane>
+                    </VBox>
+
+                    <!-- Nút Save / Cancel trong form -->
+                    <HBox spacing="12">
+                        <Button text="💾  Lưu thay đổi"
+                                onAction="#handleSave"
+                                styleClass="seller-btn-save"
+                                prefWidth="160"/>
+                        <Button text="Hủy"
+                                onAction="#handleCancelEdit"
+                                styleClass="seller-btn-cancel"
+                                prefWidth="100"/>
+                    </HBox>
+
+                </VBox>
+
+                <!-- ─── PHẦN 3: Lịch sử đấu giá ─── -->
+                <VBox spacing="10" styleClass="seller-section-card">
+                    <HBox alignment="CENTER_LEFT" spacing="10">
+                        <Label text="📊  Lịch sử đặt giá" styleClass="seller-section-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="lblBidCountSmall" text="" styleClass="seller-badge-count"/>
+                    </HBox>
+                    <Separator styleClass="seller-sep"/>
+                    <!--
+                        vboxBidHistory: controller sẽ add các HBox row vào đây.
+                        Cấu trúc giống ItemDetailController để giao diện đồng nhất.
+                    -->
+                    <VBox fx:id="vboxBidHistory" spacing="8"/>
+                </VBox>
+
+            </VBox>
+        </ScrollPane>
+    </center>
+
+</BorderPane>

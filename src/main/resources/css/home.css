@@ -943,12 +943,52 @@
     -fx-border-color: #2c2c2c;
     -fx-border-radius: 8;
     -fx-border-width: 1;
-    -fx-padding: 10 14 10 14;
+    -fx-padding: 0;
     -fx-font-size: 13px;
+}
+
+/*
+ * Tại sao cần selector .form-textarea .content?
+ * → JavaFX TextArea dùng 2 lớp CSS:
+ *     - outer (.form-textarea): border + background-radius
+ *     - inner (.content): nơi text thực sự được render
+ *   Nếu chỉ set màu ở outer, inner vẫn dùng màu trắng mặc định của hệ thống.
+ *   Phải set cả inner mới đổi được màu nền thật sự của vùng gõ chữ.
+ */
+.form-textarea .content {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 8;
+    -fx-padding: 10 14 10 14;
+}
+
+/* Thanh cuộn dọc bên trong TextArea */
+.form-textarea .scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+.form-textarea .scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+.form-textarea .scroll-bar:vertical {
+    -fx-background-color: #1a1a1a;
+    -fx-pref-width: 6;
+}
+.form-textarea .scroll-bar:vertical .thumb {
+    -fx-background-color: #333344;
+    -fx-background-radius: 3;
+}
+.form-textarea .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #c9a84c;
+}
+.form-textarea .scroll-bar .increment-button,
+.form-textarea .scroll-bar .decrement-button {
+    -fx-pref-height: 0;
+    -fx-opacity: 0;
 }
 
 .form-textarea:focused {
     -fx-border-color: #c9a84c;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.2), 8, 0, 0, 0);
 }
 
 /* ComboBox trong form */
@@ -989,6 +1029,48 @@
 .form-error {
     -fx-text-fill: #ff7070;
     -fx-font-size: 12px;
+    -fx-wrap-text: true;
+}
+
+/* ── Giờ/Phút ComboBox trong form đăng bán ─────────────────────────────── */
+.form-time-combo {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-text-fill: #e8e8e8;
+}
+.form-time-combo:focused,
+.form-time-combo:showing {
+    -fx-border-color: #c9a84c;
+}
+.form-time-combo .list-cell {
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: #e8e8e8;
+}
+.form-time-combo .list-view {
+    -fx-background-color: #1a1a1a;
+    -fx-border-color: #2c2c2c;
+}
+.form-time-combo .list-view .list-cell:hover {
+    -fx-background-color: #2c2c2c;
+}
+.form-time-combo .list-view .list-cell:selected {
+    -fx-background-color: #3a2e10;
+    -fx-text-fill: #f2d67e;
+}
+/* Dấu ":" ngăn cách giờ và phút */
+.form-time-sep {
+    -fx-text-fill: #888888;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+/* Preview thời gian kết thúc — cập nhật realtime khi chọn ngày/giờ/phút */
+.form-time-preview {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-font-style: italic;
 }
 
 /* Vùng upload ảnh — dashed border, click để chọn file */
@@ -1047,4 +1129,129 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════
    END: Phần bổ sung "Sản phẩm của tôi"
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KET QUA DAU GIA — Results overlay styles
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.results-overlay {
+    -fx-background-color: #0d0d0d;
+}
+
+.results-panel {
+    -fx-background-color: #0d0d0d;
+    -fx-padding: 0;
+    -fx-min-height: 600;
+}
+
+.results-header {
+    -fx-background-color: #141414;
+    -fx-padding: 24 28 20 28;
+    -fx-spacing: 14;
+    -fx-border-color: transparent transparent #252525 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.results-header-icon {
+    -fx-font-size: 28px;
+}
+
+.results-title {
+    -fx-text-fill: #f0f0f0;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.results-subtitle {
+    -fx-text-fill: #666666;
+    -fx-font-size: 12px;
+}
+
+.results-list {
+    -fx-padding: 20 24 24 24;
+    -fx-background-color: transparent;
+}
+
+/* ── Result Card ─────────────────────────────────────────────────────── */
+
+.result-card {
+    -fx-background-color: #141414;
+    -fx-background-radius: 14;
+    -fx-border-color: #252525;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 12, 0, 0, 4);
+}
+
+.result-card:hover {
+    -fx-border-color: #c9a84c;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.18), 20, 0, 0, 6);
+}
+
+.result-card-image {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 14 0 0 14;
+    -fx-min-width: 140;
+    -fx-max-width: 140;
+    -fx-min-height: 120;
+    -fx-alignment: center;
+}
+
+.result-card-body {
+    -fx-padding: 16 18 16 18;
+    -fx-spacing: 6;
+    -fx-background-color: transparent;
+}
+
+.result-card-category {
+    -fx-text-fill: #666666;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.result-card-title {
+    -fx-text-fill: #e8e8e8;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-wrap-text: true;
+}
+
+.result-final-price-label {
+    -fx-text-fill: #888888;
+    -fx-font-size: 11px;
+}
+
+.result-final-price-value {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.result-winner-badge {
+    -fx-background-color: rgba(201,168,76,0.12);
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 20;
+    -fx-padding: 5 12 5 12;
+    -fx-border-color: rgba(201,168,76,0.4);
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+.result-expired-badge {
+    -fx-background-color: rgba(120,120,120,0.10);
+    -fx-text-fill: #666666;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 20;
+    -fx-padding: 5 12 5 12;
+    -fx-border-color: #333333;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   END: Ket qua dau gia
    ═══════════════════════════════════════════════════════════════════════════ */

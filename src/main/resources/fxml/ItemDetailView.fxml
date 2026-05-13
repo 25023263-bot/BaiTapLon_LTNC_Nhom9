@@ -10,152 +10,151 @@
             stylesheets="@../css/item-detail.css"
             styleClass="detail-root">
 
-    <!-- ═══════════ TOP NAVBAR ═══════════ -->
+    <!-- NAVBAR -->
     <top>
-        <HBox spacing="16" alignment="CENTER_LEFT" styleClass="detail-navbar">
+        <HBox alignment="CENTER_LEFT" styleClass="detail-navbar">
             <Button text="← Quay lại" onAction="#handleBack" styleClass="detail-back-btn"/>
             <Label text="UBid" styleClass="detail-logo"/>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label fx:id="lblLiveBadge" text="● LIVE" style="-fx-text-fill: #f5d26f; -fx-font-size: 11px;"/>
+            <Label text="● LIVE" style="-fx-text-fill: #f5d26f; -fx-font-size: 11px; -fx-font-weight: bold;"/>
         </HBox>
     </top>
 
-    <!-- ═══════════ MAIN — cuộn được ═══════════ -->
     <center>
-        <!--
-            ScrollPane bọc toàn bộ nội dung:
-              fitToWidth="true"  → nội dung luôn rộng bằng viewport (không scroll ngang)
-              hbarPolicy="NEVER" → ẩn hẳn thanh cuộn ngang
-        -->
-        <ScrollPane fitToWidth="true"
-                    hbarPolicy="NEVER"
-                    vbarPolicy="AS_NEEDED"
-                    styleClass="detail-scroll-pane">
-            <VBox spacing="24" styleClass="detail-main">
+        <HBox styleClass="detail-body">
 
-                <!-- ─── PHẦN 1: Ảnh + Thông tin sản phẩm ─── -->
-                <HBox spacing="28">
+            <!-- CỘT TRÁI: ảnh + thumbnails + mô tả -->
+            <VBox styleClass="detail-left-panel" spacing="10">
 
-                    <!-- Trái: ảnh + thumbnails -->
-                    <VBox spacing="12" prefWidth="340" minWidth="280">
-                        <StackPane styleClass="detail-main-image">
-                            <Label fx:id="lblMainImageGlyph" text="⌚" styleClass="detail-main-image-label"/>
-                        </StackPane>
-                        <HBox spacing="8">
-                            <StackPane styleClass="detail-thumb"><Label text="⌚" style="-fx-text-fill:#f0f0f0;"/></StackPane>
-                            <StackPane styleClass="detail-thumb"><Label text="🌅" style="-fx-text-fill:#f0f0f0;"/></StackPane>
-                            <StackPane styleClass="detail-thumb"><Label text="🧪" style="-fx-text-fill:#f0f0f0;"/></StackPane>
-                            <StackPane styleClass="detail-thumb"><Label text="💎" style="-fx-text-fill:#f0f0f0;"/></StackPane>
-                        </HBox>
-                    </VBox>
+                <!--
+                    imageContainer: StackPane dùng để chứa ảnh thật (ImageView)
+                    hoặc fallback emoji (Label) được inject bằng code trong controller.
+                    fx:id="imageContainer" được inject qua @FXML → controller gọi
+                    loadImageInto(imageContainer, item.imageUrl(), item.imagePlaceholderEmoji())
+                -->
+                <StackPane fx:id="imageContainer" styleClass="detail-main-image" VBox.vgrow="SOMETIMES"/>
 
-                    <!-- Phải: thông tin + giá + nút -->
-                    <VBox spacing="12" HBox.hgrow="ALWAYS">
-
-                        <VBox spacing="4">
-                            <Label fx:id="lblBreadcrumb"
-                                   text="Trang chủ  >  Đấu giá  >  Sản phẩm"
-                                   styleClass="detail-breadcrumb"/>
-                            <Label fx:id="lblTitle"
-                                   text="Patek Philippe Nautilus 5711 – Siêu Hiếm"
-                                   wrapText="true"
-                                   styleClass="detail-title"/>
-                        </VBox>
-
-                        <HBox spacing="8" styleClass="detail-meta-row">
-                            <HBox styleClass="detail-meta-pill"><Label text="⭐ NỔI BẬT"            styleClass="detail-meta-pill-label"/></HBox>
-                            <HBox styleClass="detail-meta-pill"><Label text="● LIVE"                 styleClass="detail-meta-pill-label"/></HBox>
-                            <HBox styleClass="detail-meta-pill"><Label fx:id="lblViewCount" text="1.284 lượt xem"   styleClass="detail-meta-pill-label"/></HBox>
-                            <HBox styleClass="detail-meta-pill"><Label fx:id="lblBidCount"  text="214 lượt đấu giá" styleClass="detail-meta-pill-label"/></HBox>
-                        </HBox>
-
-                        <HBox spacing="14">
-                            <VBox spacing="6" styleClass="detail-timer-box">
-                                <Label text="Thời gian còn lại" styleClass="detail-timer-label"/>
-                                <HBox spacing="8">
-                                    <VBox alignment="CENTER" styleClass="detail-timer-segment">
-                                        <Label fx:id="lblDays"    text="00" styleClass="detail-timer-value"/>
-                                        <Label text="Ngày" styleClass="detail-timer-unit"/>
-                                    </VBox>
-                                    <VBox alignment="CENTER" styleClass="detail-timer-segment">
-                                        <Label fx:id="lblHours"   text="00" styleClass="detail-timer-value"/>
-                                        <Label text="Giờ" styleClass="detail-timer-unit"/>
-                                    </VBox>
-                                    <VBox alignment="CENTER" styleClass="detail-timer-segment">
-                                        <Label fx:id="lblMinutes" text="00" styleClass="detail-timer-value"/>
-                                        <Label text="Phút" styleClass="detail-timer-unit"/>
-                                    </VBox>
-                                    <VBox alignment="CENTER" styleClass="detail-timer-segment">
-                                        <Label fx:id="lblSeconds" text="00" styleClass="detail-timer-value"/>
-                                        <Label text="Giây" styleClass="detail-timer-unit"/>
-                                    </VBox>
-                                </HBox>
-                            </VBox>
-
-                            <VBox spacing="10" HBox.hgrow="ALWAYS">
-                                <HBox spacing="10">
-                                    <VBox spacing="4" styleClass="detail-price-box" HBox.hgrow="ALWAYS">
-                                        <Label text="GIÁ KHỞI ĐIỂM"    styleClass="detail-price-label"/>
-                                        <Label fx:id="lblStartingPrice" text="120.000đ" styleClass="detail-price-value-muted"/>
-                                    </VBox>
-                                    <VBox spacing="4" styleClass="detail-price-box" HBox.hgrow="ALWAYS">
-                                        <Label text="GIÁ ĐẶT CAO NHẤT" styleClass="detail-price-label"/>
-                                        <Label fx:id="lblCurrentPrice"  text="247.000đ" styleClass="detail-price-value-main"/>
-                                    </VBox>
-                                </HBox>
-
-                                <HBox spacing="8">
-                                    <HBox styleClass="detail-stat-chip"><Label text="🛡 Bảo chứng chính hãng" styleClass="detail-stat-chip-label"/></HBox>
-                                    <HBox styleClass="detail-stat-chip"><Label text="⭐ Đánh giá 5 sao"       styleClass="detail-stat-chip-label"/></HBox>
-                                </HBox>
-
-                                <Button fx:id="btnPlaceBid"
-                                        text="⚡ ĐẶT GIÁ THẦU NGAY"
-                                        onAction="#handlePlaceBid"
-                                        maxWidth="Infinity"
-                                        styleClass="detail-primary-btn"/>
-
-                                <HBox spacing="8">
-                                    <HBox styleClass="detail-guarantee-pill"><Label text="✅ Giao dịch bảo mật 100%"          styleClass="detail-guarantee-label"/></HBox>
-                                    <HBox styleClass="detail-guarantee-pill"><Label text="↩ Hoàn tiền nếu không nhận được"  styleClass="detail-guarantee-label"/></HBox>
-                                </HBox>
-                            </VBox>
-                        </HBox>
-                    </VBox>
+                <HBox spacing="6" styleClass="detail-thumb-row">
+                    <StackPane styleClass="detail-thumb"><Label text="🎁" style="-fx-text-fill:#f0f0f0;"/></StackPane>
+                    <StackPane styleClass="detail-thumb"><Label text="🌅" style="-fx-text-fill:#f0f0f0;"/></StackPane>
+                    <StackPane styleClass="detail-thumb"><Label text="🧪" style="-fx-text-fill:#f0f0f0;"/></StackPane>
+                    <StackPane styleClass="detail-thumb"><Label text="💎" style="-fx-text-fill:#f0f0f0;"/></StackPane>
                 </HBox>
 
-                <!-- ─── PHẦN 2: Mô tả + Lịch sử đấu giá ─── -->
-                <HBox spacing="24" VBox.vgrow="ALWAYS">
+                <VBox spacing="8" styleClass="detail-desc-card" VBox.vgrow="ALWAYS">
+                    <Label text="📋  Mô tả sản phẩm" styleClass="detail-section-title"/>
+                    <Separator styleClass="detail-section-sep"/>
+                    <Label fx:id="lblDescription"
+                           text="Sản phẩm đấu giá cao cấp..."
+                           wrapText="true"
+                           styleClass="detail-description"
+                           VBox.vgrow="ALWAYS"/>
+                </VBox>
 
-                    <!-- Mô tả sản phẩm: cố định ~300px, không grow -->
-                    <VBox spacing="10" prefWidth="300" maxWidth="300" styleClass="detail-section-card">
-                        <Label text="📋  Mô tả sản phẩm" styleClass="detail-section-title"/>
+            </VBox>
+
+            <!-- CỘT PHẢI: ScrollPane cuộn dọc toàn bộ nội dung -->
+            <ScrollPane fitToWidth="true"
+                        hbarPolicy="NEVER"
+                        vbarPolicy="AS_NEEDED"
+                        styleClass="detail-right-scroll"
+                        HBox.hgrow="ALWAYS">
+                <VBox styleClass="detail-right-panel" spacing="10">
+
+                    <!-- Tiêu đề + pills -->
+                    <VBox spacing="5">
+                        <Label fx:id="lblBreadcrumb" text="Trang chủ  >  Đấu giá  >  Sản phẩm" styleClass="detail-breadcrumb"/>
+                        <Label fx:id="lblTitle" text="Sản phẩm đấu giá" wrapText="true" styleClass="detail-title"/>
+                        <HBox spacing="6" styleClass="detail-meta-row">
+                            <HBox styleClass="detail-meta-pill"><Label text="⭐ NỔI BẬT" styleClass="detail-meta-pill-label"/></HBox>
+                            <HBox styleClass="detail-meta-pill"><Label text="● LIVE" styleClass="detail-meta-pill-label"/></HBox>
+                            <HBox styleClass="detail-meta-pill"><Label fx:id="lblBidCount" text="0 lượt đấu giá" styleClass="detail-meta-pill-label"/></HBox>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Timer + Giá -->
+                    <HBox spacing="10">
+                        <VBox spacing="6" styleClass="detail-timer-box">
+                            <Label text="Thời gian còn lại" styleClass="detail-timer-label"/>
+                            <HBox spacing="5">
+                                <VBox alignment="CENTER" styleClass="detail-timer-segment">
+                                    <Label fx:id="lblDays"    text="00" styleClass="detail-timer-value"/>
+                                    <Label text="Ngày" styleClass="detail-timer-unit"/>
+                                </VBox>
+                                <VBox alignment="CENTER" styleClass="detail-timer-segment">
+                                    <Label fx:id="lblHours"   text="00" styleClass="detail-timer-value"/>
+                                    <Label text="Giờ" styleClass="detail-timer-unit"/>
+                                </VBox>
+                                <VBox alignment="CENTER" styleClass="detail-timer-segment">
+                                    <Label fx:id="lblMinutes" text="00" styleClass="detail-timer-value"/>
+                                    <Label text="Phút" styleClass="detail-timer-unit"/>
+                                </VBox>
+                                <VBox alignment="CENTER" styleClass="detail-timer-segment">
+                                    <Label fx:id="lblSeconds" text="00" styleClass="detail-timer-value"/>
+                                    <Label text="Giây" styleClass="detail-timer-unit"/>
+                                </VBox>
+                            </HBox>
+                        </VBox>
+
+                        <VBox spacing="4" styleClass="detail-price-box" HBox.hgrow="ALWAYS">
+                            <Label text="GIÁ KHỞI ĐIỂM" styleClass="detail-price-label"/>
+                            <Label fx:id="lblStartingPrice" text="—" styleClass="detail-price-value-muted"/>
+                        </VBox>
+
+                        <VBox spacing="4" styleClass="detail-price-box-highlight" HBox.hgrow="ALWAYS">
+                            <Label text="GIÁ ĐẶT CAO NHẤT" styleClass="detail-price-label"/>
+                            <Label fx:id="lblCurrentPrice"  text="—" styleClass="detail-price-value-main"/>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Chips + nút đặt giá -->
+                    <VBox spacing="7" styleClass="detail-bid-area">
+                        <HBox spacing="8">
+                            <HBox styleClass="detail-stat-chip"><Label text="🛡 Bảo chứng chính hãng" styleClass="detail-stat-chip-label"/></HBox>
+                            <HBox styleClass="detail-stat-chip"><Label text="⭐ Đánh giá 5 sao"       styleClass="detail-stat-chip-label"/></HBox>
+                        </HBox>
+                        <Button fx:id="btnPlaceBid"
+                                text="⚡ ĐẶT GIÁ THẦU NGAY"
+                                onAction="#handlePlaceBid"
+                                maxWidth="Infinity"
+                                styleClass="detail-primary-btn"/>
+                        <HBox spacing="8">
+                            <HBox styleClass="detail-guarantee-pill"><Label text="✅ Giao dịch bảo mật 100%"        styleClass="detail-guarantee-label"/></HBox>
+                            <HBox styleClass="detail-guarantee-pill"><Label text="↩ Hoàn tiền nếu không nhận được" styleClass="detail-guarantee-label"/></HBox>
+                        </HBox>
+                    </VBox>
+
+                    <!-- Biểu đồ -->
+                    <VBox spacing="7" styleClass="detail-section-card">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <Label text="📈  Biểu đồ giá đấu theo thời gian" styleClass="detail-section-title"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label text="Cập nhật tự động" styleClass="detail-chart-live-badge"/>
+                        </HBox>
                         <Separator styleClass="detail-section-sep"/>
-                        <Label fx:id="lblDescription"
-                               text="Sản phẩm đấu giá cao cấp..."
-                               wrapText="true"
-                               styleClass="detail-description"/>
+                        <StackPane fx:id="chartContainer" minHeight="130" prefHeight="160" styleClass="detail-chart-container">
+                            <Label fx:id="lblChartEmpty"
+                                   text="⏳  Chưa đủ dữ liệu — biểu đồ sẽ hiện khi có từ 2 lượt đấu giá"
+                                   styleClass="detail-chart-empty-label"
+                                   wrapText="true"/>
+                        </StackPane>
                     </VBox>
 
                     <!-- Lịch sử đấu giá -->
-                    <VBox spacing="10" HBox.hgrow="ALWAYS" styleClass="detail-section-card">
+                    <VBox spacing="7" styleClass="detail-section-card">
                         <HBox alignment="CENTER_LEFT" spacing="10">
                             <Label text="🏆  Lịch sử đấu giá" styleClass="detail-section-title"/>
                             <Region HBox.hgrow="ALWAYS"/>
                             <Label fx:id="lblBidCountSmall" text="" styleClass="detail-section-badge"/>
                         </HBox>
                         <Separator styleClass="detail-section-sep"/>
-                        <!--
-                            vboxBidHistory: controller sẽ addAll() các HBox row vào đây.
-                            Không dùng ListView để tự do style từng dòng theo thiết kế.
-                        -->
-                        <VBox fx:id="vboxBidHistory" spacing="8"/>
+                        <VBox fx:id="vboxBidHistory" spacing="6"/>
                     </VBox>
 
-                </HBox>
+                </VBox>
+            </ScrollPane>
 
-            </VBox>
-        </ScrollPane>
+        </HBox>
     </center>
 
 </BorderPane>

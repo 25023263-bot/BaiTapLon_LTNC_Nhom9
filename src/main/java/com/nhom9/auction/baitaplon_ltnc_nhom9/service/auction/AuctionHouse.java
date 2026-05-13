@@ -61,6 +61,9 @@ public class AuctionHouse implements Auctionable {
     private void notifyCancelled(AuctionItem item) {
         observers.forEach(o -> o.onAuctionCancelled(item));
     }
+    private void notifyExtended(AuctionItem item, LocalDateTime newEndTime) {
+        observers.forEach(o -> o.onAuctionExtended(item, newEndTime));
+    }
 
     // ─── Place Bid ────────────────────────────────────────────────────────────
 
@@ -370,15 +373,29 @@ public class AuctionHouse implements Auctionable {
     }
 
     /**
-     * Nếu còn < 60 giây mà có bid mới → gia hạn thêm 60 giây.
+     * Anti-sniping: nếu có bid mới trong {@code ANTI_SNIPE_WINDOW_SECONDS} giây cuối
+     * → gia hạn thêm {@code ANTI_SNIPE_EXTENSION_SECONDS} giây và notify UI.
+     *
+     * <p>Ví dụ với giá trị mặc định (window=30s, extension=60s):</p>
+     * <pre>
+     *   Kết thúc dự kiến : 20:00:00
+     *   19:59:50 có bid  → còn 10s &lt; window 30s → kéo dài đến 20:01:00
+     * </pre>
+     *
+     * Dùng {@link AuctionRepository#updateEndTime} thay vì {@code update(item)}
+     * để chỉ ghi đúng 1 cột, tránh ghi đè dữ liệu không liên quan.
      */
     private void extendIfLastMinute(AuctionItem item) throws SQLException {
-        if (item.getRemainingSeconds() < AppConfig.LAST_MINUTE_EXTENSION_SECONDS) {
+        if (item.getRemainingSeconds() < AppConfig.ANTI_SNIPE_WINDOW_SECONDS) {
             LocalDateTime newEnd = item.getEndTime()
-                    .plusSeconds(AppConfig.LAST_MINUTE_EXTENSION_SECONDS);
+                    .plusSeconds(AppConfig.ANTI_SNIPE_EXTENSION_SECONDS);
             item.setEndTime(newEnd);
-            auctionRepo.update(item);
-            LOG.info("Gia hạn phiên: item #" + item.getId() + " → " + newEnd);
+            auctionRepo.updateEndTime(item.getId(), newEnd);   // ← lightweight: chỉ update end_time
+            LOG.info(String.format(
+                    "Anti-snipe kích hoạt: item #%d còn %ds → gia hạn +%ds → kết thúc lúc %s",
+                    item.getId(), item.getRemainingSeconds(),
+                    AppConfig.ANTI_SNIPE_EXTENSION_SECONDS, newEnd));
+            notifyExtended(item, newEnd);                       // ← UI timer tự reset
         }
     }
 }

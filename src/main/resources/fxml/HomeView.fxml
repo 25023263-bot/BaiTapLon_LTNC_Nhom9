@@ -63,15 +63,11 @@
                             <Label styleClass="search-icon" text="🔍"/>
                             <TextField fx:id="searchField"
                                        styleClass="search-field"
-                                       promptText="Tìm kiếm sản phẩm..."
+                                       promptText="Tìm kiếm sản phẩm, phiên đấu giá..."
                                        HBox.hgrow="ALWAYS"
                                        onAction="#handleSearchQuery"/>
-                            <Label fx:id="resultCountLabel" styleClass="result-count" text="6 kết quả"/>
+                            <Label fx:id="resultCountLabel" styleClass="result-count" text=""/>
                         </HBox>
-                        <ComboBox fx:id="filterDropdown"
-                                  styleClass="filter-dropdown"
-                                  promptText="Sắp hết hạn"
-                                  minWidth="160"/>
                     </HBox>
 
                     <ScrollPane styleClass="category-scroll"
@@ -302,6 +298,29 @@
                  LỚP 5: Form "Đăng bán sản phẩm"
                  Người bán điền thông tin, upload ảnh, mô tả sản phẩm
                  ═══════════════════════════════════════════════════════════ -->
+            <!-- LOP 6: Man "Ket qua dau gia" -->
+            <StackPane fx:id="resultsOverlay"
+                       visible="false"
+                       managed="false"
+                       styleClass="results-overlay">
+
+                <VBox styleClass="results-panel">
+                    <HBox styleClass="results-header" alignment="CENTER_LEFT">
+                        <Label text="&#x1F3C6;" styleClass="results-header-icon"/>
+                        <VBox HBox.hgrow="ALWAYS" spacing="2">
+                            <Label text="Kết quả đấu giá" styleClass="results-title"/>
+                            <Label fx:id="resultsSubtitle"
+                                   text="Các phiên đấu giá đã kết thúc"
+                                   styleClass="results-subtitle"/>
+                        </VBox>
+                    </HBox>
+                    <ScrollPane fitToWidth="true" styleClass="scroll-pane" VBox.vgrow="ALWAYS"
+                                hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+                        <VBox fx:id="resultsList" styleClass="results-list" spacing="12"/>
+                    </ScrollPane>
+                </VBox>
+            </StackPane>
+
             <StackPane fx:id="listProductOverlay"
                        visible="false"
                        managed="false"
@@ -335,7 +354,7 @@
                                            styleClass="form-input"
                                            promptText="Nhập tên sản phẩm rõ ràng, đầy đủ"/>
                                 <Label fx:id="listProductTitleError"
-                                       styleClass="form-error"
+                                       styleClass="form-error" wrapText="true"
                                        visible="false" managed="false"
                                        text="⚠  Vui lòng nhập tên sản phẩm"/>
                             </VBox>
@@ -347,7 +366,7 @@
                                           promptText="Chọn danh mục sản phẩm"
                                           maxWidth="Infinity"/>
                                 <Label fx:id="listProductCategoryError"
-                                       styleClass="form-error"
+                                       styleClass="form-error" wrapText="true"
                                        visible="false" managed="false"
                                        text="⚠  Vui lòng chọn danh mục"/>
                             </VBox>
@@ -360,7 +379,7 @@
                                           wrapText="true"
                                           prefRowCount="4"/>
                                 <Label fx:id="listProductDescError"
-                                       styleClass="form-error"
+                                       styleClass="form-error" wrapText="true"
                                        visible="false" managed="false"
                                        text="⚠  Vui lòng mô tả sản phẩm (ít nhất 20 ký tự)"/>
                             </VBox>
@@ -379,7 +398,7 @@
                                        alignment="CENTER"/>
 
                             <Label fx:id="listProductImageError"
-                                   styleClass="form-error"
+                                   styleClass="form-error" wrapText="true"
                                    visible="false" managed="false"
                                    text="⚠  Vui lòng chọn ít nhất 1 hình ảnh"/>
                         </VBox>
@@ -395,19 +414,44 @@
                                                styleClass="form-input"
                                                promptText="Ví dụ: 500000"/>
                                     <Label fx:id="listProductPriceError"
-                                           styleClass="form-error"
+                                           styleClass="form-error" wrapText="true"
                                            visible="false" managed="false"
                                            text="⚠  Vui lòng nhập giá hợp lệ"/>
                                 </VBox>
 
                                 <VBox HBox.hgrow="ALWAYS" styleClass="field-group-dark" spacing="6">
-                                    <Label text="Ngày kết thúc *" styleClass="form-field-label"/>
+                                    <Label text="Thời gian kết thúc *" styleClass="form-field-label"/>
+                                    <!--
+                                        Chia thành 2 dòng:
+                                          Dòng 1 — DatePicker chọn ngày
+                                          Dòng 2 — Giờ + Phút (ComboBox) + preview thời gian thực
+                                        Tại sao dùng ComboBox cho giờ/phút thay vì TextField?
+                                        → ComboBox giới hạn input hợp lệ ngay từ đầu (0-23, 0-59),
+                                          không cần validate thủ công và không bị nhập chữ.
+                                    -->
                                     <DatePicker fx:id="listProductEndDate"
                                                 styleClass="form-datepicker"
-                                                promptText="dd/mm/yyyy"
+                                                promptText="Chọn ngày kết thúc"
                                                 maxWidth="Infinity"/>
+                                    <HBox spacing="8" alignment="CENTER_LEFT">
+                                        <Label text="🕐" style="-fx-font-size:16px;"/>
+                                        <ComboBox fx:id="listProductEndHour"
+                                                  styleClass="form-time-combo"
+                                                  promptText="Giờ"
+                                                  prefWidth="80"/>
+                                        <Label text=":" styleClass="form-time-sep"/>
+                                        <ComboBox fx:id="listProductEndMinute"
+                                                  styleClass="form-time-combo"
+                                                  promptText="Phút"
+                                                  prefWidth="80"/>
+                                    </HBox>
+                                    <!-- Preview hiện trên dòng riêng để không bị cắt chữ -->
+                                    <Label fx:id="lblEndTimePreview"
+                                           styleClass="form-time-preview"
+                                           text=""
+                                           wrapText="true"/>
                                     <Label fx:id="listProductDateError"
-                                           styleClass="form-error"
+                                           styleClass="form-error" wrapText="true"
                                            visible="false" managed="false"
                                            text="⚠  Vui lòng chọn ngày kết thúc"/>
                                 </VBox>
@@ -421,7 +465,7 @@
                                     maxWidth="Infinity"
                                     onAction="#handleSubmitProduct"/>
                             <Label fx:id="submitProductError"
-                                   styleClass="form-error"
+                                   styleClass="form-error" wrapText="true"
                                    visible="false" managed="false"
                                    text=""/>
                         </VBox>

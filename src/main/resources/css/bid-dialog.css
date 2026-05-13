@@ -176,3 +176,176 @@
     -fx-font-size: 11px;
     -fx-alignment: center;
 }
+
+/* ─── Auto-bid section ───────────────────────────────────────── */
+.auto-bid-section {
+    -fx-background-color: #0f0f1c;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: #252538;
+    -fx-border-width: 1.5;
+    -fx-padding: 0;
+}
+
+/* Toggle row — luôn hiển thị */
+.auto-bid-toggle-row {
+    -fx-padding: 14 16 14 16;
+    -fx-cursor: hand;
+}
+.auto-bid-toggle-row:hover {
+    -fx-background-color: #141427;
+    -fx-background-radius: 14 14 0 0;
+}
+
+.auto-bid-checkbox {
+    -fx-text-fill: transparent;
+}
+/* Ô checkbox màu vàng khi checked */
+.auto-bid-checkbox:selected .box {
+    -fx-background-color: #d9b65c;
+    -fx-border-color: #d9b65c;
+}
+.auto-bid-checkbox .box {
+    -fx-background-color: #1e1e30;
+    -fx-border-color: #3a3a55;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 2;
+}
+.auto-bid-checkbox:selected .mark {
+    -fx-background-color: #0e0e18;
+}
+
+.auto-bid-title {
+    -fx-text-fill: #e8e8f5;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.auto-bid-subtitle {
+    -fx-text-fill: #5c5c78;
+    -fx-font-size: 11px;
+}
+
+/* Badge "SMART" góc phải */
+.auto-bid-badge {
+    -fx-background-color: linear-gradient(to right, #2a200a, #1e1800);
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: #d9b65c55;
+    -fx-border-width: 1;
+    -fx-text-fill: #d9b65c;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-padding: 3 7 3 7;
+}
+
+/* Panel mở rộng — hiện khi checkbox được bật */
+.auto-bid-panel {
+    -fx-padding: 0 16 16 16;
+    -fx-border-color: #252538;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* Dòng giải thích */
+.auto-bid-info-row {
+    -fx-background-color: #13131f;
+    -fx-background-radius: 10;
+    -fx-padding: 10 12 10 12;
+}
+
+.auto-bid-info-icon {
+    -fx-font-size: 14px;
+}
+
+.auto-bid-info-text {
+    -fx-text-fill: #7878a0;
+    -fx-font-size: 11.5px;
+    -fx-wrap-text: true;
+}
+
+/* Label "Giá tối đa" */
+.auto-bid-max-label {
+    -fx-text-fill: #8282a0;
+    -fx-font-size: 12px;
+}
+
+/* Wrapper input giá tối đa — dùng lại class bid-input-wrapper */
+.auto-bid-input-wrapper {
+    -fx-background-color: #13131f;
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: #2a2a3e;
+    -fx-border-width: 1.5;
+    -fx-padding: 4 14 4 14;
+}
+
+/* Nút gợi ý mức giá tối đa */
+.auto-bid-suggest-btn {
+    -fx-background-color: #181828;
+    -fx-background-radius: 20;
+    -fx-border-radius: 20;
+    -fx-border-color: #2e2e48;
+    -fx-border-width: 1;
+    -fx-text-fill: #a0a0c8;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 12 5 12;
+    -fx-cursor: hand;
+}
+.auto-bid-suggest-btn:hover {
+    -fx-background-color: #1e1e35;
+    -fx-border-color: #d9b65c;
+    -fx-text-fill: #f6d078;
+}
+
+/* Nút xác nhận riêng của auto-bid — màu xanh để phân biệt với submit thường */
+.auto-bid-confirm-btn {
+    -fx-background-color: linear-gradient(to right, #1a3a2a, #1e4a32);
+    -fx-background-radius: 12;
+    -fx-border-radius: 12;
+    -fx-border-color: #2e7d52;
+    -fx-border-width: 1.5;
+    -fx-text-fill: #5ddb96;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 13 0 13 0;
+    -fx-cursor: hand;
+}
+.auto-bid-confirm-btn:hover {
+    -fx-background-color: linear-gradient(to right, #1e4a32, #245a3c);
+    -fx-border-color: #5ddb96;
+    -fx-text-fill: #7eeaaa;
+    -fx-effect: dropshadow(gaussian, rgba(93,219,150,0.35), 14, 0, 0, 0);
+}
+.auto-bid-confirm-btn:pressed {
+    -fx-background-color: linear-gradient(to right, #153020, #1a3a28);
+}
+
+/* ScrollPane trong dialog — xóa viền và nền mặc định của JavaFX */
+.bid-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+.bid-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+/* Scrollbar nhỏ gọn, màu tối cho hợp theme */
+.bid-scroll .scroll-bar:vertical {
+    -fx-background-color: #0e0e18;
+    -fx-pref-width: 6;
+}
+.bid-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: #2e2e48;
+    -fx-background-radius: 3;
+}
+.bid-scroll .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #d9b65c;
+}
+.bid-scroll .scroll-bar:vertical .increment-button,
+.bid-scroll .scroll-bar:vertical .decrement-button {
+    -fx-pref-height: 0;
+    -fx-pref-width: 0;
+}

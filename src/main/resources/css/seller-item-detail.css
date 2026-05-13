@@ -1,0 +1,405 @@
+/* ============================================================
+   seller-item-detail.css — UBid Seller Product Management Screen
+   Theme: Dark — đồng nhất với item-detail.css và home.css
+   ============================================================ */
+
+/* ─── Root ─────────────────────────────────────────────────── */
+.seller-root {
+    -fx-background-color: #050509;
+    -fx-padding: 0;
+    -fx-font-family: "Be Vietnam Pro", "Noto Sans", "Segoe UI", "Arial Unicode MS", Arial, sans-serif;
+    -fx-text-fill: #f5f5f5;
+}
+
+/* ─── Navbar ────────────────────────────────────────────────── */
+.seller-navbar {
+    -fx-background-color: #050509;
+    -fx-padding: 14 32 14 32;
+    -fx-border-color: #1e1e1e;
+    -fx-border-width: 0 0 1 0;
+}
+
+.seller-logo {
+    -fx-text-fill: #d9b65c;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Be Vietnam Pro", "Noto Serif", "Georgia", serif;
+}
+
+.seller-back-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+}
+.seller-back-btn:hover {
+    -fx-text-fill: #f3d06d;
+}
+
+/* ─── ScrollPane ────────────────────────────────────────────── */
+.seller-scroll {
+    -fx-background-color: #050509;
+    -fx-background: #050509;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+.seller-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.seller-scroll .scroll-bar:vertical {
+    -fx-background-color: #0e0e16;
+    -fx-pref-width: 8;
+}
+.seller-scroll .scroll-bar:vertical .thumb {
+    -fx-background-color: #2e2e44;
+    -fx-background-radius: 4;
+}
+.seller-scroll .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #d9b65c;
+}
+.seller-scroll .scroll-bar .increment-button,
+.seller-scroll .scroll-bar .decrement-button {
+    -fx-pref-height: 0;
+    -fx-pref-width: 0;
+    -fx-opacity: 0;
+}
+
+/* ─── Main VBox ─────────────────────────────────────────────── */
+.seller-main {
+    -fx-background-color: #050509;
+    -fx-padding: 24 32 40 32;
+}
+
+/* ─── Image box ─────────────────────────────────────────────── */
+.seller-image-box {
+    -fx-background-color: linear-gradient(to bottom right, #1a1520, #0f0e18);
+    -fx-background-radius: 16;
+    -fx-alignment: center;
+    -fx-min-height: 220;
+    -fx-max-height: 260;
+}
+
+.seller-image-glyph {
+    -fx-font-size: 48px;
+    -fx-text-fill: #f5f5f5;
+}
+
+/* ─── Title + Badge ─────────────────────────────────────────── */
+.seller-title {
+    -fx-text-fill: #f8f5ee;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+/* Badge trạng thái — đang đấu giá (vàng) */
+.seller-badge-live {
+    -fx-background-color: rgba(201, 168, 76, 0.15);
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 12 5 12;
+    -fx-background-radius: 999;
+}
+
+/* Badge trạng thái — đã kết thúc (xám) */
+.seller-badge-ended {
+    -fx-background-color: rgba(120, 120, 120, 0.12);
+    -fx-text-fill: #888888;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 12 5 12;
+    -fx-background-radius: 999;
+}
+
+/* ─── Timer ─────────────────────────────────────────────────── */
+.seller-timer-box {
+    -fx-background-color: #10101a;
+    -fx-background-radius: 14;
+    -fx-padding: 10 14 10 14;
+    -fx-spacing: 8;
+}
+.seller-timer-label {
+    -fx-text-fill: #a7a7c0;
+    -fx-font-size: 11px;
+}
+.seller-timer-segment {
+    -fx-background-color: #181821;
+    -fx-background-radius: 10;
+    -fx-min-width: 52;
+    -fx-alignment: center;
+    -fx-padding: 6 0 4 0;
+}
+.seller-timer-value {
+    -fx-text-fill: #f4f4f8;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+.seller-timer-unit {
+    -fx-text-fill: #7b7b94;
+    -fx-font-size: 10px;
+}
+
+/* ─── Price boxes ───────────────────────────────────────────── */
+.seller-price-box {
+    -fx-background-color: #10111a;
+    -fx-background-radius: 14;
+    -fx-padding: 12 14 12 14;
+}
+.seller-price-label {
+    -fx-text-fill: #8e8eaa;
+    -fx-font-size: 11px;
+}
+.seller-price-muted {
+    -fx-text-fill: #bcbccc;
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+}
+.seller-price-main {
+    -fx-text-fill: #f6d078;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+/* ─── Warning label ─────────────────────────────────────────── */
+.seller-warning {
+    -fx-text-fill: #e0a050;
+    -fx-font-size: 12px;
+    -fx-background-color: rgba(224, 160, 80, 0.08);
+    -fx-background-radius: 8;
+    -fx-padding: 8 12 8 12;
+    -fx-border-color: rgba(224, 160, 80, 0.25);
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+/* ─── Action buttons ────────────────────────────────────────── */
+.seller-btn-edit {
+    -fx-background-color: #1a1a2e;
+    -fx-background-radius: 999;
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 9 20 9 20;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 999;
+    -fx-border-width: 1.5;
+    -fx-cursor: hand;
+}
+.seller-btn-edit:hover {
+    -fx-background-color: rgba(201, 168, 76, 0.12);
+}
+
+.seller-btn-delete {
+    -fx-background-color: transparent;
+    -fx-background-radius: 999;
+    -fx-text-fill: #e05c5c;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 9 20 9 20;
+    -fx-border-color: #e05c5c;
+    -fx-border-radius: 999;
+    -fx-border-width: 1.5;
+    -fx-cursor: hand;
+}
+.seller-btn-delete:hover {
+    -fx-background-color: rgba(224, 92, 92, 0.10);
+}
+
+.seller-btn-save {
+    -fx-background-color: linear-gradient(to right, #f2d67e, #d9b65c);
+    -fx-background-radius: 999;
+    -fx-text-fill: #201b0b;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 9 20 9 20;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(217,182,92,0.3), 12, 0, 0, 3);
+}
+.seller-btn-save:hover {
+    -fx-background-color: linear-gradient(to right, #ffe18c, #e0c167);
+}
+
+.seller-btn-cancel {
+    -fx-background-color: #1c1c28;
+    -fx-background-radius: 999;
+    -fx-text-fill: #a0a0b8;
+    -fx-font-size: 13px;
+    -fx-padding: 9 20 9 20;
+    -fx-cursor: hand;
+    -fx-border-color: #2a2a3c;
+    -fx-border-radius: 999;
+    -fx-border-width: 1;
+}
+.seller-btn-cancel:hover {
+    -fx-background-color: #222234;
+    -fx-text-fill: #c8c8d8;
+}
+
+/* ─── Edit form ─────────────────────────────────────────────── */
+.seller-edit-form {
+    -fx-background-color: #0d0d18;
+    -fx-background-radius: 16;
+    -fx-border-color: #252535;
+    -fx-border-radius: 16;
+    -fx-border-width: 1;
+    -fx-padding: 20 24 24 24;
+}
+
+.seller-form-label {
+    -fx-text-fill: #a0a0c0;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.seller-form-field {
+    -fx-background-color: #13131f;
+    -fx-background-radius: 10;
+    -fx-border-color: #252535;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-text-fill: #e8e8f0;
+    -fx-font-size: 13px;
+    -fx-padding: 9 12 9 12;
+}
+.seller-form-field:focused {
+    -fx-border-color: #c9a84c;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.2), 8, 0, 0, 0);
+}
+
+.seller-form-area {
+    -fx-background-color: #13131f;
+    -fx-background-radius: 10;
+    -fx-border-color: #252535;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-text-fill: #e8e8f0;
+    -fx-font-size: 13px;
+    -fx-padding: 9 12 9 12;
+}
+.seller-form-area:focused {
+    -fx-border-color: #c9a84c;
+}
+
+.seller-upload-box {
+    -fx-background-color: #0f0f1c;
+    -fx-background-radius: 12;
+    -fx-border-color: #252535;
+    -fx-border-radius: 12;
+    -fx-border-width: 1.5;
+    -fx-border-style: dashed;
+    -fx-cursor: hand;
+    -fx-alignment: center;
+}
+.seller-upload-box:hover {
+    -fx-border-color: #c9a84c;
+    -fx-background-color: rgba(201, 168, 76, 0.05);
+}
+
+/* ─── Section card (lịch sử đấu giá) ───────────────────────── */
+.seller-section-card {
+    -fx-background-color: #0d0d18;
+    -fx-background-radius: 16;
+    -fx-border-color: #1e1e2e;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-padding: 18 20 18 20;
+}
+
+.seller-section-title {
+    -fx-text-fill: #f0f0f8;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.seller-sep {
+    -fx-background-color: #1e1e2c;
+    -fx-pref-height: 1;
+}
+
+.seller-badge-count {
+    -fx-background-color: #1e1e2e;
+    -fx-background-radius: 999;
+    -fx-padding: 2 10 2 10;
+    -fx-text-fill: #8888a8;
+    -fx-font-size: 11px;
+}
+
+/* ─── Bid history rows (tái sử dụng từ item-detail.css) ─────── */
+/* Các class sau đây PHẢI khớp với class mà SellerItemDetailController dùng:
+   history-row, history-row-lead, history-avatar, history-avatar-lead,
+   history-avatar-wrap, history-name, history-sub, history-sub-lead,
+   history-price, history-price-lead, history-time
+   → Copy y chang từ item-detail.css để đảm bảo visual đồng nhất */
+
+.history-row {
+    -fx-background-color: #111120;
+    -fx-background-radius: 12;
+    -fx-border-color: #1e1e2e;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 10 14 10 14;
+}
+.history-row:hover {
+    -fx-background-color: #161628;
+}
+
+.history-row-lead {
+    -fx-background-color: #181508;
+    -fx-background-radius: 12;
+    -fx-border-color: #4a3a10;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 10 14 10 14;
+    -fx-effect: dropshadow(gaussian, rgba(217,182,92,0.15), 12, 0, 0, 0);
+}
+.history-row-lead:hover {
+    -fx-background-color: #1e1a0a;
+}
+
+.history-avatar-wrap {
+    -fx-background-radius: 999;
+    -fx-alignment: center;
+}
+
+.history-avatar {
+    -fx-background-color: #252538;
+    -fx-background-radius: 999;
+    -fx-text-fill: #a0a0c0;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-min-width: 40; -fx-min-height: 40;
+    -fx-max-width: 40; -fx-max-height: 40;
+    -fx-alignment: center;
+}
+
+.history-avatar-lead {
+    -fx-background-color: linear-gradient(to bottom right, #f2d67e, #c9a84c);
+    -fx-background-radius: 999;
+    -fx-text-fill: #1c1608;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-min-width: 40; -fx-min-height: 40;
+    -fx-max-width: 40; -fx-max-height: 40;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(217,182,92,0.5), 10, 0, 0, 0);
+}
+
+.history-name {
+    -fx-text-fill: #e0e0f0;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.history-sub      { -fx-text-fill: #55556a; -fx-font-size: 11px; }
+.history-sub-lead { -fx-text-fill: #c9a84c; -fx-font-size: 11px; -fx-font-weight: bold; }
+
+.history-price      { -fx-text-fill: #c8c8dc; -fx-font-size: 13px; -fx-font-weight: bold; }
+.history-price-lead { -fx-text-fill: #f6d078; -fx-font-size: 14px; -fx-font-weight: bold; }
+
+.history-time {
+    -fx-text-fill: #48485e;
+    -fx-font-size: 11px;
+    -fx-alignment: center-right;
+}
