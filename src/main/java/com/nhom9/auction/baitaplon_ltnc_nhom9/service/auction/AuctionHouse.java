@@ -243,6 +243,28 @@ public class AuctionHouse implements Auctionable {
         notifyClosed(item, winnerId);
     }
 
+    // ─── Close Expired Auctions ───────────────────────────────────────────────
+
+    /**
+     * Tìm tất cả phiên ACTIVE đã hết giờ và đóng từng phiên qua closeAuction().
+     *
+     * <p>Khác với auctionRepo.closeExpiredAuctions() (chỉ UPDATE database),
+     * method này gọi closeAuction() cho từng phiên → observer được kích hoạt
+     * → notification được gửi đến người dùng.</p>
+     *
+     * <p>Được gọi từ HomeController mỗi giây khi timer phát hiện phiên hết giờ.</p>
+     */
+    public void closeExpiredAuctions() throws Exception {
+        List<AuctionItem> expired = auctionRepo.findExpiredActive();
+        for (AuctionItem item : expired) {
+            try {
+                closeAuction(item.getId());
+            } catch (Exception e) {
+                LOG.warning("Không đóng được item #" + item.getId() + ": " + e.getMessage());
+            }
+        }
+    }
+
     // ─── Cancel Auction ───────────────────────────────────────────────────────
 
     @Override
@@ -341,8 +363,37 @@ public class AuctionHouse implements Auctionable {
         try {
             AuctionItem item = auctionRepo.findById(itemId)
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy item #" + itemId));
+
+            // Kiểm tra status trong DB trước
             if (item.getStatus() != AuctionStatus.ACTIVE)
                 throw new AuctionClosedException(itemId, item.getStatus());
+
+            // ── FIX Bug 1: Kiểm tra thời gian thực tế, không chỉ status trong DB ──
+            //
+            // Vấn đề: AuctionScheduler cập nhật status định kỳ, nhưng có độ trễ.
+            // Nếu scheduler chưa kịp chạy, phiên đã hết giờ nhưng DB vẫn còn ACTIVE
+            // → user vẫn bid được và bid bị lưu vào lịch sử → dữ liệu sai.
+            //
+            // Giải pháp: Tự kiểm tra endTime ngay tại đây.
+            //   - Nếu phiên đã hết giờ → gọi closeAuction() để đồng bộ DB luôn
+            //     (trao thắng cho người bid cao nhất, trừ tiền, ghi transaction)
+            //   - Sau đó throw AuctionClosedException để ngăn bid mới.
+            //
+            // Lưu ý: closeAuction() bên trong đã có guard "if status != ACTIVE → return"
+            // nên gọi nhiều lần cũng an toàn (idempotent).
+            if (item.getRemainingSeconds() <= 0) {
+                LOG.warning(String.format(
+                        "Phiên #%d đã hết giờ nhưng status vẫn là ACTIVE trong DB — tự đóng.", itemId));
+                try {
+                    closeAuction(itemId);
+                } catch (Exception ex) {
+                    // closeAuction đã log chi tiết, không cần xử lý thêm ở đây.
+                    // Dù closeAuction lỗi, vẫn phải throw để ngăn bid.
+                    LOG.warning("closeAuction thất bại khi auto-close: " + ex.getMessage());
+                }
+                throw new AuctionClosedException(itemId, AuctionStatus.CLOSED);
+            }
+
             return item;
         } catch (AuctionClosedException e) {
             throw e;

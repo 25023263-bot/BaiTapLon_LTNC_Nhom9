@@ -95,8 +95,11 @@ public class NotificationService implements AuctionObserver {
     public void onAuctionClosed(AuctionItem item, Integer winnerId) {
         try {
             if (winnerId != null) {
+                // Message người thắng: chúc mừng + yêu cầu thanh toán + cung cấp thông tin
                 persist(winnerId, item.getId(), Notification.Type.AUCTION_CLOSED,
-                        String.format("Chúc mừng! Bạn đã thắng \"%s\" với giá %,.0f đ",
+                        String.format(
+                                "🎉 Chúc mừng! Bạn đã thắng phiên \"%s\" với giá %,.0f đ. " +
+                                        "Vui lòng thanh toán và cung cấp thông tin giao hàng trong vòng 48 giờ.",
                                 item.getTitle(), item.getCurrentPrice()));
                 persist(item.getSellerId(), item.getId(), Notification.Type.AUCTION_CLOSED,
                         String.format("Phiên \"%s\" đã kết thúc. Người thắng: #%d  |  Giá: %,.0f đ",
@@ -188,6 +191,19 @@ public class NotificationService implements AuctionObserver {
             try { return notifRepo.countUnread(id); }
             catch (Exception e) { return 0; }
         });
+    }
+
+    /**
+     * Giống unreadCount() nhưng LUÔN query DB, bỏ qua cache.
+     *
+     * Dùng khi: uiListener nhận event NGAY SAU persist() + broadcast().
+     * Lý do: persist() xóa cache, nhưng computeIfAbsent() trong unreadCount()
+     * có thể vẫn thấy key cũ do ConcurrentHashMap memory visibility timing.
+     * Fresh() dùng remove() + get lại — đảm bảo luôn đọc từ DB.
+     */
+    public int unreadCountFresh(int userId) {
+        unreadCache.remove(userId);   // xóa cache trước
+        return unreadCount(userId);   // query DB và cache lại giá trị mới
     }
 
     /** Mở notification panel → đánh dấu tất cả đã đọc → badge về 0. */

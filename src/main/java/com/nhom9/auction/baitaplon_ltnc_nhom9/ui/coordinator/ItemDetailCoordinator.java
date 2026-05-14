@@ -157,6 +157,37 @@ public final class ItemDetailCoordinator {
     // ── 2. Mở popup đặt giá ──────────────────────────────────────
 
     private void openBidDialog(AuctionItem item, Stage detailStage, ItemDetailController detailCtrl) {
+
+        // ── FIX Bug 1 (phía UI): Kiểm tra phiên còn hạn trước khi mở dialog ──
+        //
+        // Tại sao cần check ở đây dù backend đã check rồi?
+        // → Nếu không check, user vẫn mở được dialog, nhập giá, bấm "Tiếp tục",
+        //   rồi mới nhận lỗi từ backend — UX tệ và gây nhầm lẫn.
+        // → Check sớm tại đây → thông báo ngay, không mở dialog → UX sạch hơn.
+        //
+        // Lưu ý: đây là "defense in depth" (bảo vệ nhiều lớp).
+        //   Lớp 1 = UI guard này (trải nghiệm người dùng tốt).
+        //   Lớp 2 = backend AuctionHouse.loadActiveItem() (tính toàn vẹn dữ liệu).
+        try {
+            int auctionId = Integer.parseInt(item.id());
+            var freshItemOpt = auctionRepo.findById(auctionId);
+
+            boolean sessionExpired = freshItemOpt.isEmpty()
+                    || freshItemOpt.get().getStatus()
+                    != com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus.ACTIVE
+                    || freshItemOpt.get().getRemainingSeconds() <= 0;
+
+            if (sessionExpired) {
+                AlertHelper.showError("Phiên đã kết thúc",
+                        "Phiên đấu giá này đã kết thúc.\nKhông thể đặt giá.");
+                return;
+            }
+        } catch (Exception e) {
+            // Nếu không đọc được DB (mất kết nối, v.v.) thì vẫn cho mở dialog.
+            // Backend sẽ là lớp bảo vệ cuối cùng.
+            LOG.log(Level.WARNING, "Không thể kiểm tra trạng thái phiên trước khi mở dialog", e);
+        }
+
         try {
             FXMLLoader loader = new FXMLLoader(
                     HelloApplication.class.getResource("/fxml/BidDialogView.fxml"));

@@ -111,12 +111,15 @@ public final class AppConfig {
     //
     // Ví dụ (giá trị mặc định):
     //   - Kết thúc dự kiến: 20:00:00
-    //   - 19:59:50 có bid (còn 10s < window 30s)
+    //   - 19:59:10 có bid (còn 50s < window 60s)
     //   → Gia hạn đến 20:01:00 (thêm 60s)
     // ─────────────────────────────────────────────────────────
 
-    /** Cửa sổ kiểm tra (giây): nếu bid vào trong khoảng này trước khi hết → gia hạn. */
-    public static final int ANTI_SNIPE_WINDOW_SECONDS = 30;
+    /**
+     * Cửa sổ kiểm tra (giây): nếu bid vào trong khoảng này trước khi hết → gia hạn.
+     * Đặt 60 = gia hạn khi còn dưới 1 phút.
+     */
+    public static final int ANTI_SNIPE_WINDOW_SECONDS = 60;
 
     /** Số giây gia hạn thêm mỗi lần anti-snipe kích hoạt. */
     public static final int ANTI_SNIPE_EXTENSION_SECONDS = 60;

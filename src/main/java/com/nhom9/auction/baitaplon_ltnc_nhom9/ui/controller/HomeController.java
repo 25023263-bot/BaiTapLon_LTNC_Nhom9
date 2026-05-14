@@ -1,5 +1,6 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
 
+import java.util.logging.Logger;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Notification;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
@@ -8,6 +9,8 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.AuctionRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.UserRepository;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionObserver;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification.NotificationService;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.HomeLoginCoordinator;
@@ -83,7 +86,9 @@ import java.util.concurrent.TimeUnit;
  *   4. sellerTermsOverlay    — điều khoản khi Buyer muốn nâng cấp thành Seller
  *   5. listProductOverlay    — form đăng bán sản phẩm mới
  */
-public class HomeController implements Initializable {
+public class HomeController implements Initializable, AuctionObserver {
+
+    private static final Logger LOG = Logger.getLogger(HomeController.class.getName());
 
     private static final int AVATAR_SIZE = 40;
     private static final String EXTERNAL_AVATAR_URL = "";
@@ -104,6 +109,8 @@ public class HomeController implements Initializable {
 
     // Profile overlay
     @FXML private StackPane profileOverlay;
+    @FXML private ScrollPane profileScrollPane;
+    @FXML private VBox guestProfilePane;
     @FXML private Label profileTitleLabel;
     @FXML private Label profileHintLabel;
     @FXML private Label profileAvatarGlyph;
@@ -240,8 +247,11 @@ public class HomeController implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         setupListProductForm();
         activeChipButton = chipAll;
-        // Đóng các phiên hết hạn ngay khi app khởi động
-        try { auctionRepo.closeExpiredAuctions(); } catch (Exception ignored) {}
+        // Lưu ý: KHÔNG gọi auctionRepo.closeExpiredAuctions() trực tiếp ở đây.
+        // Lý do: auctionRepo.closeExpiredAuctions() chỉ UPDATE database, bỏ qua
+        // toàn bộ AuctionHouse — không trigger Observer, không gửi notification.
+        // AuctionScheduler (daemon thread) sẽ tự gọi auctionHouse.closeExpiredAuctions()
+        // sau vài giây khởi động, đảm bảo đúng pipeline và gửi thông báo.
         loadHotAuctions();
         loadAllAuctions();
         startCountdownTimers();
@@ -271,6 +281,11 @@ public class HomeController implements Initializable {
         });
         Platform.runLater(this::bootstrapCoordinatorIfPossible);
         buildAvatarMenu();
+
+        // Đăng ký HomeController làm AuctionObserver để nhận sự kiện real-time
+        // từ AuctionHouse (phiên kết thúc, phiên mở, huỷ...) và tự động refresh UI.
+        ServiceLocator.getInstance().getAuctionHouse().addObserver(this);
+
         initNotifications();
     }
 
@@ -1562,11 +1577,13 @@ public class HomeController implements Initializable {
 
             if (needsRefresh) {
                 // ── Thứ tự quan trọng: close DB TRƯỚC trên timer thread ──────
-                // Lý do: nếu gọi closeExpiredAuctions() bên trong Platform.runLater()
-                // thì nó chạy trên FX thread — có thể bị delay bởi render cycle.
-                // Gọi ở đây (timer thread) đảm bảo DB đã được commit TRƯỚC KHI
-                // FX thread gọi loadFromDb() để reload UI.
-                try { auctionRepo.closeExpiredAuctions(); } catch (Exception ignored) {}
+                // Phải gọi qua AuctionHouse để kích hoạt observer → gửi notification!
+                // Gọi auctionRepo.closeExpiredAuctions() trực tiếp sẽ bypass observer.
+                try {
+                    ServiceLocator.getInstance().getAuctionHouse().closeExpiredAuctions();
+                } catch (Exception e) {
+                    LOG.warning("closeExpiredAuctions lỗi: " + e.getMessage());
+                }
 
                 Platform.runLater(() -> {
                     // clear timerLabels trước khi build lại card (tránh label cũ mồ côi)
@@ -1704,6 +1721,8 @@ public class HomeController implements Initializable {
     private void refreshProfileTabContent(boolean logged) {
         if (profileTitleLabel == null) return;
         if (logged) {
+            setVisible(profileScrollPane, true);
+            setVisible(guestProfilePane, false);
             User u = UserSession.getInstance().getCurrentUser();
             profileTitleLabel.setText(u.getFullName() != null && !u.getFullName().isBlank()
                     ? u.getFullName() : u.getUsername());
@@ -1716,16 +1735,8 @@ public class HomeController implements Initializable {
             refreshProfileInfo(u);
             refreshWalletSection(u);
         } else {
-            profileTitleLabel.setText("Chưa đăng nhập");
-            profileHintLabel.setText("Đăng nhập để xem hồ sơ, đấu giá của bạn và cài đặt tài khoản.");
-            profileTabLoginButton.setVisible(true);
-            profileTabLoginButton.setManaged(true);
-            profileLogoutButton.setVisible(false);
-            profileLogoutButton.setManaged(false);
-            profileAvatarGlyph.setText("👤");
-            setVisible(profileInfoSection, false);
-            setVisible(profileWalletSection, false);
-            setVisible(walletDivider, false);
+            setVisible(profileScrollPane, false);
+            setVisible(guestProfilePane, true);
         }
     }
 
@@ -2133,11 +2144,14 @@ public class HomeController implements Initializable {
      */
     private void initNotifications() {
         // 1. Real-time: nhận push từ AuctionHouse trong cùng JVM
+        // Dùng unreadCountFresh() thay vì unreadCount() để tránh race condition:
+        //   persist() xóa cache → broadcast() gọi listener → listener gọi unreadCount()
+        //   Đôi khi computeIfAbsent() vẫn trả cache cũ do timing. Fresh() bỏ qua cache.
         notifService.addUiListener(event -> Platform.runLater(() -> {
             User user = UserSession.getInstance().getCurrentUser();
             if (user == null) return;
             // Chỉ cập nhật badge, không mở panel tự động (không muốn làm phiền)
-            int count = notifService.unreadCount(user.getId());
+            int count = notifService.unreadCountFresh(user.getId());
             refreshBadge(count);
         }));
 
@@ -2377,6 +2391,55 @@ public class HomeController implements Initializable {
         if (price >= 1_000_000)
             return String.format("đ%.2fM", price / 1_000_000);
         return String.format("đ%,.0f", price);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // AuctionObserver — nhận sự kiện từ AuctionHouse và refresh UI
+    //
+    // Các method này được gọi từ background thread (AuctionScheduler),
+    // nên BẮT BUỘC phải dùng Platform.runLater() để chạm vào UI.
+    // Không dùng Platform.runLater() → crash hoặc hành vi không xác định.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    @Override
+    public void onAuctionClosed(
+            com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem item,
+            Integer winnerId) {
+        // Phiên kết thúc → xóa khỏi trang chủ, cập nhật mục kết quả
+        Platform.runLater(() -> {
+            timerLabels.clear();
+            loadHotAuctions();
+            loadAllAuctions();
+        });
+    }
+
+    @Override
+    public void onAuctionStarted(
+            com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem item) {
+        // Phiên mới chuyển PENDING → ACTIVE → hiện lên trang chủ
+        Platform.runLater(() -> {
+            loadHotAuctions();
+            loadAllAuctions();
+        });
+    }
+
+    @Override
+    public void onNewBid(
+            com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem item,
+            Bid bid) {
+        // Có bid mới → tuỳ chọn refresh giá trên card nếu muốn real-time
+        // Tạm để trống — badge thông báo đã được xử lý bởi NotificationService
+    }
+
+    @Override
+    public void onAuctionCancelled(
+            com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem item) {
+        // Phiên bị huỷ → xóa khỏi danh sách
+        Platform.runLater(() -> {
+            timerLabels.clear();
+            loadHotAuctions();
+            loadAllAuctions();
+        });
     }
 
     public void shutdown() {

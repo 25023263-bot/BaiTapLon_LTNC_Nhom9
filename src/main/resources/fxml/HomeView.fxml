@@ -138,7 +138,7 @@
                 <!-- ══════════════════════════════════════════════════════════
                      PROFILE PAGE — Full-screen layout, 2-column design
                      ══════════════════════════════════════════════════════════ -->
-                <ScrollPane styleClass="profile-page-scroll" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+                <ScrollPane fx:id="profileScrollPane" styleClass="profile-page-scroll" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
                     <VBox styleClass="profile-page-root" spacing="0">
 
                         <!-- ── HERO BANNER ──────────────────────────────────── -->
@@ -391,6 +391,35 @@
                                    wrapText="true" alignment="CENTER"/>
                         </VBox>
                     </VBox>
+                </VBox>
+
+                <!-- ═══════════════════════════════════════════════════════════
+                     GUEST PANE — Centered view when not logged in
+                     ═══════════════════════════════════════════════════════════ -->
+                <VBox fx:id="guestProfilePane"
+                      alignment="CENTER"
+                      spacing="20"
+                      visible="false"
+                      managed="false">
+                    <StackPane alignment="CENTER"
+                               minWidth="90" minHeight="90"
+                               maxWidth="90" maxHeight="90"
+                               styleClass="profile-large-avatar">
+                        <Label styleClass="profile-avatar-glyph" text="👤"/>
+                    </StackPane>
+                    <Label styleClass="profile-hero-name"
+                           text="Chưa đăng nhập"
+                           alignment="CENTER"
+                           textAlignment="CENTER"/>
+                    <Label styleClass="profile-hero-subtitle"
+                           text="Đăng nhập để xem hồ sơ, Số dư và Nạp tiền"
+                           wrapText="true"
+                           alignment="CENTER"
+                           textAlignment="CENTER"
+                           maxWidth="320"/>
+                    <Button styleClass="btn-login-solid"
+                            text="Đăng nhập"
+                            onAction="#handleLogin"/>
                 </VBox>
 
             </StackPane>
