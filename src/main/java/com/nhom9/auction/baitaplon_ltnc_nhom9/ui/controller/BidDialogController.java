@@ -18,14 +18,19 @@ import java.util.Locale;
  * Luồng hoạt động:
  *   ItemDetailCoordinator.openBidDialog(item, ownerStage)
  *       → load BidDialogView.fxml
- *       → gọi configure(currentBid, stage)
+ *       → gọi configure(currentBid, stage, callback)
  *       → người dùng chọn / nhập giá → bấm "Tiếp tục"
- *       → onBidConfirmed.run(selectedAmount) (callback trả về coordinator)
+ *       → callback.accept(BidRequest) (trả về coordinator)
  *
- * Auto-bid:
- *   Khi user bật checkbox "Tự động đặt giá" và nhập giá tối đa,
- *   dialog trả về BidResult chứa cả amount lẫn maxAutoBid.
- *   Phần logic tự động tăng giá sẽ được xử lý ở backend sau này.
+ * Thay đổi so với phiên bản cũ:
+ *   - Callback đổi từ Consumer<Double> → Consumer<BidRequest>
+ *   - submitAutoBid() giờ truyền BidRequest.auto(maxBid) thay vì chỉ maxBid
+ *   - submitManualBid() truyền BidRequest.manual(amount)
+ *
+ * Tại sao phải đổi callback type?
+ *   Consumer<Double> chỉ mang được 1 con số — coordinator không biết
+ *   đây là bid thủ công hay auto-bid, nên cứ gọi placeBid() cho cả hai.
+ *   BidRequest mang thêm flag isAuto → coordinator xử lý đúng branch.
  */
 public class BidDialogController {
 
@@ -57,18 +62,28 @@ public class BidDialogController {
     // ── State ────────────────────────────────────────────────────
     private Stage thisStage;
     private double increment;
-    private final double[] quickAmounts = new double[4];
+    private final double[] quickAmounts    = new double[4];
+    private final double[] suggestAmounts  = new double[3];
 
-    /** Ba mức gợi ý cho giá tối đa auto-bid */
-    private final double[] suggestAmounts = new double[3];
-
-    /** Callback được gọi khi user xác nhận — truyền BidResult */
-    private java.util.function.Consumer<Double> onBidConfirmed;
+    /**
+     * Callback được gọi khi user xác nhận đặt giá.
+     *
+     * Đổi từ Consumer<Double> → Consumer<BidRequest> để coordinator
+     * biết được đây là bid thủ công hay auto-bid.
+     */
+    private java.util.function.Consumer<BidRequest> onBidConfirmed;
 
     // ── Public API ───────────────────────────────────────────────
 
+    /**
+     * Khởi tạo dialog với giá hiện tại và callback.
+     *
+     * @param currentBid      giá hiện tại của phiên đấu giá
+     * @param stage           Stage của dialog này (để đóng sau khi xác nhận)
+     * @param onBidConfirmed  callback nhận BidRequest khi user bấm "Tiếp tục"
+     */
     public void configure(double currentBid, Stage stage,
-                          java.util.function.Consumer<Double> onBidConfirmed) {
+                          java.util.function.Consumer<BidRequest> onBidConfirmed) {
 
         this.thisStage      = stage;
         this.onBidConfirmed = onBidConfirmed;
@@ -181,6 +196,10 @@ public class BidDialogController {
 
     // ── Private — submit logic ───────────────────────────────────
 
+    /**
+     * Xác nhận bid thủ công.
+     * Truyền BidRequest.manual(amount) → coordinator sẽ gọi placeBid().
+     */
     private void submitManualBid() {
         String raw = tfAmount.getText().trim().replaceAll("[^\\d]", "");
         if (raw.isEmpty()) { showError("Vui lòng nhập số tiền đặt giá."); return; }
@@ -195,16 +214,21 @@ public class BidDialogController {
             return;
         }
 
-        if (onBidConfirmed != null) onBidConfirmed.accept(amount);
+        if (onBidConfirmed != null) onBidConfirmed.accept(BidRequest.manual(amount));
         closeDialog();
     }
 
     /**
-     * Validate và submit auto-bid.
+     * Xác nhận auto-bid.
      *
-     * Lưu ý: hiện tại callback vẫn trả về Double (giá tối đa).
-     * Khi backend sẵn sàng, bạn có thể tạo class BidRequest riêng
-     * chứa cả firstBid lẫn maxAutoBid, rồi đổi kiểu callback.
+     * Thay đổi quan trọng so với phiên bản cũ:
+     *   Cũ: onBidConfirmed.accept(maxBid)      → coordinator nhận Double, không biết là auto
+     *   Mới: onBidConfirmed.accept(BidRequest.auto(maxBid)) → coordinator biết gọi placeAutoBid()
+     *
+     * Coordinator sẽ:
+     *   1. Gọi auctionHouse.placeAutoBid(auctionId, buyerId, maxLimit)
+     *   2. Backend đặt ngay ở mức TỐI THIỂU (không phải maxBid)
+     *   3. Tự động counter khi có người bid qua, đến khi vượt maxLimit
      */
     private void submitAutoBid() {
         String raw = tfMaxBid.getText().trim().replaceAll("[^\\d]", "");
@@ -220,10 +244,8 @@ public class BidDialogController {
             return;
         }
 
-        // TODO (backend): gửi cả minBid lẫn maxBid để server biết
-        // phải tự động đặt từ minBid lên đến maxBid khi bị vượt qua.
-        // Hiện tại chỉ confirm bằng maxBid như một bid thủ công.
-        if (onBidConfirmed != null) onBidConfirmed.accept(maxBid);
+        // Truyền BidRequest.auto() — coordinator sẽ gọi placeAutoBid() thay vì placeBid()
+        if (onBidConfirmed != null) onBidConfirmed.accept(BidRequest.auto(maxBid));
         closeDialog();
     }
 

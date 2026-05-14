@@ -17,6 +17,10 @@ import java.util.Optional;
  * Thay đổi so với phiên bản cũ:
  *  - Mỗi method mở Connection riêng và đóng trong try-with-resources.
  *  - Dùng DbUtil.toDbString/fromDbString thay vì toStr/fromStr local.
+ *
+ * [AUTO-BID] Thêm 2 method mới để hỗ trợ Proxy Bidding:
+ *  - findTopAutoBidByBuyer()      : tìm auto-bid có limit cao nhất của 1 người trong 1 phiên
+ *  - findActiveAutoBidsExcluding(): tìm tất cả auto-bid của người khác (trừ người đang dẫn đầu)
  */
 public class BidRepository {
 
@@ -170,6 +174,10 @@ public class BidRepository {
         return ids;
     }
 
+    /**
+     * [CŨ] Tìm auto-bid của một buyer trong một phiên, sắp xếp theo limit giảm dần.
+     * Giữ lại để không phá code cũ. Dùng findTopAutoBidByBuyer() thay thế khi cần.
+     */
     public Optional<Bid> findAutoBid(int auctionId, int buyerId) throws SQLException {
         String sql = """
                 SELECT b.*, u.username AS buyer_username
@@ -186,6 +194,91 @@ public class BidRepository {
             }
         }
         return Optional.empty();
+    }
+
+    // ─── [MỚI] Auto-bid Proxy Bidding ─────────────────────────────────────────
+
+    /**
+     * Tìm auto-bid có limit cao nhất của một buyer trong một phiên.
+     *
+     * Mục đích: Biết "giới hạn tối đa" thực sự mà người này sẵn sàng trả,
+     * dù họ đã đặt nhiều lần auto-bid (mỗi lần đặt tạo ra 1 row mới trong DB).
+     *
+     * Ví dụ: A đặt auto-bid 3 lần → 3 rows trong bảng bids.
+     * Method này chỉ lấy row có auto_bid_limit cao nhất → đó là "limit hiện tại" của A.
+     *
+     * @param auctionId phiên đấu giá cần tra
+     * @param buyerId   người cần tra
+     * @return Optional chứa Bid nếu người đó có auto-bid, rỗng nếu không
+     */
+    public Optional<Bid> findTopAutoBidByBuyer(int auctionId, int buyerId) throws SQLException {
+        String sql = """
+                SELECT b.*, u.username AS buyer_username
+                FROM bids b JOIN users u ON b.buyer_id = u.id
+                WHERE b.auction_id = ? AND b.buyer_id = ? AND b.auto_bid = 1
+                ORDER BY b.auto_bid_limit DESC
+                LIMIT 1
+                """;
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, auctionId);
+            ps.setInt(2, buyerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return Optional.of(mapRow(rs));
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Tìm tất cả auto-bid đang "hiệu lực" của những người KHÁC trong một phiên,
+     * sắp xếp theo limit giảm dần (người có limit cao nhất đứng đầu).
+     *
+     * "Hiệu lực" = auto_bid = 1 và là auto_bid_limit cao nhất của người đó.
+     * Tại sao cần GROUP BY buyer_id?
+     * → Một người có thể đặt auto-bid nhiều lần (mỗi lần counter tạo 1 row).
+     *   GROUP BY đảm bảo mỗi người chỉ xuất hiện 1 lần, đại diện bởi limit cao nhất.
+     *
+     * Tại sao dùng subquery thay vì MAX() đơn giản?
+     * → Vì cần lấy toàn bộ thông tin của Bid (username, bidTime...), không chỉ limit.
+     *   Subquery tìm đúng row có limit cao nhất, rồi lấy dữ liệu từ row đó.
+     *
+     * @param auctionId      phiên đấu giá cần tra
+     * @param excludeBuyerId buyer đang dẫn đầu — không cần counter chính mình
+     * @return danh sách Bid, sắp xếp theo auto_bid_limit giảm dần
+     */
+    public List<Bid> findActiveAutoBidsExcluding(int auctionId, int excludeBuyerId) throws SQLException {
+        List<Bid> list = new ArrayList<>();
+        // Giải thích SQL:
+        //   - Outer query: lấy row của mỗi buyer có auto_bid_limit bằng MAX của chính họ
+        //   - Subquery:    tìm auto_bid_limit cao nhất của từng buyer trong phiên này
+        //   - GROUP BY b.buyer_id: đảm bảo mỗi buyer chỉ xuất hiện 1 lần
+        //   - ORDER BY b.auto_bid_limit DESC: người có giới hạn cao nhất đứng đầu
+        String sql = """
+                SELECT b.*, u.username AS buyer_username
+                FROM bids b JOIN users u ON b.buyer_id = u.id
+                WHERE b.auction_id = ?
+                  AND b.buyer_id != ?
+                  AND b.auto_bid = 1
+                  AND b.auto_bid_limit = (
+                      SELECT MAX(b2.auto_bid_limit)
+                      FROM bids b2
+                      WHERE b2.auction_id = b.auction_id
+                        AND b2.buyer_id   = b.buyer_id
+                        AND b2.auto_bid   = 1
+                  )
+                GROUP BY b.buyer_id
+                ORDER BY b.auto_bid_limit DESC
+                """;
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, auctionId);
+            ps.setInt(2, excludeBuyerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) list.add(mapRow(rs));
+            }
+        }
+        return list;
     }
 
     // ─── Update ───────────────────────────────────────────────────────────────

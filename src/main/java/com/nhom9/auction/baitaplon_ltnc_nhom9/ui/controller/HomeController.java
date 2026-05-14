@@ -2122,9 +2122,10 @@ public class HomeController implements Initializable, AuctionObserver {
     @FXML private void handleMarkAllRead() {
         User user = UserSession.getInstance().getCurrentUser();
         if (user == null) return;
-        notifService.markAllRead(user.getId());
+        // Xóa hẳn khỏi DB thay vì chỉ đánh dấu đã đọc — giữ DB gọn nhẹ
+        notifService.clearAll(user.getId());
         refreshBadge(0);
-        renderNotifications(user.getId()); // re-render để bỏ highlight unread
+        renderNotifications(user.getId()); // re-render → panel hiện trống
     }
 
     /**

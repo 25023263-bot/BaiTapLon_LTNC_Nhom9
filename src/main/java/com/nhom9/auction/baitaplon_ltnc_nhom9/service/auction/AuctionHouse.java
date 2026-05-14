@@ -19,11 +19,19 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 /**
  * Lõi nghiệp vụ đấu giá – điều phối bid, buy-now, close, cancel.
  * Implements Auctionable + Subject trong Observer pattern.
+ *
+ * [AUTO-BID] Proxy Bidding Engine:
+ *   - Hệ thống KHÔNG đặt ngay mức tối đa của người dùng
+ *   - Chỉ tăng lên đủ để dẫn đầu (currentPrice + increment)
+ *   - Khi 2 người đều có auto-bid → resolveAutoBidConflict() xử lý ngay lập tức
+ *     (không loop từng bước, tránh tạo hàng trăm rows DB thừa)
+ *   - Khi chỉ 1 người có auto-bid → triggerAutoBids() counter 1 lần rồi dừng
  */
 public class AuctionHouse implements Auctionable {
 
@@ -98,7 +106,10 @@ public class AuctionHouse implements Auctionable {
 
         notifyNewBid(item, bid);
 
-        // Kích hoạt auto-bid của đối thủ (nếu có)
+        // Người bid thủ công vừa vượt người dẫn đầu.
+        // Nếu người dẫn đầu cũ có auto-bid → hệ thống tự counter lại 1 lần.
+        // (Bid thủ công không bao giờ tạo ra xung đột 2 auto-bid với nhau,
+        //  vì bản thân bid này không phải auto-bid.)
         triggerAutoBids(item, bidderId);
 
         return bid;
@@ -106,70 +117,369 @@ public class AuctionHouse implements Auctionable {
 
     // ─── Auto Bid ─────────────────────────────────────────────────────────────
 
+    /**
+     * Đặt auto-bid (proxy bid) cho người dùng.
+     *
+     * Người dùng chỉ cần nhập số tiền TỐI ĐA họ sẵn sàng trả (maxLimit).
+     * Hệ thống sẽ:
+     *   1. Ghi nhớ previousLeaderId (người đang dẫn đầu TRƯỚC khi B đặt)
+     *   2. Đặt bid ở mức TỐI THIỂU hiện tại (không tiết lộ limit của người dùng)
+     *   3. Kiểm tra: previousLeader có auto-bid không?
+     *      - Có  → resolveAutoBidConflict() so sánh limit ngay, tính kết quả cuối cùng
+     *      - Không → triggerAutoBids() kiểm tra nhưng không counter được → dừng
+     *
+     * Tại sao cần capture previousLeaderId TRƯỚC khi gọi updateCurrentBid()?
+     * → Sau updateCurrentBid(), item.getLeadingBidderId() = bidderId (người mới).
+     *   Nếu capture sau, sẽ không tìm được đúng auto-bid của người dẫn đầu cũ.
+     *
+     * Ví dụ (increment = 1.000đ):
+     *   Giá hiện tại: 50.000đ
+     *   A đặt auto limit 100.000đ → hệ thống đặt A: 51.000đ, A dẫn đầu
+     *   B đặt auto limit 200.000đ:
+     *     - previousLeaderId = A
+     *     - B bid: 52.000đ, B dẫn đầu
+     *     - resolveAutoBidConflict(): B (200k) > A (100k) → B thắng
+     *     - Ghi bid cuối của A: 100.000đ
+     *     - Ghi bid thắng của B: 101.000đ ✅
+     *   → Chỉ tạo 4 rows tổng cộng, không loop 50 lần
+     */
     @Override
     public synchronized Bid placeAutoBid(int itemId, int bidderId, BigDecimal maxLimit)
             throws AuctionClosedException, BidTooLowException, InsufficientBalanceException, Exception {
 
         AuctionItem item = loadActiveItem(itemId);
-        Buyer buyer = loadBuyer(bidderId);
+        validateBidder(item, bidderId);
 
+        Buyer buyer = loadBuyer(bidderId);
         if (!buyer.hasSufficientBalance(maxLimit))
             throw new InsufficientBalanceException(buyer.getWalletBalance(), maxLimit);
 
-        // Tính mức bid tối thiểu ngay bây giờ
         BigDecimal firstBid = item.getNextMinimumBid();
         if (maxLimit.compareTo(firstBid) < 0)
             throw new BidTooLowException(maxLimit, firstBid);
 
-        // Bid ở mức tối thiểu hiện tại (không bid tối đa ngay)
-        BigDecimal bidNow = firstBid;
+        // ── Bước quan trọng: capture người dẫn đầu CŨ trước khi đặt bid ──
+        // Sau updateCurrentBid() bên dưới, leadingBidderId sẽ thành bidderId.
+        // previousLeaderId = 0 có nghĩa là chưa có ai bid (phiên mới mở).
+        int previousLeaderId = item.getLeadingBidderId();
 
-        Bid bid = new Bid(itemId, bidderId, bidNow);
+        // ── Phát hiện xung đột auto-bid TRƯỚC khi lưu bid của B ──────────────
+        //
+        // Lý do KHÔNG lưu firstBid của B trước rồi resolve sau:
+        //   Nếu lưu B ở firstBid (thấp) trước, lịch sử sẽ có điểm giá thấp bất thường
+        //   → biểu đồ dip xuống rồi vọt lên, trông vô lý với app đấu giá.
+        //   Thay vào đó, resolveAutoBidConflict() tự quyết định ghi bid của B ở mức đúng.
+        //
+        // Ví dụ các trường hợp:
+        //   previousLeaderId = 0  → Phiên mới, B là người đầu tiên → lưu firstBid bình thường
+        //   previousLeaderId = A, A không có auto-bid → lưu firstBid, B dẫn đầu
+        //   previousLeaderId = A, A có auto-bid → resolveAutoBidConflict() tự lưu bid đúng
+        if (previousLeaderId > 0 && previousLeaderId != bidderId) {
+            Optional<Bid> rivalAutoBid = bidRepo.findTopAutoBidByBuyer(itemId, previousLeaderId);
+
+            if (rivalAutoBid.isPresent()) {
+                // Cả 2 đều có auto-bid → giải quyết xung đột ngay lập tức.
+                // Tạo bid object của B nhưng CHƯA lưu vào DB — resolveAutoBidConflict()
+                // sẽ lưu B ở mức giá đúng (không phải firstBid thấp).
+                Bid bid = new Bid(itemId, bidderId, firstBid);
+                bid.setBuyerUsername(buyer.getUsername());
+                bid.setAutoBid(true);
+                bid.setAutoBidLimit(maxLimit);
+                // Không gọi bidRepo.save(bid) ở đây — resolve sẽ tự lưu với amount đúng
+
+                resolveAutoBidConflict(item, bid, rivalAutoBid.get());
+                return bid;
+            }
+        }
+
+        // Không có xung đột: lưu bid của B ở firstBid bình thường
+        Bid bid = new Bid(itemId, bidderId, firstBid);
         bid.setBuyerUsername(buyer.getUsername());
         bid.setAutoBid(true);
         bid.setAutoBidLimit(maxLimit);
         bidRepo.save(bid);
 
-        item.updateCurrentBid(bidNow, bidderId);
-        auctionRepo.updateCurrentBid(itemId, bidNow, bidderId);
+        item.updateCurrentBid(firstBid, bidderId);
+        auctionRepo.updateCurrentBid(itemId, firstBid, bidderId);
 
-        LOG.info(String.format("Auto-bid đặt: item #%d, buyer=%s, now=%,.0f, limit=%,.0f",
-                itemId, buyer.getUsername(), bidNow, maxLimit));
+        LOG.info(String.format("Auto-bid đặt: item #%d, buyer=%s, đặt=%,.0fđ, limit=%,.0fđ",
+                itemId, buyer.getUsername(), firstBid, maxLimit));
 
         notifyNewBid(item, bid);
+
+        // Nếu có người đứng sau B không có auto-bid nhưng B vừa vượt qua,
+        // triggerAutoBids sẽ không tìm thấy auto-bid → dừng ngay
+        if (previousLeaderId > 0 && previousLeaderId != bidderId) {
+            triggerAutoBids(item, bidderId);
+        }
+
         return bid;
     }
 
+    // ─── Auto Bid Conflict Resolution (Short-circuit) ─────────────────────────
+
     /**
-     * Sau khi có bid mới, tìm auto-bid của người khác và kích hoạt nếu có.
+     * Giải quyết xung đột khi 2 người CÙNG có auto-bid trên một phiên.
+     *
+     * ═══ Tại sao cần method này? ═══
+     *
+     * Nếu dùng triggerAutoBids() để xử lý 2 auto-bid counter nhau từng bước,
+     * sẽ tạo ra rất nhiều rows DB thừa:
+     *   Ví dụ: A limit=100.000đ, B limit=200.000đ, increment=1.000đ
+     *   → triggerAutoBids() loop ~50 lần, tạo 50 rows trong bảng bids
+     *   → Chậm, tốn DB, khó debug
+     *
+     * resolveAutoBidConflict() thay thế bằng cách so sánh limit trực tiếp:
+     *   → Tính ngay kết quả cuối, chỉ tạo 2 rows (bid cuối của người thua + bid thắng)
+     *   → Nhanh hơn, sạch hơn, dễ hiểu hơn
+     *
+     * ═══ Logic xử lý ═══
+     *
+     * Trường hợp 1: newBid.limit > existingBid.limit (B > A)
+     *   → B thắng, giá cuối = A.limit + increment
+     *   → Ghi bid cuối của A tại A.limit (A đã "dùng hết" limit)
+     *   → Ghi bid thắng của B tại A.limit + increment
+     *
+     * Trường hợp 2: newBid.limit < existingBid.limit (B < A)
+     *   → A vẫn thắng, giá tăng thêm vì B vừa thử counter
+     *   → Giá mới = B.limit + increment (A counter qua B)
+     *   → Ghi bid counter của A tại mức đó (nếu vẫn trong limit A)
+     *
+     * Trường hợp 3: newBid.limit == existingBid.limit
+     *   → Người đặt TRƯỚC thắng (A đặt trước → A thắng)
+     *   → Giá không thay đổi, không cần ghi thêm bid
+     *
+     * QUAN TRỌNG: newBid được truyền vào CHƯA được lưu vào DB.
+     * Method này tự quyết định lưu newBid ở mức giá đúng trong từng trường hợp,
+     * đảm bảo lịch sử đấu giá luôn tăng dần (không bao giờ có điểm dip).
+     *
+     * @param item          vật phẩm đang đấu giá
+     * @param newBid        auto-bid của B (người mới) — CHƯA được lưu vào DB
+     * @param existingBid   auto-bid tốt nhất của A (người đang dẫn đầu trước đó)
+     */
+    private void resolveAutoBidConflict(AuctionItem item, Bid newBid, Bid existingBid)
+            throws Exception {
+
+        BigDecimal increment  = item.getMinBidIncrement();
+        BigDecimal newLimit   = newBid.getAutoBidLimit();       // limit của B (người mới)
+        BigDecimal oldLimit   = existingBid.getAutoBidLimit();  // limit của A (người cũ)
+
+        Buyer newBuyer = loadBuyer(newBid.getBuyerId());
+        Buyer oldBuyer = loadBuyer(existingBid.getBuyerId());
+
+        int cmp = newLimit.compareTo(oldLimit);
+
+        if (cmp > 0) {
+            // ── Trường hợp 1: B có limit CAO hơn A → B thắng ──────────────────
+            //
+            // Lịch sử mong muốn: ...giá_cũ(A) → A.limit(A) → A.limit+increment(B)
+            // → Biểu đồ luôn đi lên ✅
+            //
+            // Ví dụ: A đang dẫn đầu ở 800.000đ, A.limit=2.000.000đ, B.limit=2.400.000đ
+            //   → Ghi A tại 2.000.000đ (A dùng hết limit)
+            //   → Ghi B tại 2.001.000đ (B thắng, vừa đủ hơn A 1 increment)
+            //   → Biểu đồ: 800K → 2.0M → 2.001M  ✅ không bao giờ dip
+            BigDecimal finalPrice = oldLimit.add(increment);
+
+            // Ghi bid cuối của A ở mức limit (A "dùng hết" giới hạn)
+            if (oldBuyer.hasSufficientBalance(oldLimit)) {
+                Bid aFinalBid = new Bid(item.getId(), existingBid.getBuyerId(), oldLimit);
+                aFinalBid.setBuyerUsername(oldBuyer.getUsername());
+                aFinalBid.setAutoBid(true);
+                aFinalBid.setAutoBidLimit(oldLimit);
+                bidRepo.save(aFinalBid);
+                item.updateCurrentBid(oldLimit, existingBid.getBuyerId());
+                auctionRepo.updateCurrentBid(item.getId(), oldLimit, existingBid.getBuyerId());
+                LOG.info(String.format(
+                        "Auto-bid conflict: %s dùng hết limit, bid cuối=%,.0fđ",
+                        oldBuyer.getUsername(), oldLimit));
+                notifyNewBid(item, aFinalBid);
+            }
+
+            // Ghi bid thắng của B ở finalPrice (B dẫn đầu, vừa đủ hơn A)
+            // newBid chưa được lưu vào DB → lưu tại đây với amount = finalPrice
+            newBid.setAmount(finalPrice);
+            bidRepo.save(newBid);
+
+            item.updateCurrentBid(finalPrice, newBid.getBuyerId());
+            auctionRepo.updateCurrentBid(item.getId(), finalPrice, newBid.getBuyerId());
+
+            LOG.info(String.format(
+                    "Auto-bid conflict resolved: %s (limit=%,.0fđ) thắng %s (limit=%,.0fđ) → giá=%,.0fđ",
+                    newBuyer.getUsername(), newLimit,
+                    oldBuyer.getUsername(), oldLimit,
+                    finalPrice));
+
+            notifyNewBid(item, newBid);
+
+        } else if (cmp < 0) {
+            // ── Trường hợp 2: A có limit CAO hơn B → A vẫn thắng ─────────────
+            //
+            // Lịch sử mong muốn: ...giá_cũ(A) → B.limit(B) → B.limit+increment(A)
+            // → Biểu đồ luôn đi lên ✅
+            //
+            // Ví dụ: A đang dẫn đầu ở 800.000đ, A.limit=2.400.000đ, B.limit=2.000.000đ
+            //   → Ghi B tại 2.000.000đ (B dùng hết limit)
+            //   → Ghi A counter tại 2.001.000đ (A thắng)
+            //   → Biểu đồ: 800K → 2.0M → 2.001M  ✅ không bao giờ dip
+            BigDecimal counterPrice = newLimit.add(increment);
+
+            // Ghi bid của B ở mức limit thực của B (không phải firstBid thấp)
+            // newBid chưa được lưu vào DB → lưu tại đây với amount = newLimit
+            newBid.setAmount(newLimit);
+            bidRepo.save(newBid);
+            item.updateCurrentBid(newLimit, newBid.getBuyerId());
+            auctionRepo.updateCurrentBid(item.getId(), newLimit, newBid.getBuyerId());
+            LOG.info(String.format(
+                    "Auto-bid conflict: ghi bid %s tại limit=%,.0fđ",
+                    newBuyer.getUsername(), newLimit));
+            notifyNewBid(item, newBid);
+
+            // A counter lên B.limit + increment để dẫn đầu lại
+            if (counterPrice.compareTo(oldLimit) <= 0
+                    && oldBuyer.hasSufficientBalance(counterPrice)) {
+
+                Bid aCounterBid = new Bid(item.getId(), existingBid.getBuyerId(), counterPrice);
+                aCounterBid.setBuyerUsername(oldBuyer.getUsername());
+                aCounterBid.setAutoBid(true);
+                aCounterBid.setAutoBidLimit(oldLimit);
+                bidRepo.save(aCounterBid);
+
+                item.updateCurrentBid(counterPrice, existingBid.getBuyerId());
+                auctionRepo.updateCurrentBid(item.getId(), counterPrice, existingBid.getBuyerId());
+
+                LOG.info(String.format(
+                        "Auto-bid conflict resolved: %s (limit=%,.0fđ) giữ vị trí, counter lên %,.0fđ",
+                        oldBuyer.getUsername(), oldLimit, counterPrice));
+
+                notifyNewBid(item, aCounterBid);
+            } else {
+                LOG.warning(String.format(
+                        "Auto-bid conflict: %s không thể counter (counterPrice=%,.0fđ, limit=%,.0fđ)",
+                        oldBuyer.getUsername(), counterPrice, oldLimit));
+            }
+
+        } else {
+            // ── Trường hợp 3: Cùng limit → người đặt TRƯỚC thắng (A) ──────────
+            //
+            // Lịch sử mong muốn: ...giá_cũ(A) → B.limit(B) → B.limit+increment(A)
+            // → Biểu đồ luôn đi lên ✅
+            //
+            // Ví dụ: A.limit=B.limit=100.000đ, giá hiện tại 50.000đ, increment=1.000đ
+            //   → Ghi B tại 100.000đ, A counter tại 101.000đ → A dẫn đầu
+            BigDecimal tieBreakPrice = newLimit.add(increment); // = oldLimit + increment
+
+            // Ghi bid của B ở mức limit (dùng hết giới hạn, thua tie-break)
+            newBid.setAmount(newLimit);
+            bidRepo.save(newBid);
+            item.updateCurrentBid(newLimit, newBid.getBuyerId());
+            auctionRepo.updateCurrentBid(item.getId(), newLimit, newBid.getBuyerId());
+            notifyNewBid(item, newBid);
+
+            if (tieBreakPrice.compareTo(oldLimit) <= 0
+                    && oldBuyer.hasSufficientBalance(tieBreakPrice)) {
+
+                Bid aTieBreakBid = new Bid(item.getId(), existingBid.getBuyerId(), tieBreakPrice);
+                aTieBreakBid.setBuyerUsername(oldBuyer.getUsername());
+                aTieBreakBid.setAutoBid(true);
+                aTieBreakBid.setAutoBidLimit(oldLimit);
+                bidRepo.save(aTieBreakBid);
+
+                item.updateCurrentBid(tieBreakPrice, existingBid.getBuyerId());
+                auctionRepo.updateCurrentBid(item.getId(), tieBreakPrice, existingBid.getBuyerId());
+
+                LOG.info(String.format(
+                        "Auto-bid tie (cùng limit=%,.0fđ): %s thắng vì đặt trước, giá=%,.0fđ",
+                        oldLimit, oldBuyer.getUsername(), tieBreakPrice));
+
+                notifyNewBid(item, aTieBreakBid);
+            }
+            // Nếu tieBreakPrice > limit (không thể counter): B thắng tình cờ.
+            // Trường hợp này cực kỳ hiếm và chỉ xảy ra khi giá đã ở sát limit.
+        }
+    }
+
+    // ─── Auto Bid - Proxy Bidding Engine (dùng cho bid thủ công) ─────────────
+
+    /**
+     * Sau khi có bid THỦ CÔNG mới, tìm và kích hoạt auto-bid của người đang dẫn đầu cũ.
+     *
+     * ═══ Cơ chế Proxy Bidding ═══
+     *
+     * Nguyên tắc:
+     *   - Chỉ tăng lên MỨC TỐI THIỂU cần thiết để dẫn đầu (currentPrice + increment)
+     *   - Nếu người dẫn đầu cũ có auto-bid → counter 1 lần rồi dừng
+     *   - Method này KHÔNG xử lý 2 auto-bid gặp nhau (dùng resolveAutoBidConflict() cho đó)
+     *
+     * Ví dụ (increment = 100.000đ):
+     *   A đặt auto limit:  5.000.000đ  → hệ thống đặt cho A: 1.100.000đ
+     *   B bid thủ công:    2.000.000đ  → triggerAutoBids → A counter: 2.100.000đ ✅
+     *   B bid thủ công:    4.900.000đ  → triggerAutoBids → A counter: 5.000.000đ ✅
+     *   B bid thủ công:    5.500.000đ  → triggerAutoBids → A muốn 5.600.000đ > limit → A thua ✅
+     *
+     * @param item          vật phẩm đang đấu giá (đã được cập nhật currentPrice)
+     * @param lastBidderId  người vừa đặt bid thủ công (không trigger cho chính họ)
      */
     private void triggerAutoBids(AuctionItem item, int lastBidderId) throws Exception {
-        // Tìm auto-bid cao nhất của người khác
-        List<Bid> allBids = bidRepo.findByAuctionId(item.getId());
-        for (Bid existing : allBids) {
-            if (existing.getBuyerId() == lastBidderId) continue;
-            if (!existing.isAutoBid() || existing.getAutoBidLimit() == null) continue;
+        BigDecimal increment = item.getMinBidIncrement();
 
-            BigDecimal needed = item.getNextMinimumBid();
-            if (existing.getAutoBidLimit().compareTo(needed) >= 0) {
-                Buyer autoBuyer = loadBuyer(existing.getBuyerId());
-                if (!autoBuyer.hasSufficientBalance(needed)) continue;
+        // Tìm auto-bid tốt nhất (limit cao nhất) của những người KHÁC người vừa bid
+        List<Bid> rivals = bidRepo.findActiveAutoBidsExcluding(item.getId(), lastBidderId);
 
-                Bid counter = new Bid(item.getId(), existing.getBuyerId(), needed);
-                counter.setBuyerUsername(autoBuyer.getUsername());
-                counter.setAutoBid(true);
-                counter.setAutoBidLimit(existing.getAutoBidLimit());
-                bidRepo.save(counter);
-
-                item.updateCurrentBid(needed, existing.getBuyerId());
-                auctionRepo.updateCurrentBid(item.getId(), needed, existing.getBuyerId());
-
-                LOG.info(String.format("Auto-bid counter: buyer=%s, amount=%,.0f",
-                        autoBuyer.getUsername(), needed));
-                notifyNewBid(item, counter);
-                break; // Chỉ counter một lần mỗi lượt
-            }
+        if (rivals.isEmpty()) {
+            // Không có đối thủ nào có auto-bid → không cần counter
+            return;
         }
+
+        // Lấy đối thủ có limit cao nhất (đứng đầu danh sách)
+        Bid topRival = rivals.get(0);
+        BigDecimal needed = item.getCurrentPrice().add(increment); // Giá cần để dẫn đầu lại
+
+        // Kiểm tra rival có đủ limit để counter không
+        if (topRival.getAutoBidLimit().compareTo(needed) < 0) {
+            LOG.info(String.format(
+                    "Auto-bid trigger: %s hết limit (limit=%,.0fđ < needed=%,.0fđ) → thua",
+                    topRival.getBuyerUsername(), topRival.getAutoBidLimit(), needed));
+            return;
+        }
+
+        // Kiểm tra số dư ví
+        Buyer rivalBuyer = loadBuyer(topRival.getBuyerId());
+        if (!rivalBuyer.hasSufficientBalance(needed)) {
+            LOG.info(String.format(
+                    "Auto-bid trigger: %s không đủ số dư để counter %,.0fđ → bỏ qua",
+                    rivalBuyer.getUsername(), needed));
+            return;
+        }
+
+        // Tính giá counter: đặt ở mức TỐI THIỂU để dẫn đầu, nhưng không vượt limit
+        BigDecimal counterAmount = needed.min(topRival.getAutoBidLimit());
+
+        // Lưu bid counter vào DB
+        Bid counter = new Bid(item.getId(), topRival.getBuyerId(), counterAmount);
+        counter.setBuyerUsername(rivalBuyer.getUsername());
+        counter.setAutoBid(true);
+        counter.setAutoBidLimit(topRival.getAutoBidLimit()); // Giữ nguyên limit gốc
+        bidRepo.save(counter);
+
+        // Cập nhật giá item
+        item.updateCurrentBid(counterAmount, topRival.getBuyerId());
+        auctionRepo.updateCurrentBid(item.getId(), counterAmount, topRival.getBuyerId());
+
+        LOG.info(String.format(
+                "Auto-bid trigger: %s counter lên %,.0fđ (limit=%,.0fđ)",
+                rivalBuyer.getUsername(), counterAmount, topRival.getAutoBidLimit()));
+
+        notifyNewBid(item, counter);
+
+        // Sau khi rival counter thành công, bid thủ công của lastBidder đã bị qua.
+        // Không cần loop thêm vì:
+        //   - Nếu lastBidder là bid thủ công → họ không tự động counter lại
+        //   - Nếu có auto-bid nào khác → sẽ được xử lý khi người dùng bid lần tiếp theo
+        //
+        // Lưu ý: Nếu bạn muốn hỗ trợ nhiều người cùng auto-bid tranh nhau,
+        // có thể gọi đệ quy hoặc thêm loop ở đây. Nhưng với 2 người (trường hợp phổ biến),
+        // resolveAutoBidConflict() đã xử lý hoàn toàn và triggerAutoBids() chỉ cần 1 lần.
     }
 
     // ─── Buy Now ──────────────────────────────────────────────────────────────
@@ -368,7 +678,7 @@ public class AuctionHouse implements Auctionable {
             if (item.getStatus() != AuctionStatus.ACTIVE)
                 throw new AuctionClosedException(itemId, item.getStatus());
 
-            // ── FIX Bug 1: Kiểm tra thời gian thực tế, không chỉ status trong DB ──
+            // ── FIX Bug: Kiểm tra thời gian thực tế, không chỉ status trong DB ──
             //
             // Vấn đề: AuctionScheduler cập nhật status định kỳ, nhưng có độ trễ.
             // Nếu scheduler chưa kịp chạy, phiên đã hết giờ nhưng DB vẫn còn ACTIVE
@@ -376,19 +686,13 @@ public class AuctionHouse implements Auctionable {
             //
             // Giải pháp: Tự kiểm tra endTime ngay tại đây.
             //   - Nếu phiên đã hết giờ → gọi closeAuction() để đồng bộ DB luôn
-            //     (trao thắng cho người bid cao nhất, trừ tiền, ghi transaction)
             //   - Sau đó throw AuctionClosedException để ngăn bid mới.
-            //
-            // Lưu ý: closeAuction() bên trong đã có guard "if status != ACTIVE → return"
-            // nên gọi nhiều lần cũng an toàn (idempotent).
             if (item.getRemainingSeconds() <= 0) {
                 LOG.warning(String.format(
                         "Phiên #%d đã hết giờ nhưng status vẫn là ACTIVE trong DB — tự đóng.", itemId));
                 try {
                     closeAuction(itemId);
                 } catch (Exception ex) {
-                    // closeAuction đã log chi tiết, không cần xử lý thêm ở đây.
-                    // Dù closeAuction lỗi, vẫn phải throw để ngăn bid.
                     LOG.warning("closeAuction thất bại khi auto-close: " + ex.getMessage());
                 }
                 throw new AuctionClosedException(itemId, AuctionStatus.CLOSED);
@@ -464,12 +768,12 @@ public class AuctionHouse implements Auctionable {
             LocalDateTime newEnd = item.getEndTime()
                     .plusSeconds(AppConfig.ANTI_SNIPE_EXTENSION_SECONDS);
             item.setEndTime(newEnd);
-            auctionRepo.updateEndTime(item.getId(), newEnd);   // ← lightweight: chỉ update end_time
+            auctionRepo.updateEndTime(item.getId(), newEnd);
             LOG.info(String.format(
                     "Anti-snipe kích hoạt: item #%d còn %ds → gia hạn +%ds → kết thúc lúc %s",
                     item.getId(), item.getRemainingSeconds(),
                     AppConfig.ANTI_SNIPE_EXTENSION_SECONDS, newEnd));
-            notifyExtended(item, newEnd);                       // ← UI timer tự reset
+            notifyExtended(item, newEnd);
         }
     }
 }

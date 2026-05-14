@@ -216,6 +216,19 @@ public class NotificationService implements AuctionObserver {
         }
     }
 
+    /**
+     * Xóa toàn bộ thông báo của user khỏi DB và cache.
+     * Gọi khi user bấm "Đánh dấu tất cả đã đọc" — dọn sạch luôn thay vì chỉ flip is_read.
+     */
+    public void clearAll(int userId) {
+        try {
+            notifRepo.deleteAllByUser(userId);
+            unreadCache.put(userId, 0);  // cache về 0, badge biến mất
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, "Lỗi clearAll user #" + userId, e);
+        }
+    }
+
     /** Click vào 1 thông báo cụ thể → đánh dấu đã đọc. */
     public void markRead(int notificationId, int userId) {
         try {

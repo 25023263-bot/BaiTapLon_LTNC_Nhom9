@@ -126,6 +126,23 @@ public class NotificationRepository {
     // ─── Delete ───────────────────────────────────────────────────────────────
 
     /**
+     * Xoá TẤT CẢ thông báo của một user khỏi DB.
+     * Gọi khi user bấm "Đánh dấu tất cả đã đọc" — vừa đánh dấu vừa dọn sạch.
+     *
+     * Tại sao xóa hẳn thay vì chỉ markAllRead?
+     * → Thông báo đã đọc không còn giá trị hiển thị, giữ lại chỉ làm nặng DB.
+     *   Xóa ngay giúp bảng notifications không phình to theo thời gian.
+     */
+    public void deleteAllByUser(int userId) throws SQLException {
+        String sql = "DELETE FROM notifications WHERE user_id = ?";
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
      * Xoá thông báo cũ hơn {@code days} ngày.
      * Nên gọi khi app start để tránh bảng phình to theo thời gian.
      *

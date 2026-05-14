@@ -2,6 +2,7 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.HelloApplication;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.BidDialogController;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.BidRequest;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.HomeController.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.ItemDetailController;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
@@ -48,6 +49,11 @@ import javafx.application.Platform;
  *   - Subscribe vào topic "/topic/auction/{id}/bids"
  *   - Nhận event → gọi refreshAfterBid() tương tự
  *   → Interface của controller KHÔNG thay đổi, chỉ thay cách trigger.
+ *
+ * Thay đổi so với phiên bản cũ:
+ *   - openBidDialog() đổi callback type từ Consumer<Double> → Consumer<BidRequest>
+ *   - onBidConfirmed() tách thành 2 nhánh: manual → placeBid(), auto → placeAutoBid()
+ *   - Thông báo sau auto-bid giải thích rõ hơn cơ chế proxy bidding
  */
 public final class ItemDetailCoordinator {
 
@@ -139,7 +145,7 @@ public final class ItemDetailCoordinator {
             stage.setMinWidth(900);
             stage.setMinHeight(560);
             stage.setWidth(960);
-            stage.setHeight(700); // tăng thêm 20px cho chart section
+            stage.setHeight(700);
             stage.setScene(scene);
 
             // Khi cửa sổ đóng → dừng polling ngay để giải phóng thread
@@ -214,10 +220,12 @@ public final class ItemDetailCoordinator {
             final double currentBidForDialog = freshCurrentBid;
 
             Stage dialog = new Stage();
+
+            // ── Thay đổi: configure() nhận Consumer<BidRequest> thay vì Consumer<Double> ──
             ctrl.configure(
                     currentBidForDialog,
                     dialog,
-                    confirmedAmount -> onBidConfirmed(item, confirmedAmount, detailCtrl)
+                    bidRequest -> onBidConfirmed(item, bidRequest, detailCtrl)
             );
 
             // UNDECORATED: không có thanh tiêu đề hệ thống
@@ -253,19 +261,21 @@ public final class ItemDetailCoordinator {
     /**
      * Được gọi khi user bấm "Tiếp tục" trong BidDialog và giá hợp lệ.
      *
-     * Trước đây: ghi bid thẳng vào DB qua bidRepo + auctionRepo → bỏ qua AuctionHouse
-     * → NotificationService.onNewBid() không bao giờ được gọi → không có thông báo.
+     * Thay đổi quan trọng:
+     *   Cũ: luôn gọi placeBid() dù user chọn auto-bid
+     *        → hệ thống đặt thẳng giá tối đa, không có proxy bidding
      *
-     * Fix: gọi auctionHouse.placeBid() — nó đã xử lý đầy đủ:
-     *   1. Validate giá (race condition check)
-     *   2. Lưu bid vào DB
-     *   3. updateCurrentBid trong bảng auctions
-     *   4. extendIfLastMinute (anti-snipe)
-     *   5. notifyNewBid → NotificationService.onNewBid() → seller + previous bidders
+     *   Mới: phân nhánh theo BidRequest.isAuto()
+     *        - isAuto = false → placeBid()      (bid thủ công, đặt đúng số tiền)
+     *        - isAuto = true  → placeAutoBid()  (backend đặt ở mức tối thiểu,
+     *                                            tự counter khi bị vượt qua)
+     *
+     * Tại sao UI refresh dùng giá từ bid thật (saved.getAmount()) thay vì maxLimit?
+     * → placeAutoBid() trả về Bid với amount = firstBid (mức tối thiểu hiện tại),
+     *   không phải maxLimit. Hiển thị firstBid mới đúng với thực tế.
      */
-    private void onBidConfirmed(AuctionItem item, double amount, ItemDetailController detailCtrl) {
+    private void onBidConfirmed(AuctionItem item, BidRequest request, ItemDetailController detailCtrl) {
         NumberFormat nf = NumberFormat.getIntegerInstance(new Locale("vi", "VN"));
-        String formatted = nf.format(Math.round(amount)) + " đ";
 
         int buyerId   = UserSession.getInstance().getCurrentUserId();
         int auctionId = Integer.parseInt(item.id());
@@ -278,11 +288,43 @@ public final class ItemDetailCoordinator {
         }
 
         try {
-            // Một lần gọi duy nhất — AuctionHouse lo toàn bộ:
-            // validate → save bid → update price → anti-snipe → notify
-            Bid saved = auctionHouse.placeBid(auctionId, buyerId, BigDecimal.valueOf(amount));
+            Bid saved;
 
-            // Refresh UI sau khi bid thành công
+            if (request.isAuto()) {
+                // ── Auto-bid (Proxy Bidding) ──────────────────────────────────
+                // Backend sẽ:
+                //   1. Đặt ngay ở mức TỐI THIỂU (currentPrice + increment)
+                //   2. Lưu maxLimit vào DB
+                //   3. Tự động counter khi có người bid qua, cho đến maxLimit
+                //
+                // Người dùng KHÔNG thấy giá tối đa của mình xuất hiện trong lịch sử
+                // → Đây là đúng: proxy bidding không tiết lộ limit
+                BigDecimal maxLimit = BigDecimal.valueOf(request.amount());
+                saved = auctionHouse.placeAutoBid(auctionId, buyerId, maxLimit);
+
+                String firstBidFormatted = nf.format(saved.getAmount().longValue()) + " đ";
+                String maxLimitFormatted = nf.format(maxLimit.longValue()) + " đ";
+
+                AlertHelper.showInfo("Đặt giá tự động thành công!",
+                        "Sản phẩm      : " + item.title() + "\n"
+                                + "Giá đặt ngay  : " + firstBidFormatted + "\n"
+                                + "Giới hạn tối đa: " + maxLimitFormatted + "\n\n"
+                                + "Hệ thống sẽ tự động tăng giá khi có người vượt qua,\n"
+                                + "cho đến khi đạt giới hạn tối đa của bạn.");
+
+            } else {
+                // ── Bid thủ công ──────────────────────────────────────────────
+                BigDecimal amount = BigDecimal.valueOf(request.amount());
+                saved = auctionHouse.placeBid(auctionId, buyerId, amount);
+
+                String formatted = nf.format(saved.getAmount().longValue()) + " đ";
+                AlertHelper.showInfo("Đặt giá thành công!",
+                        "Sản phẩm : " + item.title() + "\n"
+                                + "Giá đặt  : " + formatted + "\n\n"
+                                + "Hệ thống sẽ thông báo kết quả khi phiên đấu giá kết thúc.");
+            }
+
+            // Refresh UI: dùng giá thật từ bid vừa lưu (firstBid, không phải maxLimit)
             detailCtrl.refreshAfterBid(
                     saved.getAmount().doubleValue(),
                     bidRepo.countByAuctionId(auctionId),
@@ -297,13 +339,7 @@ public final class ItemDetailCoordinator {
                 LOG.log(Level.WARNING, "Không thể đọc endTime mới sau bid", ex);
             }
 
-            AlertHelper.showInfo("Đặt giá thành công!",
-                    "Sản phẩm : " + item.title() + "\n"
-                            + "Giá đặt  : " + formatted + "\n\n"
-                            + "Hệ thống sẽ thông báo kết quả khi phiên đấu giá kết thúc.");
-
         } catch (IllegalArgumentException e) {
-            // AuctionHouse ném khi giá không hợp lệ hoặc phiên không ACTIVE
             AlertHelper.showError("Không thể đặt giá", e.getMessage());
         } catch (Exception e) {
             LOG.log(Level.SEVERE, "Lỗi khi đặt giá", e);

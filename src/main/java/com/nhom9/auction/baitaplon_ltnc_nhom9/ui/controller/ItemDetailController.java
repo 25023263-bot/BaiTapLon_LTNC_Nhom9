@@ -67,6 +67,11 @@ public class ItemDetailController {
     private ScheduledExecutorService timerScheduler;
     private List<Bid> currentBids = new ArrayList<>();
     private Canvas chartCanvas;
+    /**
+     * Giá khởi điểm của phiên — dùng làm floor (sàn) cho trục Y biểu đồ.
+     * Trục Y không bao giờ xuống dưới giá này vì giá đấu giá chỉ tăng.
+     */
+    private double chartStartingPrice = 0;
 
     // ── Public API ───────────────────────────────────────────────
 
@@ -97,6 +102,7 @@ public class ItemDetailController {
         }
 
         lblDescription.setText(item.description().isBlank() ? "Không có mô tả." : item.description());
+        chartStartingPrice = item.startingPrice(); // khởi tạo floor trục Y ngay từ đầu
         populateBidHistory(List.of(), item.startingPrice());
         setupChart();
     }
@@ -311,6 +317,8 @@ public class ItemDetailController {
                         && b.getBidTime() != null)
                 .sorted((a, b2) -> a.getBidTime().compareTo(b2.getBidTime()))
                 .collect(java.util.stream.Collectors.toList());
+        // Lưu lại startingPrice để dùng trong redrawChart() tính floor trục Y
+        this.chartStartingPrice = startingPrice;
         redrawChart();
     }
 
@@ -337,9 +345,21 @@ public class ItemDetailController {
             double minPrice = currentBids.stream().mapToDouble(b -> b.getAmount().doubleValue()).min().orElse(0);
             double maxPrice = currentBids.stream().mapToDouble(b -> b.getAmount().doubleValue()).max().orElse(minPrice + 1);
             double priceRange = maxPrice - minPrice;
-            double priceMin = minPrice - priceRange * 0.1;
-            double priceMax = maxPrice + priceRange * 0.1;
-            if (priceMin == priceMax) { priceMin -= 1000; priceMax += 1000; }
+
+            // ── FIX: Trục Y không được xuống dưới startingPrice ──────────────
+            //
+            // Trước đây: priceMin = minPrice - priceRange * 0.1
+            // → Khi auto-bid tạo ra nhiều bid gần nhau, priceRange lớn
+            //   → priceMin có thể âm hoặc rất nhỏ → đường giá vẽ đi xuống
+            //
+            // Giải pháp:
+            //   - Sàn (floor) của trục Y = chartStartingPrice (giá khởi điểm)
+            //     vì trong đấu giá, giá không bao giờ thấp hơn giá khởi điểm
+            //   - Chỉ thêm padding lên TRÊN (priceMax), không trừ xuống dưới
+            //   - Nếu tất cả bid cùng giá (priceRange = 0): mở rộng đều 2 phía
+            double priceMin = Math.min(minPrice, chartStartingPrice); // floor = startingPrice
+            double priceMax = maxPrice + priceRange * 0.15;           // padding 15% lên trên
+            if (priceMax == priceMin) { priceMin = Math.max(0, priceMin - 1000); priceMax += 1000; }
 
             LocalDateTime timeMin = currentBids.get(0).getBidTime();
             LocalDateTime timeMax = currentBids.get(currentBids.size() - 1).getBidTime();
