@@ -2411,6 +2411,35 @@ public class HomeController implements Initializable, AuctionObserver {
             timerLabels.clear();
             loadHotAuctions();
             loadAllAuctions();
+
+            // ── FIX: Sync số dư hiển thị ngay sau khi phiên kết thúc ──────────
+            //
+            // Vấn đề trước đây:
+            //   processPayment() cập nhật DB đúng, nhưng UserSession đang giữ
+            //   object currentUser trong RAM với số dư CŨ. refreshWalletSection()
+            //   đọc từ UserSession nên luôn hiện số cũ cho đến khi đăng xuất.
+            //
+            // Giải pháp:
+            //   Sau khi phiên đóng, nếu người dùng hiện tại là người thắng (buyer)
+            //   hoặc người bán (seller), reload fresh data từ DB vào UserSession
+            //   rồi refresh UI. Các người dùng không liên quan không bị ảnh hưởng.
+            if (!UserSession.getInstance().isLoggedIn()) return;
+
+            int currentUserId = UserSession.getInstance().getCurrentUserId();
+            boolean isWinner = winnerId != null && currentUserId == winnerId;
+            boolean isSeller = currentUserId == item.getSellerId();
+
+            if (isWinner || isSeller) {
+                try {
+                    // Đọc lại từ DB để lấy số dư mới nhất sau khi thanh toán
+                    userRepo.findById(currentUserId).ifPresent(freshUser -> {
+                        UserSession.getInstance().login(freshUser); // cập nhật RAM
+                        refreshWalletSection(freshUser);            // cập nhật UI
+                    });
+                } catch (Exception e) {
+                    LOG.warning("Không thể refresh balance sau khi phiên đóng: " + e.getMessage());
+                }
+            }
         });
     }
 
