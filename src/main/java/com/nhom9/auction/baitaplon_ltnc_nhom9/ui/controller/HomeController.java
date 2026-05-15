@@ -35,7 +35,6 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
@@ -140,6 +139,8 @@ public class HomeController implements Initializable, AuctionObserver {
     @FXML private Label     adminLevelBadge;
     @FXML private Button    adminTabUsers;
     @FXML private Button    adminTabAuctions;
+    @FXML private Region    adminTabUsersIndicator;
+    @FXML private Region    adminTabAuctionsIndicator;
     @FXML private VBox      adminUsersPanel;
     @FXML private VBox      adminAuctionsPanel;
     @FXML private TextField adminUserSearchField;
@@ -1633,21 +1634,13 @@ public class HomeController implements Initializable, AuctionObserver {
         avatarMenu = new ContextMenu();
         avatarMenu.getStyleClass().add("dark-context-menu");
 
-        MenuItem miProfile    = new MenuItem("Thông tin cá nhân");
-        MenuItem miMyAuctions = new MenuItem("Đấu giá của tôi");
-        MenuItem miSettings   = new MenuItem("Cài đặt");
-        MenuItem miLogout     = new MenuItem("Đăng xuất");
+        MenuItem miLogout = new MenuItem("Đăng xuất");
         miLogout.getStyleClass().add("menu-danger");
-
-        miProfile.setOnAction(e    -> showInfoPlaceholder("Thông tin cá nhân"));
-        miMyAuctions.setOnAction(e -> showInfoPlaceholder("Đấu giá của tôi"));
-        miSettings.setOnAction(e   -> showInfoPlaceholder("Cài đặt"));
         miLogout.setOnAction(e -> {
             if (loginCoordinator != null) loginCoordinator.performLogout();
         });
 
-        avatarMenu.getItems().addAll(
-                miProfile, miMyAuctions, miSettings, new SeparatorMenuItem(), miLogout);
+        avatarMenu.getItems().add(miLogout);
     }
 
     private static void showInfoPlaceholder(String title) {
@@ -2558,19 +2551,51 @@ public class HomeController implements Initializable, AuctionObserver {
         handleAdminTabUsers();
     }
 
+    // Style cho tab ACTIVE — inline style có priority cao nhất,
+    // thắng cả Modena :focused/:armed/:pressed pseudo-state.
+    // KHONG set border tren button: duong vang do Region indicator dam nhan
+    private static final String TAB_ACTIVE_STYLE =
+            "-fx-background-color: rgba(201,168,76,0.07);" +
+                    "-fx-background-insets: 0;" +
+                    "-fx-background-radius: 0;" +
+                    "-fx-border-color: null;" +
+                    "-fx-border-width: 0;" +
+                    "-fx-border-insets: 0;" +
+                    "-fx-border-radius: 0;" +
+                    "-fx-text-fill: #c9a84c;";
+
+    // Style cho tab INACTIVE — dùng "null" thay vì "transparent".
+    // "transparent" bị Modena override bằng inner-border highlight trắng.
+    // "null" xóa hoàn toàn mọi background layer.
+    private static final String TAB_INACTIVE_STYLE =
+            "-fx-background-color: null;" +
+                    "-fx-background-insets: 0;" +
+                    "-fx-background-radius: 0;" +
+                    "-fx-border-color: null;" +
+                    "-fx-border-width: 0;" +
+                    "-fx-text-fill: #4a4a4a;";
+
     /** Chuyển sang tab Người dùng, load dữ liệu. */
     @FXML
     private void handleAdminTabUsers() {
         setVisible(adminUsersPanel, true);
         setVisible(adminAuctionsPanel, false);
-        // Cập nhật style tab active / inactive
+        // Button: chi doi mau text + background, KHONG border
         if (adminTabUsers != null) {
             adminTabUsers.getStyleClass().remove("admin-tab-active");
             adminTabUsers.getStyleClass().add("admin-tab-active");
+            adminTabUsers.setStyle(TAB_ACTIVE_STYLE);
         }
         if (adminTabAuctions != null) {
             adminTabAuctions.getStyleClass().remove("admin-tab-active");
+            adminTabAuctions.setStyle(TAB_INACTIVE_STYLE);
         }
+        // Ca 2 indicator luon cao 2px, chi thay doi MAU
+        if (adminTabUsersIndicator != null)
+            adminTabUsersIndicator.setStyle("-fx-background-color: #c9a84c;");
+        if (adminTabAuctionsIndicator != null)
+            adminTabAuctionsIndicator.setStyle("-fx-background-color: transparent;");
+        if (adminOverlay != null) adminOverlay.requestFocus();
         handleAdminLoadUsers();
     }
 
@@ -2582,10 +2607,17 @@ public class HomeController implements Initializable, AuctionObserver {
         if (adminTabAuctions != null) {
             adminTabAuctions.getStyleClass().remove("admin-tab-active");
             adminTabAuctions.getStyleClass().add("admin-tab-active");
+            adminTabAuctions.setStyle(TAB_ACTIVE_STYLE);
         }
         if (adminTabUsers != null) {
             adminTabUsers.getStyleClass().remove("admin-tab-active");
+            adminTabUsers.setStyle(TAB_INACTIVE_STYLE);
         }
+        if (adminTabAuctionsIndicator != null)
+            adminTabAuctionsIndicator.setStyle("-fx-background-color: #c9a84c;");
+        if (adminTabUsersIndicator != null)
+            adminTabUsersIndicator.setStyle("-fx-background-color: transparent;");
+        if (adminOverlay != null) adminOverlay.requestFocus();
         handleAdminLoadAuctions();
     }
 

@@ -1904,34 +1904,100 @@
 }
 
 /* ── TAB BAR ─────────────────────────────────────────────────────────────── */
+/*
+ * HBox chỉ là container layout, không cần border-bottom nữa.
+ * Đường kẻ phân cách được tạo bởi Region indicator của mỗi tab:
+ *   - Tab active  → Region màu vàng #c9a84c
+ *   - Tab inactive → Region transparent (không thấy gì)
+ * Cách này tránh hoàn toàn vấn đề border button bị đẩy ra ngoài HBox.
+ */
 .admin-tab-bar {
     -fx-background-color: #0a0a0a;
-    -fx-border-color: transparent transparent #1e1e1e transparent;
-    -fx-border-width: 0 0 1 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
     -fx-spacing: 0;
 }
+
+/*
+ * Cách triệt tiêu Modena Button background trong JavaFX 21:
+ * Modena định nghĩa -fx-background-color với 3 layers:
+ *   -fx-outer-border, -fx-inner-border, -fx-body-color
+ * và -fx-background-insets: 0, 1, 2  (mỗi layer lùi vào)
+ *
+ * Để override hoàn toàn, ta phải set ĐÚNG 1 layer duy nhất VÀ
+ * reset insets về 0. Dùng "null" thay vì "transparent" vì:
+ *   - transparent = render 1 layer màu trong suốt (vẫn có layer)
+ *   - null        = xóa hoàn toàn, không render gì
+ * focusTraversable=false trong FXML cũng ngăn button nhận focus.
+ */
 .admin-tab-btn {
-    -fx-background-color: transparent;
+    -fx-background-color: null;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: null;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
     -fx-text-fill: #4a4a4a;
     -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-padding: 14 20 14 20;
     -fx-cursor: hand;
-    -fx-border-color: transparent;
-    -fx-background-radius: 0;
-    -fx-border-radius: 0;
-    -fx-border-width: 0 0 2 0;
-    -fx-border-insets: 0 0 0 0;
 }
 .admin-tab-btn:hover {
+    -fx-background-color: rgba(255,255,255,0.04);
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
     -fx-text-fill: #888888;
-    -fx-background-color: #ffffff08;
 }
+/* Chặn mọi pseudo-state của Modena — focused, armed, pressed */
+.admin-tab-btn:focused,
+.admin-tab-btn:armed,
+.admin-tab-btn:pressed,
+.admin-tab-btn:focused:hover,
+.admin-tab-btn:focused:armed {
+    -fx-background-color: null;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
 .admin-tab-active {
     -fx-text-fill: #c9a84c;
-    -fx-border-color: transparent transparent #c9a84c transparent;
-    -fx-border-width: 0 0 2 0;
-    -fx-background-color: #c9a84c0d;
+    -fx-background-color: rgba(201,168,76,0.07);
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    /* Không dùng border trên button nữa — indicator là Region riêng bên dưới */
+    -fx-border-color: null;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+}
+.admin-tab-active:hover {
+    -fx-background-color: rgba(201,168,76,0.13);
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+/* Chặn Modena override khi tab active bị focused/pressed */
+.admin-tab-active:focused,
+.admin-tab-active:armed,
+.admin-tab-active:pressed,
+.admin-tab-active:focused:hover,
+.admin-tab-active:focused:armed {
+    -fx-background-color: rgba(201,168,76,0.07);
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+/*
+ * Indicator Region — đường 2px nằm dưới mỗi tab.
+ * Region không có padding, không có pseudo-state phức tạp như Button,
+ * nên màu được set chính xác 100%, không bị Modena can thiệp.
+ */
+.admin-tab-indicator {
+    -fx-background-color: transparent;
+}
+.admin-tab-indicator-active {
+    -fx-background-color: #c9a84c;
 }
 
 /* ── BODY AREA ───────────────────────────────────────────────────────────── */

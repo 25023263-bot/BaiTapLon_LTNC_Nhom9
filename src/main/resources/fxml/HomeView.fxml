@@ -827,17 +827,48 @@
                         </VBox>
 
                         <!-- ── TAB BAR ────────────────────────────────────── -->
-                        <HBox styleClass="admin-tab-bar" spacing="0">
-                            <Button fx:id="adminTabUsers"
-                                    styleClass="admin-tab-btn admin-tab-active"
-                                    text="👥  Người dùng"
-                                    onAction="#handleAdminTabUsers"
-                                    HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                            <Button fx:id="adminTabAuctions"
-                                    styleClass="admin-tab-btn"
-                                    text="🔨  Phiên đấu giá"
-                                    onAction="#handleAdminTabAuctions"
-                                    HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        <!--
+                            Mỗi tab = VBox[Button + Region indicator].
+                            Region indicator là đường 2px nằm NGOÀI button,
+                            sát đáy HBox — không bị ảnh hưởng bởi button padding.
+                            Java chỉ cần đổi style của Region, không đụng button border.
+                        -->
+                        <HBox styleClass="admin-tab-bar" spacing="0"
+                              maxWidth="Infinity" VBox.vgrow="NEVER">
+                            <!--
+                                StackPane approach:
+                                - Button chiem toan bo chieu cao StackPane
+                                - Region indicator (2px) duoc pin xuong day bang StackPane.alignment=BOTTOM_CENTER
+                                - Khong bi anh huong boi button padding hay Modena sizing
+                            -->
+                            <StackPane HBox.hgrow="ALWAYS" maxWidth="Infinity">
+                                <Button fx:id="adminTabUsers"
+                                        styleClass="admin-tab-btn admin-tab-active"
+                                        text="👥  Người dùng"
+                                        onAction="#handleAdminTabUsers"
+                                        focusTraversable="false"
+                                        maxWidth="Infinity" maxHeight="Infinity"
+                                        StackPane.alignment="CENTER"/>
+                                <Region fx:id="adminTabUsersIndicator"
+                                        maxWidth="Infinity" minHeight="2" maxHeight="2"
+                                        style="-fx-background-color: #c9a84c;"
+                                        StackPane.alignment="BOTTOM_CENTER"
+                                        mouseTransparent="true"/>
+                            </StackPane>
+                            <StackPane HBox.hgrow="ALWAYS" maxWidth="Infinity">
+                                <Button fx:id="adminTabAuctions"
+                                        styleClass="admin-tab-btn"
+                                        text="🔨  Phiên đấu giá"
+                                        onAction="#handleAdminTabAuctions"
+                                        focusTraversable="false"
+                                        maxWidth="Infinity" maxHeight="Infinity"
+                                        StackPane.alignment="CENTER"/>
+                                <Region fx:id="adminTabAuctionsIndicator"
+                                        maxWidth="Infinity" minHeight="2" maxHeight="2"
+                                        style="-fx-background-color: transparent;"
+                                        StackPane.alignment="BOTTOM_CENTER"
+                                        mouseTransparent="true"/>
+                            </StackPane>
                         </HBox>
 
                         <!-- ── CONTENT BODY ────────────────────────────────── -->
