@@ -134,6 +134,27 @@ public class HomeController implements Initializable, AuctionObserver {
     @FXML private Label depositAmountHint;
     @FXML private Button btnConfirmDeposit;
 
+    // ── Admin Panel overlay ──────────────────────────────────────────────────
+    @FXML private StackPane adminOverlay;
+    @FXML private Label     adminSubtitleLabel;
+    @FXML private Label     adminLevelBadge;
+    @FXML private Button    adminTabUsers;
+    @FXML private Button    adminTabAuctions;
+    @FXML private VBox      adminUsersPanel;
+    @FXML private VBox      adminAuctionsPanel;
+    @FXML private TextField adminUserSearchField;
+    @FXML private ComboBox<String> adminUserRoleFilter;
+    @FXML private VBox      adminUsersList;
+    @FXML private VBox      adminUsersEmpty;
+    @FXML private TextField adminAuctionSearchField;
+    @FXML private ComboBox<String> adminAuctionStatusFilter;
+    @FXML private VBox      adminAuctionsList;
+    @FXML private VBox      adminAuctionsEmpty;
+
+    /** Cache danh sách users và items để filter local không cần query lại DB */
+    private List<User> adminAllUsers    = new java.util.ArrayList<>();
+    private List<com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem> adminAllItems = new java.util.ArrayList<>();
+
     // Bottom nav — "Danh mục" đã đổi thành "Sản phẩm của tôi"
     @FXML private ToggleButton bottomNavHome;
     @FXML private ToggleButton bottomNavMyProducts;   // Trước là bottomNavCategories
@@ -400,6 +421,8 @@ public class HomeController implements Initializable, AuctionObserver {
         listProductOverlay.setManaged(false);
         resultsOverlay.setVisible(false);
         resultsOverlay.setManaged(false);
+        adminOverlay.setVisible(false);
+        adminOverlay.setManaged(false);
 
         node.setVisible(true);
         node.setManaged(true);
@@ -438,8 +461,14 @@ public class HomeController implements Initializable, AuctionObserver {
      */
     private void onBottomTabSwitch(ToggleButton sel) {
         if (sel == bottomNavProfile) {
-            showOnly(profileOverlay);
-            refreshProfileTabContent(UserSession.getInstance().isLoggedIn());
+            // ── Admin → hiện bảng quản trị thay vì profile thường ──────────
+            if (UserSession.getInstance().isAdmin()) {
+                showOnly(adminOverlay);
+                refreshAdminPanel();
+            } else {
+                showOnly(profileOverlay);
+                refreshProfileTabContent(UserSession.getInstance().isLoggedIn());
+            }
 
         } else if (sel == bottomNavMyProducts) {
             handleMyProductsTab();
@@ -2478,5 +2507,398 @@ public class HomeController implements Initializable, AuctionObserver {
         if (badgePoller != null && !badgePoller.isShutdown())
             badgePoller.shutdownNow();
         notifService.removeUiListener(null); // cleanup listener (no-op nếu null)
+    }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ADMIN PANEL — Bảng quản trị dành cho user có role ADMIN
+//
+// Cấu trúc:
+//   refreshAdminPanel()      — entry point, gọi khi mở panel
+//   handleAdminTabUsers()    — chuyển sang tab Người dùng
+//   handleAdminTabAuctions() — chuyển sang tab Phiên đấu giá
+//   handleAdminLoadUsers()   — load + render danh sách user từ DB
+//   handleAdminLoadAuctions()— load + render danh sách phiên từ DB
+//   handleAdminUserSearch()  — filter local theo text search + role
+//   handleAdminAuctionSearch()- filter local theo text + status
+//   renderAdminUserRows()    — vẽ các dòng user trong bảng
+//   renderAdminAuctionRows() — vẽ các dòng phiên trong bảng
+//   adminBanUser()           — khoá / mở khoá user (toggle active)
+//   adminForceCloseAuction() — đóng phiên đang active sớm
+// ═══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Entry point khi admin mở admin panel.
+     * Khởi tạo ComboBox filter (chỉ lần đầu), load dữ liệu, hiển thị tab Users.
+     *
+     * Tại sao kiểm tra adminUserRoleFilter.getItems().isEmpty()?
+     * → Tránh thêm items vào ComboBox nhiều lần mỗi khi admin mở panel.
+     *   Chỉ populate lần đầu, sau đó tái dùng.
+     */
+    private void refreshAdminPanel() {
+        // Cập nhật subtitle với tên admin hiện tại
+        User admin = UserSession.getInstance().getCurrentUser();
+        if (admin != null && adminSubtitleLabel != null) {
+            adminSubtitleLabel.setText("Xin chào " + admin.getUsername() + " · Quản lý người dùng và phiên đấu giá");
+        }
+
+        // Populate filter ComboBox lần đầu
+        if (adminUserRoleFilter != null && adminUserRoleFilter.getItems().isEmpty()) {
+            adminUserRoleFilter.getItems().addAll("Tất cả", "BUYER", "SELLER", "ADMIN");
+            adminUserRoleFilter.getSelectionModel().selectFirst();
+            adminUserRoleFilter.setOnAction(e -> handleAdminUserSearch(null));
+        }
+        if (adminAuctionStatusFilter != null && adminAuctionStatusFilter.getItems().isEmpty()) {
+            adminAuctionStatusFilter.getItems().addAll(
+                    "Tất cả", "PENDING", "ACTIVE", "CLOSED", "EXPIRED", "CANCELLED");
+            adminAuctionStatusFilter.getSelectionModel().selectFirst();
+            adminAuctionStatusFilter.setOnAction(e -> handleAdminAuctionSearch(null));
+        }
+
+        // Mặc định hiện tab Users
+        handleAdminTabUsers();
+    }
+
+    /** Chuyển sang tab Người dùng, load dữ liệu. */
+    @FXML
+    private void handleAdminTabUsers() {
+        setVisible(adminUsersPanel, true);
+        setVisible(adminAuctionsPanel, false);
+        // Cập nhật style tab active / inactive
+        if (adminTabUsers != null) {
+            adminTabUsers.getStyleClass().remove("admin-tab-active");
+            adminTabUsers.getStyleClass().add("admin-tab-active");
+        }
+        if (adminTabAuctions != null) {
+            adminTabAuctions.getStyleClass().remove("admin-tab-active");
+        }
+        handleAdminLoadUsers();
+    }
+
+    /** Chuyển sang tab Phiên đấu giá, load dữ liệu. */
+    @FXML
+    private void handleAdminTabAuctions() {
+        setVisible(adminUsersPanel, false);
+        setVisible(adminAuctionsPanel, true);
+        if (adminTabAuctions != null) {
+            adminTabAuctions.getStyleClass().remove("admin-tab-active");
+            adminTabAuctions.getStyleClass().add("admin-tab-active");
+        }
+        if (adminTabUsers != null) {
+            adminTabUsers.getStyleClass().remove("admin-tab-active");
+        }
+        handleAdminLoadAuctions();
+    }
+
+    /**
+     * Load toàn bộ users từ DB vào adminAllUsers rồi render.
+     *
+     * Tại sao cache vào adminAllUsers?
+     * → Để filter/search chạy local (không cần query DB mỗi lần gõ phím).
+     *   Đây là pattern "load once, filter locally" — phổ biến cho danh sách nhỏ.
+     */
+    @FXML
+    private void handleAdminLoadUsers() {
+        try {
+            adminAllUsers = userRepo.findAll();
+            handleAdminUserSearch(null); // render với filter hiện tại
+        } catch (Exception e) {
+            LOG.warning("Admin: không load được danh sách user: " + e.getMessage());
+            showToast("Lỗi tải danh sách người dùng");
+        }
+    }
+
+    /** Load toàn bộ phiên đấu giá từ DB. */
+    @FXML
+    private void handleAdminLoadAuctions() {
+        try {
+            adminAllItems = auctionRepo.findAll();
+            handleAdminAuctionSearch(null);
+        } catch (Exception e) {
+            LOG.warning("Admin: không load được danh sách phiên: " + e.getMessage());
+            showToast("Lỗi tải danh sách phiên đấu giá");
+        }
+    }
+
+    /**
+     * Filter danh sách user theo text search + role filter, rồi render.
+     * Được gọi cả khi gõ phím (onKeyReleased) lẫn khi chọn ComboBox.
+     *
+     * @param event có thể null (khi gọi từ code, không phải từ FXML)
+     */
+    @FXML
+    private void handleAdminUserSearch(javafx.event.Event event) {
+        String keyword = adminUserSearchField == null ? "" :
+                adminUserSearchField.getText().trim().toLowerCase();
+        String roleFilter = (adminUserRoleFilter == null ||
+                adminUserRoleFilter.getValue() == null ||
+                adminUserRoleFilter.getValue().equals("Tất cả"))
+                ? "" : adminUserRoleFilter.getValue().toLowerCase();
+
+        List<User> filtered = adminAllUsers.stream()
+                .filter(u -> {
+                    boolean matchText = keyword.isEmpty()
+                            || u.getUsername().toLowerCase().contains(keyword)
+                            || (u.getEmail() != null && u.getEmail().toLowerCase().contains(keyword));
+                    boolean matchRole = roleFilter.isEmpty()
+                            || u.getRole().name().equalsIgnoreCase(roleFilter);
+                    return matchText && matchRole;
+                })
+                .toList();
+
+        renderAdminUserRows(filtered);
+    }
+
+    /** Filter danh sách phiên theo text + status. */
+    @FXML
+    private void handleAdminAuctionSearch(javafx.event.Event event) {
+        String keyword = adminAuctionSearchField == null ? "" :
+                adminAuctionSearchField.getText().trim().toLowerCase();
+        String statusFilter = (adminAuctionStatusFilter == null ||
+                adminAuctionStatusFilter.getValue() == null ||
+                adminAuctionStatusFilter.getValue().equals("Tất cả"))
+                ? "" : adminAuctionStatusFilter.getValue().toLowerCase();
+
+        var filtered = adminAllItems.stream()
+                .filter(item -> {
+                    boolean matchText = keyword.isEmpty()
+                            || item.getTitle().toLowerCase().contains(keyword);
+                    boolean matchStatus = statusFilter.isEmpty()
+                            || item.getStatus().name().equalsIgnoreCase(statusFilter);
+                    return matchText && matchStatus;
+                })
+                .toList();
+
+        renderAdminAuctionRows(filtered);
+    }
+
+    /**
+     * Vẽ các dòng user trong bảng admin.
+     *
+     * Tại sao build UI bằng Java thay vì FXML tĩnh?
+     * → Số lượng rows là động (không biết trước). FXML chỉ phù hợp cho layout cố định.
+     *   Đây là pattern "programmatic UI" — tạo Node bằng code Java.
+     *
+     * Mỗi dòng là một HBox gồm: ID | username | email | role | trạng thái | nút hành động
+     */
+    private void renderAdminUserRows(List<User> users) {
+        adminUsersList.getChildren().clear();
+
+        boolean empty = users.isEmpty();
+        setVisible(adminUsersEmpty, empty);
+        if (empty) return;
+
+        // Lấy ID của admin hiện tại để không cho phép tự khoá bản thân
+        int currentAdminId = UserSession.getInstance().getCurrentUserId();
+
+        for (User u : users) {
+            HBox row = new HBox(0);
+            row.getStyleClass().add("admin-row");
+            row.setAlignment(Pos.CENTER_LEFT);
+
+            // Cột: ID
+            Label idLabel = new Label(String.valueOf(u.getId()));
+            idLabel.getStyleClass().add("admin-td-muted");
+            idLabel.setMinWidth(50); idLabel.setMaxWidth(50);
+
+            // Cột: Username
+            Label nameLabel = new Label(u.getUsername());
+            nameLabel.getStyleClass().add("admin-td");
+            nameLabel.setMinWidth(130);
+            HBox.setHgrow(nameLabel, Priority.ALWAYS);
+
+            // Cột: Email
+            Label emailLabel = new Label(u.getEmail() != null ? u.getEmail() : "—");
+            emailLabel.getStyleClass().add("admin-td-muted");
+            emailLabel.setMinWidth(170);
+            HBox.setHgrow(emailLabel, Priority.ALWAYS);
+
+            // Cột: Role (màu khác nhau theo role)
+            Label roleLabel = new Label(u.getRole().name());
+            String roleStyle = switch (u.getRole()) {
+                case BUYER  -> "admin-role-buyer";
+                case SELLER -> "admin-role-seller";
+                case ADMIN  -> "admin-role-admin";
+            };
+            roleLabel.getStyleClass().add(roleStyle);
+            roleLabel.setMinWidth(110); roleLabel.setMaxWidth(110);
+
+            // Cột: Trạng thái (active / bị khoá)
+            Label statusLabel = new Label(u.isActive() ? "✓ Active" : "✕ Bị khoá");
+            statusLabel.getStyleClass().add(u.isActive() ? "admin-badge-active" : "admin-badge-locked");
+            HBox statusWrap = new HBox(statusLabel);
+            statusWrap.setAlignment(Pos.CENTER_LEFT);
+            statusWrap.setMinWidth(100); statusWrap.setMaxWidth(100);
+            statusWrap.setStyle("-fx-padding: 0 12 0 12;");
+
+            // Cột: Hành động
+            HBox actionBox = new HBox(6);
+            actionBox.setAlignment(Pos.CENTER_LEFT);
+            actionBox.setMinWidth(120); actionBox.setMaxWidth(120);
+            actionBox.setStyle("-fx-padding: 0 12 0 12;");
+
+            // Không cho admin khoá chính mình, và không khoá admin khác (an toàn hơn)
+            if (u.getId() != currentAdminId && u.getRole() != UserRole.ADMIN) {
+                Button actionBtn = new Button(u.isActive() ? "🔒 Khoá" : "🔓 Mở khoá");
+                actionBtn.getStyleClass().add(u.isActive() ? "admin-btn-lock" : "admin-btn-unlock");
+                // Capture snapshot của user để dùng trong lambda
+                final User snapshot = u;
+                actionBtn.setOnAction(e -> adminToggleUserLock(snapshot, row));
+                actionBox.getChildren().add(actionBtn);
+            } else {
+                Label noAction = new Label("—");
+                noAction.getStyleClass().add("admin-td-muted");
+                actionBox.getChildren().add(noAction);
+            }
+
+            row.getChildren().addAll(idLabel, nameLabel, emailLabel, roleLabel, statusWrap, actionBox);
+            adminUsersList.getChildren().add(row);
+        }
+    }
+
+    /**
+     * Vẽ các dòng phiên đấu giá trong bảng admin.
+     * Chỉ hiện nút "Đóng ngay" với phiên đang ACTIVE.
+     */
+    private void renderAdminAuctionRows(
+            List<com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem> items) {
+        adminAuctionsList.getChildren().clear();
+
+        boolean empty = items.isEmpty();
+        setVisible(adminAuctionsEmpty, empty);
+        if (empty) return;
+
+        for (var item : items) {
+            HBox row = new HBox(0);
+            row.getStyleClass().add("admin-row");
+            row.setAlignment(Pos.CENTER_LEFT);
+
+            // ID
+            Label idLabel = new Label(String.valueOf(item.getId()));
+            idLabel.getStyleClass().add("admin-td-muted");
+            idLabel.setMinWidth(50); idLabel.setMaxWidth(50);
+
+            // Tên phiên (có thể dài — dùng setMaxWidth để cắt bớt)
+            Label titleLabel = new Label(item.getTitle());
+            titleLabel.getStyleClass().add("admin-td");
+            titleLabel.setMinWidth(160);
+            titleLabel.setMaxWidth(220);
+            HBox.setHgrow(titleLabel, Priority.ALWAYS);
+
+            // Seller ID
+            Label sellerLabel = new Label("seller #" + item.getSellerId());
+            sellerLabel.getStyleClass().add("admin-td-muted");
+            sellerLabel.setMinWidth(110); sellerLabel.setMaxWidth(110);
+
+            // Giá hiện tại
+            String price = item.getCurrentPrice() != null
+                    ? formatVnd(item.getCurrentPrice()) : "—";
+            Label priceLabel = new Label(price);
+            priceLabel.getStyleClass().add("admin-td");
+            priceLabel.setMinWidth(120); priceLabel.setMaxWidth(120);
+
+            // Trạng thái — màu theo status
+            String statusText = item.getStatus().getDisplayName();
+            Label statusLabel = new Label(statusText);
+            String statusClass = switch (item.getStatus()) {
+                case ACTIVE   -> "admin-badge-active";
+                case PENDING  -> "admin-badge-pending";
+                case CLOSED, EXPIRED, CANCELLED -> "admin-badge-closed";
+            };
+            statusLabel.getStyleClass().add(statusClass);
+            HBox statusWrap = new HBox(statusLabel);
+            statusWrap.setAlignment(Pos.CENTER_LEFT);
+            statusWrap.setMinWidth(110); statusWrap.setMaxWidth(110);
+            statusWrap.setStyle("-fx-padding: 0 12 0 12;");
+
+            // Hành động — chỉ đóng được phiên ACTIVE
+            HBox actionBox = new HBox(6);
+            actionBox.setAlignment(Pos.CENTER_LEFT);
+            actionBox.setMinWidth(130); actionBox.setMaxWidth(130);
+            actionBox.setStyle("-fx-padding: 0 12 0 12;");
+
+            if (item.getStatus() == AuctionStatus.ACTIVE) {
+                Button closeBtn = new Button("⛔ Đóng ngay");
+                closeBtn.getStyleClass().add("admin-btn-close");
+                final var snapshot = item;
+                closeBtn.setOnAction(e -> adminForceCloseAuction(snapshot));
+                actionBox.getChildren().add(closeBtn);
+            } else {
+                Label noAction = new Label("—");
+                noAction.getStyleClass().add("admin-td-muted");
+                actionBox.getChildren().add(noAction);
+            }
+
+            row.getChildren().addAll(idLabel, titleLabel, sellerLabel, priceLabel, statusWrap, actionBox);
+            adminAuctionsList.getChildren().add(row);
+        }
+    }
+
+    /**
+     * Khoá hoặc mở khoá một user (toggle trạng thái active).
+     *
+     * Flow:
+     *   1. Đảo ngược u.active trong memory
+     *   2. Gọi userRepo.update() để lưu xuống DB
+     *   3. Reload lại danh sách để UI phản ánh đúng
+     *
+     * Tại sao reload lại toàn bộ thay vì chỉ sửa 1 dòng?
+     * → Đơn giản hơn và đảm bảo UI luôn đồng bộ với DB.
+     *   Khi có DB thật, có thể tối ưu bằng cách chỉ cập nhật 1 row.
+     */
+    private void adminToggleUserLock(User u, HBox row) {
+        boolean willLock = u.isActive(); // nếu đang active → sẽ khoá
+        String confirmMsg = willLock
+                ? "Bạn có chắc muốn khoá tài khoản \"" + u.getUsername() + "\"?\nUser này sẽ không thể đăng nhập."
+                : "Mở khoá tài khoản \"" + u.getUsername() + "\"?";
+
+        javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Xác nhận");
+        confirm.setHeaderText(null);
+        confirm.setContentText(confirmMsg);
+
+        confirm.showAndWait().ifPresent(result -> {
+            if (result != ButtonType.OK) return;
+            try {
+                u.setActive(!u.isActive());          // đảo active trong memory
+                userRepo.update(u);                   // lưu vào DB
+                showToast(willLock ? "Đã khoá tài khoản " + u.getUsername()
+                        : "Đã mở khoá " + u.getUsername());
+                handleAdminLoadUsers();               // reload lại bảng
+            } catch (Exception e) {
+                u.setActive(!u.isActive());           // rollback nếu DB lỗi
+                LOG.warning("Admin: lỗi khi toggle lock user: " + e.getMessage());
+                showToast("Lỗi: không thể cập nhật trạng thái user");
+            }
+        });
+    }
+
+    /**
+     * Đóng cưỡng bức một phiên đang ACTIVE.
+     *
+     * Gọi AuctionHouse.closeAuction() — cùng code path với closeAuction bình thường,
+     * đảm bảo logic thanh toán và notification được chạy đúng.
+     */
+    private void adminForceCloseAuction(
+            com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem item) {
+        javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Xác nhận đóng phiên");
+        confirm.setHeaderText(null);
+        confirm.setContentText("Đóng sớm phiên \"" + item.getTitle() + "\"?\n"
+                + "Hệ thống sẽ xử lý thanh toán ngay nếu có người đặt giá.");
+
+        confirm.showAndWait().ifPresent(result -> {
+            if (result != ButtonType.OK) return;
+            try {
+                // Dùng AuctionHouse để đảm bảo business logic (payment, notify...) chạy đúng
+                ServiceLocator.getInstance().getAuctionHouse().closeAuction(item.getId());
+                showToast("Đã đóng phiên: " + item.getTitle());
+                handleAdminLoadAuctions(); // reload lại bảng
+            } catch (Exception e) {
+                LOG.warning("Admin: lỗi đóng phiên #" + item.getId() + ": " + e.getMessage());
+                showToast("Lỗi: không thể đóng phiên này");
+            }
+        });
     }
 }

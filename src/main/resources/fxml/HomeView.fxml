@@ -794,6 +794,152 @@
                 </ScrollPane>
             </StackPane>
 
+            <!-- ═══════════════════════════════════════════════════════════
+                 ADMIN PANEL OVERLAY
+                 Thay thế profileOverlay khi admin bấm tab "Cá nhân"
+                 ═══════════════════════════════════════════════════════════ -->
+            <StackPane fx:id="adminOverlay"
+                       visible="false"
+                       managed="false"
+                       styleClass="profile-overlay">
+
+                <ScrollPane styleClass="profile-page-scroll" fitToWidth="true"
+                            hbarPolicy="NEVER" vbarPolicy="AS_NEEDED">
+                    <VBox styleClass="profile-page-root" spacing="0">
+
+                        <!-- ── HERO BANNER ────────────────────────────────── -->
+                        <VBox styleClass="profile-hero-banner" spacing="0">
+                            <Region styleClass="admin-accent-bar" minHeight="3" maxHeight="3"/>
+                            <HBox styleClass="profile-hero-content" spacing="20" alignment="CENTER_LEFT">
+                                <StackPane styleClass="admin-avatar-circle"
+                                           minWidth="66" minHeight="66" maxWidth="66" maxHeight="66">
+                                    <Label styleClass="admin-avatar-glyph" text="⚡"/>
+                                </StackPane>
+                                <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                    <Label styleClass="admin-title" text="Bảng quản trị"/>
+                                    <Label fx:id="adminSubtitleLabel" styleClass="admin-subtitle"
+                                           text="Quản lý người dùng và phiên đấu giá"/>
+                                    <Label fx:id="adminLevelBadge" styleClass="admin-badge-role" text="Quản trị viên"/>
+                                </VBox>
+                                <Button styleClass="profile-logout-btn" text="Đăng xuất"
+                                        onAction="#handleLogoutFromProfile"/>
+                            </HBox>
+                        </VBox>
+
+                        <!-- ── TAB BAR ────────────────────────────────────── -->
+                        <HBox styleClass="admin-tab-bar" spacing="0">
+                            <Button fx:id="adminTabUsers"
+                                    styleClass="admin-tab-btn admin-tab-active"
+                                    text="👥  Người dùng"
+                                    onAction="#handleAdminTabUsers"
+                                    HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                            <Button fx:id="adminTabAuctions"
+                                    styleClass="admin-tab-btn"
+                                    text="🔨  Phiên đấu giá"
+                                    onAction="#handleAdminTabAuctions"
+                                    HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        </HBox>
+
+                        <!-- ── CONTENT BODY ────────────────────────────────── -->
+                        <VBox styleClass="admin-body" spacing="0">
+
+                            <StackPane>
+
+                                <!-- PANEL 1: Người dùng -->
+                                <VBox fx:id="adminUsersPanel" styleClass="admin-panel" spacing="14">
+
+                                    <!-- Toolbar -->
+                                    <HBox styleClass="admin-toolbar" spacing="10" alignment="CENTER_LEFT">
+                                        <HBox styleClass="admin-search-box" spacing="8" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
+                                            <Label styleClass="admin-search-icon-lbl" text="🔍"/>
+                                            <TextField fx:id="adminUserSearchField"
+                                                       styleClass="admin-search-field"
+                                                       promptText="Tìm username, email..."
+                                                       HBox.hgrow="ALWAYS"
+                                                       onKeyReleased="#handleAdminUserSearch"/>
+                                        </HBox>
+                                        <ComboBox fx:id="adminUserRoleFilter"
+                                                  styleClass="admin-combo"
+                                                  promptText="Tất cả"/>
+                                        <Button styleClass="admin-refresh-btn" text="↻ Làm mới"
+                                                onAction="#handleAdminLoadUsers"/>
+                                    </HBox>
+
+                                    <!-- Table header -->
+                                    <HBox styleClass="admin-table-head" spacing="0">
+                                        <Label styleClass="admin-th" text="ID"         minWidth="55"  maxWidth="55"/>
+                                        <Label styleClass="admin-th" text="Username"   minWidth="140" HBox.hgrow="ALWAYS"/>
+                                        <Label styleClass="admin-th" text="Email"      minWidth="190" HBox.hgrow="ALWAYS"/>
+                                        <Label styleClass="admin-th" text="Vai trò"    minWidth="115" maxWidth="115"/>
+                                        <Label styleClass="admin-th" text="Trạng thái" minWidth="115" maxWidth="115"/>
+                                        <Label styleClass="admin-th" text="Hành động"  minWidth="130" maxWidth="130"/>
+                                    </HBox>
+
+                                    <!-- Rows (populated by Java) -->
+                                    <VBox fx:id="adminUsersList" styleClass="admin-table-body" spacing="0"/>
+
+                                    <!-- Empty state -->
+                                    <VBox fx:id="adminUsersEmpty" spacing="10" alignment="CENTER"
+                                          visible="false" managed="false" minHeight="120">
+                                        <Label styleClass="admin-empty-icon" text="👥"/>
+                                        <Label styleClass="admin-empty-text" text="Không tìm thấy người dùng nào"/>
+                                    </VBox>
+
+                                </VBox>
+
+                                <!-- PANEL 2: Phiên đấu giá -->
+                                <VBox fx:id="adminAuctionsPanel" styleClass="admin-panel" spacing="14"
+                                      visible="false" managed="false">
+
+                                    <!-- Toolbar -->
+                                    <HBox styleClass="admin-toolbar" spacing="10" alignment="CENTER_LEFT">
+                                        <HBox styleClass="admin-search-box" spacing="8" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
+                                            <Label styleClass="admin-search-icon-lbl" text="🔍"/>
+                                            <TextField fx:id="adminAuctionSearchField"
+                                                       styleClass="admin-search-field"
+                                                       promptText="Tìm tên phiên đấu giá..."
+                                                       HBox.hgrow="ALWAYS"
+                                                       onKeyReleased="#handleAdminAuctionSearch"/>
+                                        </HBox>
+                                        <ComboBox fx:id="adminAuctionStatusFilter"
+                                                  styleClass="admin-combo"
+                                                  promptText="Tất cả"/>
+                                        <Button styleClass="admin-refresh-btn" text="↻ Làm mới"
+                                                onAction="#handleAdminLoadAuctions"/>
+                                    </HBox>
+
+                                    <!-- Table header -->
+                                    <HBox styleClass="admin-table-head" spacing="0">
+                                        <Label styleClass="admin-th" text="ID"           minWidth="55"  maxWidth="55"/>
+                                        <Label styleClass="admin-th" text="Tên phiên"    minWidth="180" HBox.hgrow="ALWAYS"/>
+                                        <Label styleClass="admin-th" text="Người bán"    minWidth="120" maxWidth="120"/>
+                                        <Label styleClass="admin-th" text="Giá hiện tại" minWidth="130" maxWidth="130"/>
+                                        <Label styleClass="admin-th" text="Trạng thái"   minWidth="115" maxWidth="115"/>
+                                        <Label styleClass="admin-th" text="Hành động"    minWidth="140" maxWidth="140"/>
+                                    </HBox>
+
+                                    <!-- Rows (populated by Java) -->
+                                    <VBox fx:id="adminAuctionsList" styleClass="admin-table-body" spacing="0"/>
+
+                                    <!-- Empty state -->
+                                    <VBox fx:id="adminAuctionsEmpty" spacing="10" alignment="CENTER"
+                                          visible="false" managed="false" minHeight="120">
+                                        <Label styleClass="admin-empty-icon" text="🔨"/>
+                                        <Label styleClass="admin-empty-text" text="Không có phiên đấu giá nào"/>
+                                    </VBox>
+
+                                </VBox>
+
+                            </StackPane>
+                        </VBox>
+
+                    </VBox>
+                </ScrollPane>
+
+            </StackPane>
+
+
+
         </StackPane>
     </center>
 

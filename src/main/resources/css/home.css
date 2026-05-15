@@ -1854,3 +1854,393 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    END: Profile Page Redesign
    ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN PANEL STYLES — Append vào cuối home.css
+   JavaFX CSS: dùng -fx- prefix, không dùng var() hay rgba() dạng %
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Accent bar vàng trên hero ───────────────────────────────────────────── */
+.admin-accent-bar {
+    -fx-background-color: linear-gradient(to right, #c9a84c, #8a6a20, #c9a84c);
+}
+
+/* ── Avatar tròn vàng ────────────────────────────────────────────────────── */
+.admin-avatar-circle {
+    -fx-background-color: linear-gradient(to bottom right, #c9a84c, #7a5a1a);
+    -fx-background-radius: 50%;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, #c9a84c66, 14, 0, 0, 0);
+}
+.admin-avatar-glyph {
+    -fx-font-size: 26px;
+    -fx-text-fill: #0a0a0a;
+}
+
+/* ── Tiêu đề & subtitle ──────────────────────────────────────────────────── */
+.admin-title {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
+.admin-subtitle {
+    -fx-text-fill: #666666;
+    -fx-font-size: 13px;
+    -fx-wrap-text: true;
+}
+
+/* ── Badge "Quản trị viên" ───────────────────────────────────────────────── */
+.admin-badge-role {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-color: #1e1608;
+    -fx-background-radius: 20;
+    -fx-border-color: #c9a84c55;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-padding: 3 12 3 12;
+}
+
+/* ── TAB BAR ─────────────────────────────────────────────────────────────── */
+.admin-tab-bar {
+    -fx-background-color: #0a0a0a;
+    -fx-border-color: transparent transparent #1e1e1e transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-spacing: 0;
+}
+.admin-tab-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #4a4a4a;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 14 20 14 20;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-border-width: 0 0 2 0;
+    -fx-border-insets: 0 0 0 0;
+}
+.admin-tab-btn:hover {
+    -fx-text-fill: #888888;
+    -fx-background-color: #ffffff08;
+}
+.admin-tab-active {
+    -fx-text-fill: #c9a84c;
+    -fx-border-color: transparent transparent #c9a84c transparent;
+    -fx-border-width: 0 0 2 0;
+    -fx-background-color: #c9a84c0d;
+}
+
+/* ── BODY AREA ───────────────────────────────────────────────────────────── */
+.admin-body {
+    -fx-background-color: #0a0a0a;
+    -fx-padding: 20 32 32 32;
+    -fx-spacing: 0;
+}
+.admin-panel {
+    -fx-background-color: transparent;
+    -fx-spacing: 14;
+}
+
+/* ── TOOLBAR ─────────────────────────────────────────────────────────────── */
+.admin-toolbar {
+    -fx-spacing: 10;
+    -fx-alignment: CENTER_LEFT;
+}
+
+/* Search box với border */
+.admin-search-box {
+    -fx-background-color: #111111;
+    -fx-background-radius: 10;
+    -fx-border-color: #252525;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 9 14 9 14;
+    -fx-spacing: 8;
+    -fx-alignment: CENTER_LEFT;
+}
+.admin-search-icon-lbl {
+    -fx-text-fill: #3a3a3a;
+    -fx-font-size: 13px;
+}
+.admin-search-field {
+    -fx-background-color: transparent;
+    -fx-text-fill: #d8d8d8;
+    -fx-font-size: 13px;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-prompt-text-fill: #3a3a3a;
+    -fx-highlight-fill: #c9a84c44;
+}
+.admin-search-field:focused {
+    -fx-border-color: transparent;
+}
+
+/* ComboBox */
+.admin-combo {
+    -fx-background-color: #111111;
+    -fx-background-radius: 10;
+    -fx-border-color: #252525;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-font-size: 12px;
+    -fx-padding: 4 8 4 8;
+    -fx-pref-width: 140;
+    -fx-cursor: hand;
+}
+.admin-combo .list-cell {
+    -fx-background-color: #111111;
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 12px;
+    -fx-padding: 6 12 6 12;
+}
+.admin-combo .list-view {
+    -fx-background-color: #111111;
+    -fx-border-color: #2a2a2a;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, #00000088, 10, 0, 0, 4);
+}
+.admin-combo .list-view .list-cell:hover {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #c9a84c;
+}
+.admin-combo > .combo-box-base > .arrow-button {
+    -fx-background-color: transparent;
+}
+.admin-combo > .combo-box-base > .arrow-button > .arrow {
+    -fx-background-color: #555555;
+}
+
+/* Refresh button */
+.admin-refresh-btn {
+    -fx-background-color: #161616;
+    -fx-text-fill: #777777;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-border-color: #252525;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 9 18 9 18;
+    -fx-cursor: hand;
+}
+.admin-refresh-btn:hover {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #c9a84c;
+    -fx-border-color: #c9a84c55;
+}
+.admin-refresh-btn:pressed {
+    -fx-background-color: #141200;
+}
+
+/* ── TABLE HEADER ────────────────────────────────────────────────────────── */
+.admin-table-head {
+    -fx-background-color: #0d0d0d;
+    -fx-background-radius: 10 10 0 0;
+    -fx-border-color: #1e1e1e;
+    -fx-border-radius: 10 10 0 0;
+    -fx-border-width: 1 1 0 1;
+    -fx-min-height: 40;
+    -fx-max-height: 40;
+    -fx-spacing: 0;
+}
+.admin-th {
+    -fx-text-fill: #444444;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 12 0 12;
+    -fx-alignment: CENTER_LEFT;
+}
+
+/* ── TABLE BODY ──────────────────────────────────────────────────────────── */
+.admin-table-body {
+    -fx-background-color: #0e0e0e;
+    -fx-border-color: #1e1e1e;
+    -fx-border-radius: 0 0 10 10;
+    -fx-border-width: 0 1 1 1;
+    -fx-spacing: 0;
+}
+
+/* Row — được tạo bằng Java, styleClass="admin-row" */
+.admin-row {
+    -fx-background-color: transparent;
+    -fx-min-height: 52;
+    -fx-max-height: 52;
+    -fx-alignment: CENTER_LEFT;
+    -fx-border-color: transparent transparent #181818 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.admin-row:hover {
+    -fx-background-color: #ffffff07;
+}
+
+/* Cells */
+.admin-td {
+    -fx-text-fill: #d0d0d0;
+    -fx-font-size: 13px;
+    -fx-padding: 0 12 0 12;
+}
+.admin-td-muted {
+    -fx-text-fill: #484848;
+    -fx-font-size: 12px;
+    -fx-padding: 0 12 0 12;
+}
+
+/* ── ROLE BADGES ─────────────────────────────────────────────────────────── */
+.admin-role-buyer {
+    -fx-text-fill: #4db8ff;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-background-color: #0d2233;
+    -fx-background-radius: 5;
+    -fx-border-color: #1a4466;
+    -fx-border-radius: 5;
+    -fx-border-width: 1;
+    -fx-padding: 3 9 3 9;
+}
+.admin-role-seller {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-background-color: #1a1408;
+    -fx-background-radius: 5;
+    -fx-border-color: #4a3a10;
+    -fx-border-radius: 5;
+    -fx-border-width: 1;
+    -fx-padding: 3 9 3 9;
+}
+.admin-role-admin {
+    -fx-text-fill: #f97316;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-background-color: #1e0e04;
+    -fx-background-radius: 5;
+    -fx-border-color: #5a2a08;
+    -fx-border-radius: 5;
+    -fx-border-width: 1;
+    -fx-padding: 3 9 3 9;
+}
+
+/* ── STATUS BADGES ───────────────────────────────────────────────────────── */
+.admin-badge-active {
+    -fx-text-fill: #4caf72;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-background-color: #0a1e12;
+    -fx-background-radius: 5;
+    -fx-border-color: #1a4a28;
+    -fx-border-radius: 5;
+    -fx-border-width: 1;
+    -fx-padding: 3 9 3 9;
+}
+.admin-badge-locked {
+    -fx-text-fill: #e05555;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-background-color: #1e0a0a;
+    -fx-background-radius: 5;
+    -fx-border-color: #4a1818;
+    -fx-border-radius: 5;
+    -fx-border-width: 1;
+    -fx-padding: 3 9 3 9;
+}
+.admin-badge-pending {
+    -fx-text-fill: #f5a623;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-background-color: #1e1404;
+    -fx-background-radius: 5;
+    -fx-border-color: #4a3208;
+    -fx-border-radius: 5;
+    -fx-border-width: 1;
+    -fx-padding: 3 9 3 9;
+}
+.admin-badge-closed {
+    -fx-text-fill: #555555;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-background-color: #111111;
+    -fx-background-radius: 5;
+    -fx-border-color: #2a2a2a;
+    -fx-border-radius: 5;
+    -fx-border-width: 1;
+    -fx-padding: 3 9 3 9;
+}
+
+/* ── ACTION BUTTONS ──────────────────────────────────────────────────────── */
+.admin-btn-lock {
+    -fx-background-color: #1e0a0a;
+    -fx-text-fill: #e05555;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 7;
+    -fx-border-color: #4a1818;
+    -fx-border-radius: 7;
+    -fx-border-width: 1;
+    -fx-padding: 6 12 6 12;
+    -fx-cursor: hand;
+}
+.admin-btn-lock:hover {
+    -fx-background-color: #2a0f0f;
+    -fx-border-color: #e05555aa;
+}
+.admin-btn-lock:pressed {
+    -fx-background-color: #3a1414;
+}
+
+.admin-btn-unlock {
+    -fx-background-color: #0a1e12;
+    -fx-text-fill: #4caf72;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 7;
+    -fx-border-color: #1a4a28;
+    -fx-border-radius: 7;
+    -fx-border-width: 1;
+    -fx-padding: 6 12 6 12;
+    -fx-cursor: hand;
+}
+.admin-btn-unlock:hover {
+    -fx-background-color: #0f2a1a;
+    -fx-border-color: #4caf72aa;
+}
+
+.admin-btn-close {
+    -fx-background-color: #1e0e04;
+    -fx-text-fill: #f97316;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 7;
+    -fx-border-color: #5a2a08;
+    -fx-border-radius: 7;
+    -fx-border-width: 1;
+    -fx-padding: 6 12 6 12;
+    -fx-cursor: hand;
+}
+.admin-btn-close:hover {
+    -fx-background-color: #2a1408;
+    -fx-border-color: #f97316aa;
+}
+.admin-btn-close:pressed {
+    -fx-background-color: #3a1c0a;
+}
+
+/* ── EMPTY STATE ─────────────────────────────────────────────────────────── */
+.admin-empty-icon {
+    -fx-font-size: 32px;
+    -fx-text-fill: #222222;
+    -fx-alignment: center;
+}
+.admin-empty-text {
+    -fx-text-fill: #3a3a3a;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   END Admin Panel Styles
+   ═══════════════════════════════════════════════════════════════════════════ */

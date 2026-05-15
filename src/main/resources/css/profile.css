@@ -1,245 +1,1648 @@
 /* ============================================================
-   profile.css — UBid | Profile Page — Full-Screen 2-Column Layout
+   home.css — UBid Auction App | Luxury Dark Theme
+   JavaFX CSS (uses -fx- prefixes)
    ============================================================ */
 
-/* ── Scroll & Root ─────────────────────────────────────────── */
-
-.profile-page-scroll {
+/* ── Root / Global ─────────────────────────────────────────── */
+.root {
     -fx-background-color: #0d0d0d;
-    -fx-background: #0d0d0d;
+    -fx-font-family: "Be Vietnam Pro", "Noto Sans", "Segoe UI", "Arial Unicode MS", Arial, sans-serif;
+    -fx-text-fill: #e8e8e8;
+}
+
+/* ── Scrollbar Styling ─────────────────────────────────────── */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
     -fx-padding: 0;
 }
-
-.profile-page-scroll > .viewport {
-    -fx-background-color: #0d0d0d;
-}
-
-.profile-page-root {
-    -fx-background-color: #0d0d0d;
-    -fx-min-width: 0;
-}
-
-/* ── HERO BANNER ───────────────────────────────────────────── */
-
-.profile-hero-banner {
-    -fx-background-color: linear-gradient(to bottom, #111111, #0d0d0d);
-    -fx-border-color: transparent transparent #1e1e1e transparent;
-    -fx-border-width: 0 0 1 0;
-}
-
-.profile-hero-accent-bar {
-    -fx-background-color: linear-gradient(to right, #c9a84c, #f0d060, #c9a84c);
-}
-
-.profile-hero-content {
-    -fx-padding: 28 32 28 32;
+.scroll-pane > .viewport {
     -fx-background-color: transparent;
 }
-
-.profile-hero-avatar-wrap {
-    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.3), 20, 0, 0, 0);
+.scroll-bar:vertical .thumb,
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: #c9a84c;
+    -fx-background-radius: 4;
+}
+.scroll-bar:vertical .track,
+.scroll-bar:horizontal .track {
+    -fx-background-color: #1a1a1a;
+}
+.scroll-bar .increment-button,
+.scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+.scroll-bar .increment-arrow,
+.scroll-bar .decrement-arrow {
+    -fx-background-color: #c9a84c;
 }
 
-.profile-hero-name {
-    -fx-text-fill: #f4f4f4;
-    -fx-font-size: 26px;
+/* ── NAVBAR ────────────────────────────────────────────────── */
+.navbar {
+    -fx-background-color: #0a0a0a;
+    -fx-padding: 14 32 14 32;
+    -fx-border-color: #1e1e1e;
+    -fx-border-width: 0 0 1 0;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 12, 0, 0, 4);
+}
+
+/* Logo circle */
+.logo-circle {
+    -fx-background-color: #c9a84c;
+    -fx-background-radius: 50%;
+    -fx-min-width: 40;
+    -fx-min-height: 40;
+    -fx-max-width: 40;
+    -fx-max-height: 40;
+    -fx-alignment: center;
+}
+.logo-icon-label {
+    -fx-text-fill: #0a0a0a;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+.app-name {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Be Vietnam Pro", "Noto Serif", "Georgia", serif;
+}
+
+/* Nav links */
+.nav-links {
+    -fx-alignment: center;
+    -fx-spacing: 32;
+}
+.nav-link {
+    -fx-text-fill: #999999;
+    -fx-font-size: 14px;
+    -fx-font-weight: normal;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 6 0 6 0;
+}
+.nav-link:hover {
+    -fx-text-fill: #e8e8e8;
+}
+.nav-link-active {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 6 0 6 0;
+    -fx-border-width: 0 0 2 0;
+    -fx-border-insets: 0 0 -4 0;
+}
+
+/* Right section icons */
+.navbar-right {
+    -fx-alignment: center-right;
+    -fx-spacing: 16;
+}
+.icon-btn {
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 16px;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 6;
+    -fx-background-radius: 50%;
+}
+.icon-btn:hover {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #c9a84c;
+}
+
+/* Profile avatar */
+.avatar-circle {
+    -fx-background-color: #c9a84c;
+    -fx-background-radius: 50%;
+    -fx-min-width: 36;
+    -fx-min-height: 36;
+    -fx-max-width: 36;
+    -fx-max-height: 36;
+    -fx-alignment: center;
+    -fx-cursor: hand;
+}
+.avatar-label {
+    -fx-text-fill: #0a0a0a;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+/* Notification badge wrapper */
+.badge-container {
+    -fx-alignment: center;
+}
+
+/* ── MAIN CONTENT AREA ─────────────────────────────────────── */
+.main-content {
+    -fx-background-color: #0d0d0d;
+    -fx-padding: 24 32 40 32;
+    -fx-spacing: 24;
+}
+
+/* ── SEARCH SECTION ────────────────────────────────────────── */
+.search-section {
+    -fx-alignment: center-left;
+    -fx-spacing: 12;
+}
+.search-bar-container {
+    -fx-background-color: #161616;
+    -fx-background-radius: 30;
+    -fx-border-color: #2a2a2a;
+    -fx-border-radius: 30;
+    -fx-border-width: 1;
+    -fx-padding: 0 16 0 16;
+    -fx-alignment: center-left;
+    -fx-spacing: 8;
+    -fx-min-height: 44;
+    -fx-max-height: 44;
+}
+.search-bar-container:focused-within {
+    -fx-border-color: #c9a84c;
+}
+.search-icon {
+    -fx-text-fill: #666666;
+    -fx-font-size: 14px;
+}
+.search-field {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e8e8e8;
+    -fx-prompt-text-fill: #555555;
+    -fx-font-size: 14px;
+    -fx-min-width: 280;
+    -fx-border-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 10 0 10 0;
+}
+.search-field:focused {
+    -fx-border-color: transparent;
+}
+.result-count {
+    -fx-text-fill: #666666;
+    -fx-font-size: 13px;
+    -fx-padding: 0 12 0 12;
+}
+
+/* Filter dropdown */
+.filter-dropdown {
+    -fx-background-color: #161616;
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 13px;
+    -fx-background-radius: 30;
+    -fx-border-color: #2a2a2a;
+    -fx-border-radius: 30;
+    -fx-border-width: 1;
+    -fx-padding: 10 16 10 16;
+    -fx-cursor: hand;
+    -fx-min-height: 44;
+}
+.filter-dropdown:hover {
+    -fx-border-color: #c9a84c;
+    -fx-text-fill: #c9a84c;
+}
+.filter-dropdown .arrow {
+    -fx-background-color: #c9a84c;
+}
+.filter-dropdown .list-cell {
+    -fx-background-color: #161616;
+    -fx-text-fill: #cccccc;
+}
+.filter-dropdown .list-cell:hover {
+    -fx-background-color: #1e1e1e;
+}
+.combo-box-popup .list-view {
+    -fx-background-color: #161616;
+    -fx-border-color: #2a2a2a;
+    -fx-border-radius: 8;
+}
+
+/* ── CATEGORY CHIPS ────────────────────────────────────────── */
+.category-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-hbar-policy: never;
+    -fx-vbar-policy: never;
+    -fx-min-height: 42;
+    -fx-max-height: 42;
+    -fx-fit-to-height: true;
+}
+.category-chips-container {
+    -fx-alignment: center-left;
+    -fx-spacing: 10;
+    -fx-padding: 4 0 4 0;
+}
+.chip {
+    -fx-background-color: #161616;
+    -fx-text-fill: #999999;
+    -fx-font-size: 13px;
+    -fx-background-radius: 20;
+    -fx-border-color: #2a2a2a;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-padding: 7 16 7 16;
+    -fx-cursor: hand;
+}
+.chip:hover {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #e8e8e8;
+    -fx-border-color: #555555;
+}
+.chip-active {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 20;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-padding: 7 16 7 16;
+    -fx-cursor: hand;
+}
+
+/* ── HOT SECTION HEADER ────────────────────────────────────── */
+.section-header {
+    -fx-spacing: 6;
+    -fx-padding: 8 0 8 0;
+}
+.section-title {
+    -fx-text-fill: #f0f0f0;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 1;
+}
+.section-subtitle {
+    -fx-text-fill: #666666;
+    -fx-font-size: 12px;
+}
+
+/* Hot section divider line */
+.gold-divider {
+    -fx-background-color: #c9a84c;
+    -fx-min-height: 2;
+    -fx-max-height: 2;
+    -fx-opacity: 0.6;
+}
+
+/* ── AUCTION CARD ──────────────────────────────────────────── */
+.auction-card {
+    -fx-background-color: #141414;
+    -fx-background-radius: 14;
+    -fx-border-color: #252525;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 16, 0, 0, 6);
+    -fx-cursor: hand;
+    -fx-min-width: 300;
+    -fx-max-width: 400;
+}
+.auction-card:hover {
+    -fx-border-color: #c9a84c;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.25), 24, 0, 0, 8);
+    -fx-translate-y: -4;
+}
+
+/* Card image area */
+.card-image-container {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 14 14 0 0;
+    -fx-min-height: 220;
+    -fx-max-height: 220;
+    -fx-alignment: center;
+    -fx-clip: true;
+}
+.card-image {
+    -fx-background-color: #1a1a1a;
+}
+.card-image-placeholder {
+    -fx-background-color: #1e1e1e;
+    -fx-background-radius: 14 14 0 0;
+    -fx-min-height: 220;
+    -fx-max-height: 220;
+    -fx-min-width: 300;
+    -fx-alignment: center;
+}
+.card-image-icon {
+    -fx-text-fill: #333333;
+    -fx-font-size: 48px;
+}
+
+/* Overlay badges (category + live badge) */
+.card-overlay {
+    -fx-padding: 12;
+    -fx-spacing: 8;
+    -fx-alignment: top-left;
+}
+.badge-category {
+    -fx-background-color: rgba(0,0,0,0.75);
+    -fx-text-fill: #e8e8e8;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 20;
+    -fx-padding: 4 10 4 10;
+    -fx-border-color: rgba(255,255,255,0.1);
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+.badge-live {
+    -fx-background-color: rgba(201,168,76,0.15);
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 20;
+    -fx-padding: 4 10 4 10;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+.badge-ended {
+    -fx-background-color: rgba(120,120,120,0.15);
+    -fx-text-fill: #888888;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 20;
+    -fx-padding: 4 10 4 10;
+    -fx-border-color: #555555;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+/* Timer row */
+.timer-row {
+    -fx-background-color: rgba(0,0,0,0.55);
+    -fx-padding: 6 12 6 12;
+    -fx-alignment: center-left;
+    -fx-spacing: 6;
+}
+.timer-icon {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 12px;
+}
+.timer-label-live {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-font-family: "Courier New", monospace;
+}
+.timer-label-ended {
+    -fx-text-fill: #777777;
+    -fx-font-size: 13px;
+}
+
+/* Card body */
+.card-body {
+    -fx-padding: 16 16 0 16;
+    -fx-spacing: 6;
+}
+.card-title {
+    -fx-text-fill: #f0f0f0;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-wrap-text: true;
+    -fx-line-spacing: 2;
+}
+.card-price-row {
+    -fx-alignment: center-left;
+    -fx-spacing: 0;
+    -fx-padding: 10 0 0 0;
+}
+.price-label-small {
+    -fx-text-fill: #777777;
+    -fx-font-size: 11px;
+}
+.price-value {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
+.bid-count-label {
+    -fx-text-fill: #777777;
+    -fx-font-size: 11px;
+    -fx-alignment: top-right;
+}
+.bid-count-value {
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-alignment: top-right;
+}
+.bid-trend-icon {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 12px;
+}
+
+/* Card footer button */
+.card-footer {
+    -fx-padding: 14 16 16 16;
+}
+.btn-bid {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1.5;
+    -fx-padding: 12 0 12 0;
+    -fx-cursor: hand;
+    -fx-max-width: infinity;
+    -fx-alignment: center;
+}
+.btn-bid:hover {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.4), 12, 0, 0, 0);
+}
+
+/* ── ALL PRODUCTS SECTION ──────────────────────────────────── */
+.all-products-section {
+    -fx-spacing: 16;
+    -fx-padding: 16 0 0 0;
+}
+.all-products-title {
+    -fx-text-fill: #f0f0f0;
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
 }
 
+/* Smaller product card (grid) */
+.product-card-sm {
+    -fx-background-color: #141414;
+    -fx-background-radius: 12;
+    -fx-border-color: #252525;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 8, 0, 0, 3);
+    -fx-cursor: hand;
+}
+.product-card-sm:hover {
+    -fx-border-color: #c9a84c;
+    -fx-translate-y: -3;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.2), 12, 0, 0, 4);
+}
+.card-sm-image {
+    -fx-background-color: #1e1e1e;
+    -fx-background-radius: 12 12 0 0;
+    -fx-min-height: 160;
+    -fx-max-height: 160;
+    -fx-alignment: center;
+}
+.card-sm-body {
+    -fx-padding: 12 12 0 12;
+    -fx-spacing: 4;
+}
+.card-sm-title {
+    -fx-text-fill: #e8e8e8;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-wrap-text: true;
+}
+.card-sm-category {
+    -fx-text-fill: #666666;
+    -fx-font-size: 11px;
+}
+.card-sm-price {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+.card-sm-footer {
+    -fx-padding: 10 12 12 12;
+}
+.btn-bid-sm {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 8 0 8 0;
+    -fx-cursor: hand;
+    -fx-max-width: infinity;
+    -fx-alignment: center;
+}
+.btn-bid-sm:hover {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+}
+
+/* ── Bottom navigation ─────────────────────────────────────── */
+.bottom-nav {
+    -fx-background-color: #0a0a0a;
+    -fx-border-color: #1e1e1e;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 0 0 0 0;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.75), 14, 0, 0, -2);
+}
+.bottom-nav-tab {
+    -fx-background-color: transparent;
+    -fx-text-fill: #9a9a9a;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 32 12 32;
+    -fx-cursor: hand;
+    -fx-border-width: 0 1 0 0;
+    -fx-border-color: #151515;
+}
+.bottom-nav-tab:hover {
+    -fx-text-fill: #dcdcdc;
+    -fx-background-color: #121212;
+}
+.bottom-nav-tab:selected {
+    -fx-text-fill: #c9a84c;
+    -fx-background-color: #141414;
+}
+
+/* Primary gold “Log In” — solid per spec */
+.btn-login-solid {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: transparent;
+    -fx-padding: 8 22 8 22;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.25), 8, 0, 0, 0);
+}
+.btn-login-solid:hover {
+    -fx-background-color: #e0bb5a;
+}
+
+/* Header avatar button */
+.avatar-menu-btn {
+    -fx-background-color: #141414;
+    -fx-background-radius: 50%;
+    -fx-border-radius: 50%;
+    -fx-border-color: #c9a84c;
+    -fx-border-width: 1.5;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+}
+.avatar-menu-btn:hover {
+    -fx-border-color: #e0bb5a;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.35), 10, 0, 0, 0);
+}
+.avatar-inner-fill {
+    -fx-background-color: #262626;
+    -fx-background-radius: 50%;
+}
+.avatar-monogram {
+    -fx-text-fill: #c9a84c;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+/* Profile tab overlay */
+.profile-overlay {
+    -fx-background-color: rgba(10,10,10,0.97);
+}
+.profile-card {
+    -fx-padding: 32 28 40 28;
+    -fx-background-color: #151515;
+    -fx-background-radius: 16;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 16;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 20, 0, 0, 4);
+}
+.profile-large-avatar {
+    -fx-pref-width: 88;
+    -fx-pref-height: 88;
+    -fx-max-width: 88;
+    -fx-max-height: 88;
+    -fx-background-color: #1e1e1e;
+    -fx-background-radius: 50%;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 50%;
+    -fx-border-width: 2;
+    -fx-alignment: center;
+}
+.profile-avatar-glyph {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 34px;
+}
+.profile-title {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+.profile-hint {
+    -fx-text-fill: #888888;
+    -fx-font-size: 13px;
+    -fx-text-alignment: center;
+}
+.btn-outline-gold {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c9a84c;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 8 18 8 18;
+    -fx-font-weight: bold;
+}
+.btn-outline-gold:hover {
+    -fx-background-color: rgba(201,168,76,0.12);
+}
+
+/* Dark context menu attached to avatar */
+.dark-context-menu.context-menu,
+.context-menu.dark-context-menu {
+    -fx-background-color: #161616;
+    -fx-border-color: #2e2e2e;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+.dark-context-menu.context-menu .menu-item,
+.context-menu.dark-context-menu .menu-item {
+    -fx-padding: 10 18 10 18;
+    -fx-text-fill: #e6e6e6;
+    -fx-background-color: transparent;
+}
+.dark-context-menu.context-menu .menu-item:hover,
+.dark-context-menu.context-menu .menu-item:focused {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+}
+.menu-danger {
+    -fx-text-fill: #ff8a8a !important;
+}
+
+/* ── LOGIN/REGISTER BUTTONS (top right) ────────────────────── */
+.btn-login {
+    -fx-background-color: transparent;
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6;
+    -fx-border-color: #c9a84c;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 7 16 7 16;
+    -fx-cursor: hand;
+}
+.btn-login:hover {
+    -fx-background-color: rgba(201,168,76,0.1);
+}
+.btn-register {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6;
+    -fx-border-color: transparent;
+    -fx-border-radius: 6;
+    -fx-padding: 7 16 7 16;
+    -fx-cursor: hand;
+}
+.btn-register:hover {
+    -fx-background-color: #e0bb5a;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.35), 8, 0, 0, 0);
+}
+
+/* ── SEPARATOR LINE ────────────────────────────────────────── */
+.separator-line {
+    -fx-background-color: #1e1e1e;
+    -fx-min-height: 1;
+    -fx-max-height: 1;
+}
+/* ═══════════════════════════════════════════════════════════════════════════
+   HOME.CSS — Phần bổ sung cho tính năng "Sản phẩm của tôi"
+   Thêm vào cuối file home.css hiện tại
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ── "Sản phẩm của tôi" overlay ─────────────────────────────────────────── */
+
+.my-products-overlay {
+    -fx-background-color: #0d0d0d;
+}
+
+.my-products-panel {
+    -fx-background-color: #0d0d0d;
+    -fx-spacing: 0;
+    -fx-pref-width: infinity;
+    -fx-pref-height: infinity;
+}
+
+.my-products-header {
+    -fx-background-color: #0a0a0a;
+    -fx-padding: 20 32 20 32;
+    -fx-spacing: 14;
+    -fx-alignment: CENTER_LEFT;
+    -fx-border-color: #1e1e1e;
+    -fx-border-width: 0 0 1 0;
+}
+
+.my-products-header-icon {
+    -fx-font-size: 24px;
+    -fx-min-width: 32;
+}
+
+.my-products-title {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.my-products-subtitle {
+    -fx-text-fill: #888888;
+    -fx-font-size: 13px;
+}
+
+.my-products-list {
+    -fx-padding: 24 32 32 32;
+    -fx-background-color: transparent;
+}
+
+/* Card cho mỗi sản phẩm trong danh sách của Seller */
+.my-product-card {
+    -fx-background-color: #151515;
+    -fx-background-radius: 12;
+    -fx-border-color: #242424;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 16 20 16 20;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 8, 0, 0, 2);
+}
+
+.my-product-card:hover {
+    -fx-border-color: #3a3a3a;
+    -fx-background-color: #1a1a1a;
+}
+
+.my-product-card-img {
+    -fx-font-size: 36px;
+    -fx-min-width: 60;
+    -fx-pref-width: 60;
+    -fx-max-width: 60;
+    -fx-alignment: center;
+}
+
+.my-product-card-title {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+/* Badge trạng thái ACTIVE */
+.my-product-badge-live {
+    -fx-background-color: rgba(201, 168, 76, 0.15);
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 12 5 12;
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(201, 168, 76, 0.35);
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+/* Badge trạng thái ENDED/CANCELLED/PENDING */
+.my-product-badge-ended {
+    -fx-background-color: rgba(120, 120, 120, 0.12);
+    -fx-text-fill: #888888;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 5 12 5 12;
+    -fx-background-radius: 20;
+    -fx-border-color: #333;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+/* Nút "＋ Đăng bán sản phẩm" ở header */
+.btn-list-product {
+    -fx-background-color: #c9a84c;
+    -fx-text-fill: #0a0a0a;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-border-color: transparent;
+    -fx-padding: 10 20 10 20;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.3), 8, 0, 0, 0);
+}
+
+.btn-list-product:hover {
+    -fx-background-color: #e0bb5a;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.5), 12, 0, 0, 0);
+}
+
+.btn-list-product:pressed {
+    -fx-background-color: #b8973f;
+}
+
+
+/* ── Modal overlay chung (Điều khoản + Form đăng bán) ───────────────────── */
+
+/*
+ * Tại sao dùng rgba thay vì opacity trên node?
+ * → Nếu set opacity: 0.97 trên StackPane, nó sẽ ảnh hưởng CẢ child nodes.
+ *   Dùng background-color với rgba chỉ ảnh hưởng nền, giữ content 100% rõ.
+ */
+.modal-overlay {
+    -fx-background-color: rgba(8, 8, 8, 0.97);
+}
+
+/* Card trắng đục chứa nội dung modal */
+.modal-card {
+    -fx-background-color: #131313;
+    -fx-background-radius: 20;
+    -fx-border-color: #2a2a2a;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-padding: 36 40 40 40;
+    -fx-spacing: 24;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.7), 30, 0, 0, 8);
+    -fx-max-width: 560;
+}
+
+.modal-big-icon {
+    -fx-font-size: 56px;
+}
+
+.modal-title {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
+
+.modal-subtitle {
+    -fx-text-fill: #888888;
+    -fx-font-size: 13px;
+    -fx-text-alignment: center;
+}
+
+
+/* ── "Sản phẩm" form — form-section, form inputs ────────────────────────── */
+
+.form-section {
+    -fx-background-color: rgba(255,255,255,0.02);
+    -fx-background-radius: 12;
+    -fx-border-color: #222222;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 20;
+    -fx-spacing: 14;
+}
+
+/* Tiêu đề nhỏ của mỗi section trong form */
+.form-section-title {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-letter-spacing: 0.15em;
+}
+
+/* Nhóm field: label + input + error */
+.field-group-dark {
+    -fx-spacing: 6;
+}
+
+.form-field-label {
+    -fx-text-fill: #aaaaaa;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* TextField trong form đăng bán */
+.form-input {
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: #e8e8e8;
+    -fx-prompt-text-fill: #555555;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 10 14 10 14;
+    -fx-font-size: 13px;
+}
+
+.form-input:focused {
+    -fx-border-color: #c9a84c;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.2), 8, 0, 0, 0);
+}
+
+/* TextArea trong form */
+.form-textarea {
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: #e8e8e8;
+    -fx-prompt-text-fill: #555555;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 0;
+    -fx-font-size: 13px;
+}
+
+/*
+ * Tại sao cần selector .form-textarea .content?
+ * → JavaFX TextArea dùng 2 lớp CSS:
+ *     - outer (.form-textarea): border + background-radius
+ *     - inner (.content): nơi text thực sự được render
+ *   Nếu chỉ set màu ở outer, inner vẫn dùng màu trắng mặc định của hệ thống.
+ *   Phải set cả inner mới đổi được màu nền thật sự của vùng gõ chữ.
+ */
+.form-textarea .content {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 8;
+    -fx-padding: 10 14 10 14;
+}
+
+/* Thanh cuộn dọc bên trong TextArea */
+.form-textarea .scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+}
+.form-textarea .scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+.form-textarea .scroll-bar:vertical {
+    -fx-background-color: #1a1a1a;
+    -fx-pref-width: 6;
+}
+.form-textarea .scroll-bar:vertical .thumb {
+    -fx-background-color: #333344;
+    -fx-background-radius: 3;
+}
+.form-textarea .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #c9a84c;
+}
+.form-textarea .scroll-bar .increment-button,
+.form-textarea .scroll-bar .decrement-button {
+    -fx-pref-height: 0;
+    -fx-opacity: 0;
+}
+
+.form-textarea:focused {
+    -fx-border-color: #c9a84c;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.2), 8, 0, 0, 0);
+}
+
+/* ComboBox trong form */
+.form-combo {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+.form-combo .list-cell {
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: #e8e8e8;
+    -fx-padding: 8 14 8 14;
+}
+
+.form-combo:focused {
+    -fx-border-color: #c9a84c;
+}
+
+/* DatePicker trong form */
+.form-datepicker {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+.form-datepicker .text-field {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e8e8e8;
+    -fx-prompt-text-fill: #555555;
+}
+
+/* Label lỗi trong form */
+.form-error {
+    -fx-text-fill: #ff7070;
+    -fx-font-size: 12px;
+    -fx-wrap-text: true;
+}
+
+/* ── Giờ/Phút ComboBox trong form đăng bán ─────────────────────────────── */
+.form-time-combo {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-text-fill: #e8e8e8;
+}
+.form-time-combo:focused,
+.form-time-combo:showing {
+    -fx-border-color: #c9a84c;
+}
+.form-time-combo .list-cell {
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: #e8e8e8;
+}
+.form-time-combo .list-view {
+    -fx-background-color: #1a1a1a;
+    -fx-border-color: #2c2c2c;
+}
+.form-time-combo .list-view .list-cell:hover {
+    -fx-background-color: #2c2c2c;
+}
+.form-time-combo .list-view .list-cell:selected {
+    -fx-background-color: #3a2e10;
+    -fx-text-fill: #f2d67e;
+}
+/* Dấu ":" ngăn cách giờ và phút */
+.form-time-sep {
+    -fx-text-fill: #888888;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+/* Preview thời gian kết thúc — cập nhật realtime khi chọn ngày/giờ/phút */
+.form-time-preview {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-font-style: italic;
+}
+
+/* Vùng upload ảnh — dashed border, click để chọn file */
+/*
+ * Tại sao không dùng -fx-border-style: dashed?
+ * → JavaFX không hỗ trợ dashed border trực tiếp qua CSS.
+ *   Ta mô phỏng bằng cách set border màu nhạt + padding.
+ */
+.image-upload-box {
+    -fx-background-color: rgba(201, 168, 76, 0.04);
+    -fx-border-color: rgba(201, 168, 76, 0.25);
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-border-width: 1.5;
+    -fx-cursor: hand;
+    -fx-padding: 20;
+}
+
+.image-upload-box:hover {
+    -fx-background-color: rgba(201, 168, 76, 0.09);
+    -fx-border-color: rgba(201, 168, 76, 0.5);
+}
+
+.image-upload-icon {
+    -fx-font-size: 40px;
+}
+
+.image-upload-hint {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.image-upload-sub {
+    -fx-text-fill: #555555;
+    -fx-font-size: 11px;
+}
+
+/* Nút "← Quay lại" trong form */
+.btn-back {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #aaaaaa;
+    -fx-font-size: 13px;
+    -fx-background-radius: 8;
+    -fx-border-color: #2c2c2c;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 8 16 8 16;
+    -fx-cursor: hand;
+}
+
+.btn-back:hover {
+    -fx-background-color: #252525;
+    -fx-text-fill: #e8e8e8;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   END: Phần bổ sung "Sản phẩm của tôi"
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KET QUA DAU GIA — Results overlay styles
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.results-overlay {
+    -fx-background-color: #0d0d0d;
+}
+
+.results-panel {
+    -fx-background-color: #0d0d0d;
+    -fx-padding: 0;
+    -fx-min-height: 600;
+}
+
+.results-header {
+    -fx-background-color: #141414;
+    -fx-padding: 24 28 20 28;
+    -fx-spacing: 14;
+    -fx-border-color: transparent transparent #252525 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.results-header-icon {
+    -fx-font-size: 28px;
+}
+
+.results-title {
+    -fx-text-fill: #f0f0f0;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.results-subtitle {
+    -fx-text-fill: #666666;
+    -fx-font-size: 12px;
+}
+
+.results-list {
+    -fx-padding: 20 24 24 24;
+    -fx-background-color: transparent;
+}
+
+/* ── Result Card ─────────────────────────────────────────────────────── */
+
+.result-card {
+    -fx-background-color: #141414;
+    -fx-background-radius: 14;
+    -fx-border-color: #252525;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 12, 0, 0, 4);
+}
+
+.result-card:hover {
+    -fx-border-color: #c9a84c;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.18), 20, 0, 0, 6);
+}
+
+.result-card-image {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 14 0 0 14;
+    -fx-min-width: 140;
+    -fx-max-width: 140;
+    -fx-min-height: 120;
+    -fx-alignment: center;
+}
+
+.result-card-body {
+    -fx-padding: 16 18 16 18;
+    -fx-spacing: 6;
+    -fx-background-color: transparent;
+}
+
+.result-card-category {
+    -fx-text-fill: #666666;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.result-card-title {
+    -fx-text-fill: #e8e8e8;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-wrap-text: true;
+}
+
+.result-final-price-label {
+    -fx-text-fill: #888888;
+    -fx-font-size: 11px;
+}
+
+.result-final-price-value {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.result-winner-badge {
+    -fx-background-color: rgba(201,168,76,0.12);
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 20;
+    -fx-padding: 5 12 5 12;
+    -fx-border-color: rgba(201,168,76,0.4);
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+.result-expired-badge {
+    -fx-background-color: rgba(120,120,120,0.10);
+    -fx-text-fill: #666666;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 20;
+    -fx-padding: 5 12 5 12;
+    -fx-border-color: #333333;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   END: Ket qua dau gia
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════════════════════
+   NOTIFICATION BELL — badge + panel
+   ══════════════════════════════════════════════════════════════ */
+
+/* Wrapper StackPane quanh icon bell để đặt badge */
+.bell-wrapper {
+    -fx-alignment: center;
+    -fx-min-width: 36;
+    -fx-min-height: 36;
+}
+
+/* Badge đỏ hiển thị số chưa đọc */
+.bell-badge {
+    -fx-background-color: #e53935;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-padding: 1 4 1 4;
+    -fx-min-width: 16;
+    -fx-min-height: 16;
+    -fx-alignment: center;
+}
+
+/* Backdrop tối mờ bên dưới panel */
+.notif-backdrop {
+    -fx-background-color: rgba(0, 0, 0, 0.35);
+}
+
+/* Panel chứa danh sách thông báo */
+.notif-panel {
+    -fx-background-color: #161616;
+    -fx-border-color: #2a2a2a;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 24, 0.3, 0, 6);
+}
+
+/* Header của panel */
+.notif-panel-header {
+    -fx-padding: 14 16 12 16;
+    -fx-border-color: transparent transparent #2a2a2a transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 12 12 0 0;
+}
+.notif-panel-icon {
+    -fx-font-size: 16px;
+}
+.notif-panel-title {
+    -fx-text-fill: #f0f0f0;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+.notif-mark-all-btn {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 2 6;
+}
+.notif-mark-all-btn:hover {
+    -fx-text-fill: #f0c060;
+}
+.notif-close-btn {
+    -fx-text-fill: #888888;
+    -fx-font-size: 13px;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+    -fx-padding: 2 6;
+    -fx-background-radius: 4;
+}
+.notif-close-btn:hover {
+    -fx-background-color: #2a2a2a;
+    -fx-text-fill: #cccccc;
+}
+
+/* Scroll area danh sách */
+.notif-scroll {
+    -fx-background: #161616;
+    -fx-background-color: #161616;
+    -fx-border-color: transparent;
+}
+.notif-scroll > .viewport {
+    -fx-background-color: #161616;
+}
+
+/* Container danh sách */
+.notif-list {
+    -fx-background-color: #161616;
+    -fx-spacing: 0;
+}
+
+/* Mỗi item thông báo */
+.notif-item {
+    -fx-padding: 12 16;
+    -fx-border-color: transparent transparent #1e1e1e transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-cursor: hand;
+    -fx-background-color: #161616;
+    -fx-spacing: 8;
+    -fx-alignment: CENTER_LEFT;
+}
+.notif-item:hover {
+    -fx-background-color: #1d1d1d;
+}
+
+/* Item chưa đọc — nền hơi sáng hơn + đường vàng trái */
+.notif-item-unread {
+    -fx-background-color: #181610;
+    -fx-border-color: #c9a84c transparent #1e1e1e transparent;
+    -fx-border-width: 0 0 1 3;
+    -fx-padding: 12 16 12 13;
+}
+.notif-item-unread:hover {
+    -fx-background-color: #1e1b0d;
+}
+
+/* Icon loại thông báo */
+.notif-item-icon {
+    -fx-font-size: 20px;
+    -fx-min-width: 32;
+    -fx-alignment: center;
+}
+
+/* Nội dung chính */
+.notif-item-message {
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 13px;
+    -fx-wrap-text: true;
+}
+.notif-item-unread .notif-item-message {
+    -fx-text-fill: #eeeeee;
+    -fx-font-weight: bold;
+}
+
+/* Timestamp */
+.notif-item-time {
+    -fx-text-fill: #555555;
+    -fx-font-size: 11px;
+}
+.notif-item-unread .notif-item-time {
+    -fx-text-fill: #888888;
+}
+
+/* Trạng thái rỗng */
+.notif-empty-label {
+    -fx-text-fill: #555555;
+    -fx-font-size: 13px;
+    -fx-padding: 40 0;
+    -fx-alignment: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROFILE PAGE — Redesign theo ảnh mẫu (ảnh 3 & 4)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Profile page root scroll ─────────────────────────────────────────── */
+.profile-page-scroll {
+    -fx-background: #0a0a0a;
+    -fx-background-color: #0a0a0a;
+    -fx-border-color: transparent;
+}
+.profile-page-scroll > .viewport {
+    -fx-background-color: #0a0a0a;
+}
+.profile-page-root {
+    -fx-background-color: #0a0a0a;
+    -fx-spacing: 0;
+}
+
+/* ── Hero banner ──────────────────────────────────────────────────────── */
+.profile-hero-banner {
+    -fx-background-color: linear-gradient(to bottom, #1a1408, #0a0a0a);
+    -fx-padding: 0 0 0 0;
+    -fx-spacing: 0;
+}
+.profile-hero-accent-bar {
+    -fx-background-color: linear-gradient(to right, #c9a84c, #8a6a20, #c9a84c);
+}
+.profile-hero-content {
+    -fx-padding: 28 40 28 40;
+    -fx-spacing: 28;
+    -fx-alignment: CENTER_LEFT;
+}
+
+/* ── Guest (chưa đăng nhập) — căn giữa màn hình ─────────────────────── */
+.profile-hero-guest {
+    -fx-padding: 80 40 80 40;
+    -fx-spacing: 20;
+    -fx-alignment: CENTER;
+    -fx-pref-height: 400;
+}
+.profile-guest-avatar {
+    -fx-alignment: center;
+}
+.profile-guest-hint {
+    -fx-text-alignment: center;
+    -fx-alignment: CENTER;
+}
+
+/* ── Avatar (dùng chung logged-in & guest) ───────────────────────────── */
+.profile-hero-avatar-wrap {
+    -fx-alignment: center;
+}
+/* (profile-large-avatar đã có, giữ nguyên) */
+.profile-hero-name {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
 .profile-hero-subtitle {
     -fx-text-fill: #888888;
     -fx-font-size: 13px;
     -fx-wrap-text: true;
 }
 
+/* ── Logout button ────────────────────────────────────────────────────── */
 .profile-logout-btn {
     -fx-background-color: transparent;
-    -fx-text-fill: #c9a84c;
-    -fx-border-color: #c9a84c;
-    -fx-border-radius: 8;
-    -fx-background-radius: 8;
-    -fx-border-width: 1;
-    -fx-padding: 7 18 7 18;
-    -fx-font-size: 13px;
+    -fx-text-fill: #888888;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
+    -fx-border-color: #333333;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 6 14 6 14;
     -fx-cursor: hand;
 }
-
 .profile-logout-btn:hover {
-    -fx-background-color: rgba(201,168,76,0.1);
-    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.2), 8, 0, 0, 0);
+    -fx-border-color: #ff6b6b;
+    -fx-text-fill: #ff6b6b;
+    -fx-background-color: rgba(255,107,107,0.06);
 }
 
-/* ── BODY GRID ─────────────────────────────────────────────── */
+/* ── Tab bar (Thông tin / Số dư / Lịch sử / Đăng ký) ─────────────────── */
+/* Hiện tại app dùng layout 2 cột, không có tab bar riêng.
+   Giữ tương thích với FXML hiện tại. */
 
+/* ── Body grid (2 cột) ────────────────────────────────────────────────── */
 .profile-body-grid {
-    -fx-padding: 24 32 32 32;
-    -fx-background-color: #0d0d0d;
+    -fx-padding: 28 40 40 40;
+    -fx-spacing: 20;
+    -fx-alignment: TOP_LEFT;
+    -fx-background-color: #0a0a0a;
 }
-
 .profile-body-col-right {
-    -fx-background-color: transparent;
+    -fx-spacing: 20;
+    -fx-min-width: 300;
+    -fx-max-width: 360;
 }
 
-/* ── CARD CONTAINER ────────────────────────────────────────── */
-
+/* ── Card chung (Info card & Wallet card) ─────────────────────────────── */
 .profile-body-card {
-    -fx-background-color: #131313;
-    -fx-background-radius: 14;
-    -fx-border-color: #222222;
-    -fx-border-radius: 14;
+    -fx-background-color: #141414;
+    -fx-background-radius: 16;
+    -fx-border-color: #242424;
+    -fx-border-radius: 16;
     -fx-border-width: 1;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 14, 0, 0, 4);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.4), 12, 0, 0, 3);
+    -fx-spacing: 0;
 }
 
+/* ── Card header ─────────────────────────────────────────────────────── */
 .profile-card-header {
-    -fx-padding: 16 20 16 20;
-    -fx-background-color: #0f0f0f;
-    -fx-background-radius: 14 14 0 0;
-    -fx-border-color: transparent transparent #1e1e1e transparent;
+    -fx-padding: 18 22 16 22;
+    -fx-spacing: 10;
+    -fx-alignment: CENTER_LEFT;
+    -fx-background-color: #181818;
+    -fx-background-radius: 16 16 0 0;
+    -fx-border-color: transparent transparent #242424 transparent;
     -fx-border-width: 0 0 1 0;
 }
-
 .profile-card-header-icon {
     -fx-font-size: 16px;
+    -fx-text-fill: #c9a84c;
 }
-
 .profile-card-header-title {
-    -fx-text-fill: #e0e0e0;
+    -fx-text-fill: #f0f0f0;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-letter-spacing: 0.5;
 }
-
 .profile-card-divider {
     -fx-background-color: #1e1e1e;
     -fx-min-height: 1;
     -fx-max-height: 1;
 }
 
+/* ── Card body (padding chung) ───────────────────────────────────────── */
 .profile-card-body {
-    -fx-padding: 4 0 4 0;
-    -fx-background-color: transparent;
+    -fx-padding: 0 0 8 0;
+    -fx-spacing: 0;
 }
 
-/* ── FIELD ROWS ─────────────────────────────────────────────── */
-
+/* ── Info field rows ─────────────────────────────────────────────────── */
 .profile-field-row {
-    -fx-padding: 14 20 14 20;
-    -fx-background-color: transparent;
+    -fx-padding: 14 22 14 22;
+    -fx-spacing: 14;
+    -fx-alignment: CENTER_LEFT;
 }
-
-.profile-field-row:hover {
-    -fx-background-color: rgba(255,255,255,0.02);
-}
-
 .profile-field-icon-wrap {
-    -fx-min-width: 28;
-    -fx-max-width: 28;
-    -fx-alignment: center;
+    -fx-alignment: CENTER;
+    -fx-min-width: 26;
+    -fx-max-width: 26;
 }
-
 .profile-field-icon {
     -fx-text-fill: #c9a84c;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
-
 .profile-field-label {
-    -fx-text-fill: #555555;
+    -fx-text-fill: #666666;
     -fx-font-size: 10px;
     -fx-font-weight: bold;
-    -fx-letter-spacing: 1;
+    -fx-letter-spacing: 0.5px;
 }
-
 .profile-field-value {
     -fx-text-fill: #e0e0e0;
     -fx-font-size: 14px;
+    -fx-wrap-text: true;
 }
-
 .profile-field-separator {
-    -fx-background-color: #1a1a1a;
+    -fx-background-color: #1c1c1c;
     -fx-min-height: 1;
     -fx-max-height: 1;
+    -fx-margin: 0 22 0 22;
 }
 
-/* ── AVATAR ─────────────────────────────────────────────────── */
-
-.profile-large-avatar {
-    -fx-background-color: #1e1e1e;
-    -fx-background-radius: 50%;
-    -fx-border-color: #c9a84c;
-    -fx-border-radius: 50%;
-    -fx-border-width: 2.5;
-    -fx-alignment: center;
-}
-
-.profile-avatar-glyph {
-    -fx-text-fill: #c9a84c;
-    -fx-font-size: 36px;
-}
-
-/* ── WALLET CARD ─────────────────────────────────────────────── */
-
+/* ── Wallet balance card (box vàng bên trong wallet card) ─────────────── */
 .wallet-balance-card {
-    -fx-background-color: linear-gradient(to bottom right, #1a1508, #1e1b0a);
+    -fx-background-color: linear-gradient(to bottom right, #1e1608, #141008);
     -fx-background-radius: 12;
-    -fx-border-color: #c9a84c;
+    -fx-border-color: rgba(201,168,76,0.25);
     -fx-border-radius: 12;
     -fx-border-width: 1;
     -fx-padding: 20 16 20 16;
-    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.15), 16, 0, 0, 4);
+    -fx-spacing: 6;
+    -fx-alignment: CENTER;
 }
-
 .wallet-label {
-    -fx-text-fill: #9a7c2e;
+    -fx-text-fill: #888888;
     -fx-font-size: 10px;
     -fx-font-weight: bold;
-    -fx-letter-spacing: 1.2;
+    -fx-letter-spacing: 1px;
 }
-
 .wallet-amount {
-    -fx-text-fill: #f0d060;
-    -fx-font-size: 30px;
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 32px;
     -fx-font-weight: bold;
-    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.4), 8, 0, 0, 0);
 }
-
 .wallet-type-badge {
     -fx-text-fill: #c9a84c;
     -fx-font-size: 11px;
     -fx-background-color: rgba(201,168,76,0.12);
     -fx-background-radius: 20;
-    -fx-padding: 3 10 3 10;
+    -fx-border-color: rgba(201,168,76,0.3);
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-padding: 3 12 3 12;
 }
 
-/* ── DEPOSIT BUTTON ──────────────────────────────────────────── */
-
+/* ── Nút Nạp tiền ─────────────────────────────────────────────────────── */
 .btn-deposit {
     -fx-background-color: #c9a84c;
     -fx-text-fill: #0a0a0a;
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-background-radius: 10;
     -fx-border-color: transparent;
+    -fx-padding: 12 0 12 0;
     -fx-cursor: hand;
-    -fx-padding: 13 0 13 0;
-    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.3), 10, 0, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.3), 8, 0, 0, 2);
 }
-
 .btn-deposit:hover {
     -fx-background-color: #e0bb5a;
-    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.5), 14, 0, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.5), 12, 0, 0, 2);
 }
-
 .btn-deposit:pressed {
-    -fx-background-color: #b89640;
-    -fx-effect: none;
+    -fx-background-color: #b8973f;
 }
 
-/* ── QUICK AMOUNT BUTTONS ────────────────────────────────────── */
-
+/* ── Quick amount buttons ─────────────────────────────────────────────── */
 .btn-quick-amount {
-    -fx-background-color: #1a1a1a;
+    -fx-background-color: #1c1c1c;
     -fx-text-fill: #c9a84c;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
@@ -247,202 +1650,183 @@
     -fx-border-color: #2e2e2e;
     -fx-border-radius: 8;
     -fx-border-width: 1;
+    -fx-padding: 8 0 8 0;
     -fx-cursor: hand;
-    -fx-padding: 7 0 7 0;
 }
-
 .btn-quick-amount:hover {
-    -fx-background-color: rgba(201,168,76,0.1);
-    -fx-border-color: #c9a84c;
+    -fx-background-color: #252505;
+    -fx-border-color: rgba(201,168,76,0.5);
 }
-
 .btn-quick-amount:pressed {
-    -fx-background-color: rgba(201,168,76,0.2);
+    -fx-background-color: #1a1700;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   DEPOSIT DIALOG
-   ══════════════════════════════════════════════════════════════ */
-
+/* ── Deposit Overlay (dialog nạp tiền) ───────────────────────────────── */
 .deposit-overlay {
-    -fx-background-color: rgba(0,0,0,0.80);
-    -fx-padding: 20;
+    -fx-background-color: rgba(0,0,0,0.75);
+    -fx-alignment: CENTER;
 }
-
 .deposit-dialog {
     -fx-background-color: #141414;
-    -fx-background-radius: 18;
-    -fx-border-color: #2c2c2c;
-    -fx-border-radius: 18;
+    -fx-background-radius: 20;
+    -fx-border-color: #2a2a2a;
+    -fx-border-radius: 20;
     -fx-border-width: 1;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 32, 0, 0, 8);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.8), 40, 0, 0, 10);
+    -fx-spacing: 0;
+    -fx-max-width: 440;
 }
-
 .deposit-dialog-header {
-    -fx-background-color: #0f0f0f;
-    -fx-background-radius: 18 18 0 0;
-    -fx-border-color: #1e1e1e;
+    -fx-padding: 20 24 18 24;
+    -fx-spacing: 12;
+    -fx-alignment: CENTER_LEFT;
+    -fx-background-color: #181818;
+    -fx-background-radius: 20 20 0 0;
+    -fx-border-color: transparent transparent #242424 transparent;
     -fx-border-width: 0 0 1 0;
-    -fx-padding: 18 20 18 24;
 }
-
 .deposit-dialog-title {
-    -fx-text-fill: #f0f0f0;
+    -fx-text-fill: #f4f4f4;
     -fx-font-size: 16px;
     -fx-font-weight: bold;
 }
-
 .deposit-close-btn {
-    -fx-background-color: #1e1e1e;
+    -fx-background-color: transparent;
     -fx-text-fill: #888888;
-    -fx-font-size: 13px;
-    -fx-background-radius: 50%;
+    -fx-font-size: 14px;
     -fx-border-color: transparent;
-    -fx-min-width: 30;
-    -fx-min-height: 30;
-    -fx-max-width: 30;
-    -fx-max-height: 30;
     -fx-cursor: hand;
-    -fx-padding: 0;
+    -fx-padding: 2 8 2 8;
+    -fx-background-radius: 6;
 }
-
 .deposit-close-btn:hover {
-    -fx-background-color: #2e2e2e;
-    -fx-text-fill: #e0e0e0;
+    -fx-background-color: #2a2a2a;
+    -fx-text-fill: #cccccc;
 }
-
 .deposit-dialog-body {
-    -fx-padding: 24 24 28 24;
+    -fx-padding: 24;
+    -fx-spacing: 20;
 }
 
+/* ── Deposit steps ────────────────────────────────────────────────────── */
 .deposit-step-box {
-    -fx-background-color: #1a1a1a;
-    -fx-background-radius: 12;
-    -fx-border-color: #242424;
-    -fx-border-radius: 12;
-    -fx-border-width: 1;
-    -fx-padding: 16;
+    -fx-spacing: 12;
 }
-
 .deposit-step-label {
-    -fx-text-fill: #c9a84c;
+    -fx-text-fill: #aaaaaa;
     -fx-font-size: 12px;
     -fx-font-weight: bold;
 }
 
+/* ── Bank info card ───────────────────────────────────────────────────── */
 .bank-info-card {
-    -fx-background-color: #0f1a10;
-    -fx-background-radius: 10;
-    -fx-border-color: #1e3822;
-    -fx-border-radius: 10;
+    -fx-background-color: #0f0f0f;
+    -fx-background-radius: 12;
+    -fx-border-color: #2a2a2a;
+    -fx-border-radius: 12;
     -fx-border-width: 1;
-    -fx-padding: 14;
+    -fx-padding: 16 18 16 18;
+    -fx-spacing: 10;
 }
-
 .bank-logo-badge {
-    -fx-background-color: #e8213c;
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
+    -fx-background-color: #003087;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-background-radius: 8;
-    -fx-padding: 6 10 6 10;
-    -fx-min-width: 44;
+    -fx-background-radius: 6;
+    -fx-padding: 4 8 4 8;
+    -fx-min-width: 40;
     -fx-alignment: center;
 }
-
 .bank-name {
-    -fx-text-fill: #e8e8e8;
+    -fx-text-fill: #f0f0f0;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
 }
-
 .bank-sub {
-    -fx-text-fill: #666666;
+    -fx-text-fill: #888888;
     -fx-font-size: 11px;
 }
-
 .bank-divider {
-    -fx-background-color: #1e3822;
+    -fx-background-color: #242424;
     -fx-min-height: 1;
     -fx-max-height: 1;
 }
-
 .bank-field-label {
-    -fx-text-fill: #5a8c62;
-    -fx-font-size: 11px;
+    -fx-text-fill: #666666;
+    -fx-font-size: 10px;
     -fx-font-weight: bold;
 }
-
 .bank-account-number {
-    -fx-text-fill: #5ee87a;
-    -fx-font-size: 22px;
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 18px;
     -fx-font-weight: bold;
-    -fx-font-family: "Courier New", "Consolas", monospace;
-    -fx-effect: dropshadow(gaussian, rgba(94,232,122,0.3), 6, 0, 0, 0);
+    -fx-letter-spacing: 1px;
 }
-
 .bank-account-name {
-    -fx-text-fill: #e8e8e8;
+    -fx-text-fill: #e0e0e0;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-letter-spacing: 1;
 }
-
 .btn-copy {
-    -fx-background-color: #1e2e1f;
-    -fx-text-fill: #5ee87a;
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #c9a84c;
     -fx-font-size: 11px;
-    -fx-background-radius: 7;
-    -fx-border-color: #2a3e2b;
-    -fx-border-radius: 7;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6;
+    -fx-border-color: #2e2e2e;
+    -fx-border-radius: 6;
     -fx-border-width: 1;
+    -fx-padding: 6 12 6 12;
     -fx-cursor: hand;
-    -fx-padding: 6 10 6 10;
 }
-
 .btn-copy:hover {
-    -fx-background-color: #253025;
-    -fx-border-color: #5ee87a;
+    -fx-background-color: #252505;
+    -fx-border-color: rgba(201,168,76,0.5);
 }
 
+/* ── Deposit input ───────────────────────────────────────────────────── */
 .deposit-input-wrapper {
-    -fx-background-color: #1a1a1a;
+    -fx-background-color: #0f0f0f;
     -fx-background-radius: 10;
-    -fx-border-color: #2c2c2c;
+    -fx-border-color: #2a2a2a;
     -fx-border-radius: 10;
     -fx-border-width: 1;
-    -fx-padding: 4 12 4 14;
+    -fx-padding: 10 14 10 14;
+    -fx-spacing: 8;
+    -fx-alignment: CENTER_LEFT;
 }
-
+.deposit-input-wrapper:focused-within {
+    -fx-border-color: #c9a84c;
+}
 .deposit-currency-prefix {
     -fx-text-fill: #c9a84c;
     -fx-font-size: 16px;
     -fx-font-weight: bold;
 }
-
 .deposit-input {
     -fx-background-color: transparent;
-    -fx-text-fill: #e8e8e8;
-    -fx-prompt-text-fill: #444444;
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
+    -fx-text-fill: #f0f0f0;
+    -fx-font-size: 16px;
     -fx-border-color: transparent;
-    -fx-padding: 8 0 8 6;
+    -fx-padding: 0;
+    -fx-prompt-text-fill: #555555;
 }
-
 .deposit-amount-hint {
     -fx-text-fill: #555555;
     -fx-font-size: 11px;
 }
 
-.deposit-status-icon { -fx-font-size: 36px; }
-
+/* ── Deposit status & confirm ────────────────────────────────────────── */
+.deposit-status-icon {
+    -fx-font-size: 32px;
+}
 .deposit-status-text {
     -fx-text-fill: #aaaaaa;
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-text-alignment: center;
+    -fx-wrap-text: true;
 }
-
 .btn-confirm-deposit {
     -fx-background-color: #c9a84c;
     -fx-text-fill: #0a0a0a;
@@ -450,39 +1834,515 @@
     -fx-font-weight: bold;
     -fx-background-radius: 10;
     -fx-border-color: transparent;
+    -fx-padding: 14 0 14 0;
     -fx-cursor: hand;
-    -fx-padding: 13 0 13 0;
-    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.3), 10, 0, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.35), 10, 0, 0, 2);
 }
-
-.btn-confirm-deposit:hover { -fx-background-color: #e0bb5a; }
-.btn-confirm-deposit:pressed { -fx-background-color: #b89640; -fx-effect: none; }
-.btn-confirm-deposit:disabled {
-    -fx-background-color: #2a2a2a;
-    -fx-text-fill: #555555;
-    -fx-effect: none;
-    -fx-cursor: default;
+.btn-confirm-deposit:hover {
+    -fx-background-color: #e0bb5a;
 }
-
+.btn-confirm-deposit:pressed {
+    -fx-background-color: #b8973f;
+}
 .deposit-disclaimer {
-    -fx-text-fill: #444444;
+    -fx-text-fill: #555555;
     -fx-font-size: 11px;
     -fx-text-alignment: center;
-    -fx-line-spacing: 3;
+    -fx-wrap-text: true;
 }
 
-/* ── Backwards-compat stubs ─────────────────────────────────── */
-.profile-overlay { -fx-background-color: #0d0d0d; }
-.profile-backdrop { -fx-background-color: transparent; }
-.profile-scroll { -fx-background-color: transparent; -fx-background: transparent; }
-.profile-card-v2 { -fx-background-color: #111111; }
-.profile-header-section { -fx-padding: 0; }
-.profile-divider-line { -fx-background-color: #1e1e1e; -fx-min-height: 1; -fx-max-height: 1; }
-.profile-section { -fx-padding: 0; }
-.profile-section-title { -fx-text-fill: #c9a84c; -fx-font-size: 13px; -fx-font-weight: bold; }
-.profile-info-row { -fx-background-color: #171717; -fx-background-radius: 10; -fx-padding: 12 14; }
-.profile-info-icon { -fx-font-size: 18px; }
-.profile-info-label { -fx-text-fill: #666666; -fx-font-size: 11px; }
-.profile-info-value { -fx-text-fill: #e0e0e0; -fx-font-size: 14px; }
-.profile-title { -fx-text-fill: #f4f4f4; -fx-font-size: 20px; -fx-font-weight: bold; }
-.profile-hint { -fx-text-fill: #888888; -fx-font-size: 13px; }
+/* ═══════════════════════════════════════════════════════════════════════════
+   END: Profile Page Redesign
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN PANEL — Redesigned Styles
+   Thêm vào cuối file profile.css (hoặc home.css)
+   Palette: Dark #0a0a0a | Card #111111 | Border #222222 | Gold #c9a84c
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Root container ──────────────────────────────────────────────────────── */
+.admin-root {
+    -fx-background-color: #0a0a0a;
+    -fx-spacing: 0;
+}
+
+/* ── HEADER BANNER ───────────────────────────────────────────────────────── */
+.admin-header-banner {
+    -fx-background-color: linear-gradient(to bottom, #111108, #0a0a0a);
+    -fx-spacing: 0;
+    -fx-padding: 0 0 20 0;
+}
+
+/* Accent bar ngang vàng trên cùng */
+.admin-hero-accent-bar {
+    -fx-background-color: linear-gradient(to right, #c9a84c, #8a6a20, #c9a84c);
+}
+
+/* Nội dung header: avatar + text + logout */
+.admin-header-content {
+    -fx-padding: 28 40 22 40;
+    -fx-spacing: 24;
+    -fx-alignment: CENTER_LEFT;
+}
+
+/* Avatar vòng tròn vàng */
+.admin-avatar-wrap {
+    -fx-background-color: linear-gradient(to bottom right, #c9a84c, #7a5a1a);
+    -fx-background-radius: 50%;
+    -fx-min-width: 68;
+    -fx-min-height: 68;
+    -fx-max-width: 68;
+    -fx-max-height: 68;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(201,168,76,0.4), 14, 0, 0, 3);
+}
+.admin-avatar-icon {
+    -fx-font-size: 28px;
+    -fx-text-fill: #0a0a0a;
+}
+
+/* Tiêu đề + subtitle */
+.admin-panel-title {
+    -fx-text-fill: #f4f4f4;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+.admin-subtitle {
+    -fx-text-fill: #777777;
+    -fx-font-size: 13px;
+}
+
+/* Badge "Quản trị viên" */
+.admin-level-badge {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(201,168,76,0.12);
+    -fx-background-radius: 20;
+    -fx-border-color: rgba(201,168,76,0.35);
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-padding: 4 14 4 14;
+}
+
+/* Nút đăng xuất */
+.admin-logout-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #666666;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-border-color: #2e2e2e;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 8 18 8 18;
+    -fx-cursor: hand;
+}
+.admin-logout-btn:hover {
+    -fx-border-color: #e05555;
+    -fx-text-fill: #e05555;
+    -fx-background-color: rgba(224,85,85,0.07);
+}
+
+/* ── STAT CARDS ROW ──────────────────────────────────────────────────────── */
+.admin-stat-row {
+    -fx-padding: 0 40 0 40;
+    -fx-spacing: 12;
+    -fx-alignment: CENTER_LEFT;
+}
+.admin-stat-card {
+    -fx-background-color: #111111;
+    -fx-background-radius: 12;
+    -fx-border-color: #222222;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 16 20 16 20;
+    -fx-spacing: 14;
+    -fx-alignment: CENTER_LEFT;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 8, 0, 0, 2);
+}
+.admin-stat-card:hover {
+    -fx-border-color: #333333;
+    -fx-background-color: #141414;
+}
+.admin-stat-icon {
+    -fx-font-size: 22px;
+}
+.admin-stat-value {
+    -fx-text-fill: #f0f0f0;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
+.admin-stat-label {
+    -fx-text-fill: #555555;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+/* ── MAIN CONTENT CARD ───────────────────────────────────────────────────── */
+.admin-content-card {
+    -fx-background-color: #0e0e0e;
+    -fx-margin: 20 32 32 32;
+    -fx-spacing: 0;
+    -fx-padding: 0 32 32 32;
+}
+
+/* ── TAB BAR ─────────────────────────────────────────────────────────────── */
+.admin-tab-bar {
+    -fx-background-color: #0e0e0e;
+    -fx-spacing: 0;
+    -fx-padding: 20 0 0 0;
+    -fx-alignment: CENTER_LEFT;
+}
+.admin-tab-divider {
+    -fx-background-color: #222222;
+}
+.admin-tab-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #555555;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 0 12 0;
+    -fx-cursor: hand;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-border-width: 0 0 2 0;
+    -fx-border-insets: 0 0 -1 0;
+}
+.admin-tab-btn:hover {
+    -fx-text-fill: #aaaaaa;
+    -fx-background-color: rgba(255,255,255,0.03);
+}
+.admin-tab-active {
+    -fx-text-fill: #c9a84c !important;
+    -fx-border-color: #c9a84c !important;
+    -fx-background-color: rgba(201,168,76,0.05) !important;
+}
+
+/* Đường kẻ vàng dưới tab bar */
+.admin-tab-underline {
+    -fx-background-color: #1e1e1e;
+}
+
+/* ── PANEL CONTAINER ─────────────────────────────────────────────────────── */
+.admin-panels-container {
+    -fx-background-color: transparent;
+    -fx-padding: 20 0 0 0;
+}
+.admin-panel {
+    -fx-background-color: transparent;
+    -fx-spacing: 16;
+}
+
+/* ── TOOLBAR (search + filter + refresh) ─────────────────────────────────── */
+.admin-toolbar {
+    -fx-spacing: 10;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 0 4 0;
+}
+
+/* Search wrapper có border */
+.admin-search-wrap {
+    -fx-background-color: #111111;
+    -fx-background-radius: 10;
+    -fx-border-color: #252525;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 10 16 10 14;
+    -fx-spacing: 8;
+    -fx-alignment: CENTER_LEFT;
+}
+.admin-search-wrap:focused-within {
+    -fx-border-color: rgba(201,168,76,0.5);
+}
+.admin-search-icon {
+    -fx-text-fill: #444444;
+    -fx-font-size: 13px;
+}
+.admin-search-field {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e0e0e0;
+    -fx-font-size: 13px;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-prompt-text-fill: #444444;
+}
+.admin-search-field:focused {
+    -fx-border-color: transparent;
+}
+
+/* ComboBox filter */
+.admin-filter-combo {
+    -fx-background-color: #111111;
+    -fx-background-radius: 10;
+    -fx-border-color: #252525;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 12px;
+    -fx-padding: 6 10 6 10;
+    -fx-pref-width: 145;
+    -fx-cursor: hand;
+}
+.admin-filter-combo .list-cell {
+    -fx-background-color: #111111;
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 12px;
+    -fx-padding: 6 12 6 12;
+}
+.admin-filter-combo .list-view {
+    -fx-background-color: #111111;
+    -fx-border-color: #2a2a2a;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 10, 0, 0, 4);
+}
+.admin-filter-combo .list-view .list-cell:hover {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #c9a84c;
+}
+.admin-filter-combo:hover {
+    -fx-border-color: #333333;
+}
+.admin-filter-combo:focused {
+    -fx-border-color: rgba(201,168,76,0.5);
+}
+
+/* Refresh button */
+.admin-refresh-btn {
+    -fx-background-color: #161616;
+    -fx-text-fill: #888888;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-border-color: #252525;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 10 18 10 18;
+    -fx-cursor: hand;
+}
+.admin-refresh-btn:hover {
+    -fx-background-color: #1e1e1e;
+    -fx-text-fill: #c9a84c;
+    -fx-border-color: rgba(201,168,76,0.3);
+}
+.admin-refresh-btn:pressed {
+    -fx-background-color: #141400;
+}
+
+/* ── TABLE HEADER ────────────────────────────────────────────────────────── */
+.admin-table-header {
+    -fx-background-color: #0d0d0d;
+    -fx-background-radius: 10 10 0 0;
+    -fx-border-color: #1e1e1e;
+    -fx-border-radius: 10 10 0 0;
+    -fx-border-width: 1 1 0 1;
+    -fx-spacing: 0;
+    -fx-min-height: 42;
+    -fx-max-height: 42;
+}
+.admin-th {
+    -fx-text-fill: #555555;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 12 12 12;
+    -fx-alignment: CENTER_LEFT;
+}
+
+/* ── TABLE BODY + ROWS ───────────────────────────────────────────────────── */
+.admin-table-body {
+    -fx-background-color: #0e0e0e;
+    -fx-border-color: #1e1e1e;
+    -fx-border-radius: 0 0 10 10;
+    -fx-border-width: 0 1 1 1;
+    -fx-spacing: 0;
+}
+
+/* Mỗi dòng data */
+.admin-row {
+    -fx-background-color: transparent;
+    -fx-min-height: 52;
+    -fx-max-height: 52;
+    -fx-alignment: CENTER_LEFT;
+    -fx-border-color: transparent transparent #181818 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.admin-row:hover {
+    -fx-background-color: rgba(255,255,255,0.025);
+}
+
+/* Cells */
+.admin-td {
+    -fx-text-fill: #d8d8d8;
+    -fx-font-size: 13px;
+    -fx-padding: 0 12 0 12;
+}
+.admin-td-muted {
+    -fx-text-fill: #555555;
+    -fx-font-size: 12px;
+    -fx-padding: 0 12 0 12;
+}
+
+/* ── ROLE BADGES ─────────────────────────────────────────────────────────── */
+.admin-role-buyer {
+    -fx-text-fill: #4db8ff;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(77,184,255,0.1);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(77,184,255,0.25);
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 4 10 4 10;
+}
+.admin-role-seller {
+    -fx-text-fill: #c9a84c;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(201,168,76,0.1);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(201,168,76,0.25);
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 4 10 4 10;
+}
+.admin-role-admin {
+    -fx-text-fill: #f97316;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(249,115,22,0.1);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(249,115,22,0.25);
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 4 10 4 10;
+}
+
+/* ── STATUS BADGES ───────────────────────────────────────────────────────── */
+.admin-badge-active {
+    -fx-text-fill: #4caf72;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(76,175,114,0.1);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(76,175,114,0.25);
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 4 10 4 10;
+}
+.admin-badge-locked {
+    -fx-text-fill: #e05555;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(224,85,85,0.1);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(224,85,85,0.25);
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 4 10 4 10;
+}
+.admin-badge-pending {
+    -fx-text-fill: #f5a623;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(245,166,35,0.1);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(245,166,35,0.25);
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 4 10 4 10;
+}
+.admin-badge-closed {
+    -fx-text-fill: #666666;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(102,102,102,0.1);
+    -fx-background-radius: 6;
+    -fx-border-color: rgba(102,102,102,0.2);
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-padding: 4 10 4 10;
+}
+
+/* ── ACTION BUTTONS ──────────────────────────────────────────────────────── */
+/* Nút khoá user */
+.admin-btn-lock {
+    -fx-background-color: rgba(224,85,85,0.1);
+    -fx-text-fill: #e05555;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: rgba(224,85,85,0.3);
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 7 14 7 14;
+    -fx-cursor: hand;
+}
+.admin-btn-lock:hover {
+    -fx-background-color: rgba(224,85,85,0.2);
+    -fx-border-color: rgba(224,85,85,0.6);
+}
+.admin-btn-lock:pressed {
+    -fx-background-color: rgba(224,85,85,0.3);
+}
+
+/* Nút mở khoá user */
+.admin-btn-unlock {
+    -fx-background-color: rgba(76,175,114,0.1);
+    -fx-text-fill: #4caf72;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: rgba(76,175,114,0.3);
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 7 14 7 14;
+    -fx-cursor: hand;
+}
+.admin-btn-unlock:hover {
+    -fx-background-color: rgba(76,175,114,0.2);
+    -fx-border-color: rgba(76,175,114,0.6);
+}
+
+/* Nút đóng phiên đấu giá */
+.admin-btn-close {
+    -fx-background-color: rgba(249,115,22,0.1);
+    -fx-text-fill: #f97316;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8;
+    -fx-border-color: rgba(249,115,22,0.3);
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 7 14 7 14;
+    -fx-cursor: hand;
+}
+.admin-btn-close:hover {
+    -fx-background-color: rgba(249,115,22,0.2);
+    -fx-border-color: rgba(249,115,22,0.6);
+}
+.admin-btn-close:pressed {
+    -fx-background-color: rgba(249,115,22,0.3);
+}
+
+/* ── EMPTY STATE ─────────────────────────────────────────────────────────── */
+.admin-empty-icon {
+    -fx-font-size: 36px;
+    -fx-text-fill: #2a2a2a;
+    -fx-alignment: center;
+}
+.admin-empty-title {
+    -fx-text-fill: #444444;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+}
+.admin-empty-sub {
+    -fx-text-fill: #333333;
+    -fx-font-size: 12px;
+    -fx-alignment: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   END Admin Panel Styles
+   ═══════════════════════════════════════════════════════════════════════════ */
