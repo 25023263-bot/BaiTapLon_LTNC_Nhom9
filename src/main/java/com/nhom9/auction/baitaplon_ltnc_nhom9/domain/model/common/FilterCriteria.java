@@ -92,7 +92,7 @@ public class FilterCriteria {
 
     public String getKeyword()           { return keyword; }
     public String getCategory()          { return category; }
-    public String getItemType()          { return itemType; }
+
     public AuctionStatus getStatus()     { return status; }
     public BigDecimal getMinPrice()      { return minPrice; }
     public BigDecimal getMaxPrice()      { return maxPrice; }
