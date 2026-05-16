@@ -1,6 +1,8 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers;
 
+import javafx.animation.PauseTransition;
 import javafx.scene.control.Alert;
+import javafx.util.Duration;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.GridPane;
@@ -23,6 +25,18 @@ public class AlertHelper {
 
     public static void showSuccess(String message) {
         showInfo("Thành công", message);
+    }
+
+    /** Toast tự đóng sau ~1.5 giây (không chặn UI). */
+    public static void showToast(String message) {
+        Alert toast = new Alert(Alert.AlertType.INFORMATION);
+        toast.setTitle("Thông báo");
+        toast.setHeaderText(null);
+        toast.setContentText(message);
+        toast.show();
+        PauseTransition close = new PauseTransition(Duration.millis(1500));
+        close.setOnFinished(e -> toast.close());
+        close.play();
     }
 
     // ─── Warning ──────────────────────────────────────────────────────────────

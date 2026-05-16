@@ -1,7 +1,7 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.HelloApplication;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.HomeController.AuctionItem;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.AuctionCardModel;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.SellerItemDetailController;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
 
@@ -50,7 +50,7 @@ public final class SellerItemDetailCoordinator {
      * @param onDataChanged Callback được gọi sau khi Seller save hoặc xóa.
      *                      HomeController dùng callback này để reload danh sách.
      */
-    public void open(AuctionItem item, Runnable onDataChanged) {
+    public void open(AuctionCardModel item, Runnable onDataChanged) {
         try {
             FXMLLoader loader = new FXMLLoader(
                     HelloApplication.class.getResource("/fxml/SellerItemDetailView.fxml"));

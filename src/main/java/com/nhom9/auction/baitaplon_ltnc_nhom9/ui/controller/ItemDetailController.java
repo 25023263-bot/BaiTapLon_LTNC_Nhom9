@@ -1,6 +1,6 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
 
-import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.HomeController.AuctionItem;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.AuctionCardModel;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
@@ -63,7 +63,7 @@ public class ItemDetailController {
     // ── State ────────────────────────────────────────────────────
     private Stage    thisStage;
     private Runnable onPlaceBid;
-    private AuctionItem auctionItem;
+    private AuctionCardModel auctionItem;
     private ScheduledExecutorService timerScheduler;
     private List<Bid> currentBids = new ArrayList<>();
     private Canvas chartCanvas;
@@ -75,7 +75,7 @@ public class ItemDetailController {
 
     // ── Public API ───────────────────────────────────────────────
 
-    public void configure(Stage owner, AuctionItem item, Runnable onPlaceBid) {
+    public void configure(Stage owner, AuctionCardModel item, Runnable onPlaceBid) {
         this.auctionItem = item;
         this.onPlaceBid  = onPlaceBid;
 

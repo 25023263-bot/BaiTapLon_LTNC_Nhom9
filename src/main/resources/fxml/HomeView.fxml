@@ -432,9 +432,11 @@
             <StackPane fx:id="myProductsOverlay"
                        visible="false"
                        managed="false"
+                       maxWidth="Infinity"
+                       maxHeight="Infinity"
                        styleClass="my-products-overlay">
 
-                <VBox styleClass="my-products-panel">
+                <VBox styleClass="my-products-panel" maxWidth="Infinity" maxHeight="Infinity" VBox.vgrow="ALWAYS">
 
                     <!-- Header -->
                     <HBox styleClass="my-products-header" alignment="CENTER_LEFT">
@@ -976,10 +978,13 @@
 
     <bottom>
         <HBox styleClass="bottom-nav" spacing="0" alignment="CENTER" maxWidth="Infinity">
-            <ToggleButton fx:id="bottomNavHome" styleClass="bottom-nav-tab" text="Trang chủ"/>
+            <ToggleButton fx:id="bottomNavHome" styleClass="bottom-nav-tab" text="Trang chủ"
+                          onAction="#handleNavHome"/>
             <!-- "Danh mục" đổi thành "Sản phẩm của tôi" — dành cho Người bán -->
-            <ToggleButton fx:id="bottomNavMyProducts" styleClass="bottom-nav-tab" text="Sản phẩm của tôi"/>
-            <ToggleButton fx:id="bottomNavProfile" styleClass="bottom-nav-tab" text="Cá nhân"/>
+            <ToggleButton fx:id="bottomNavMyProducts" styleClass="bottom-nav-tab" text="Sản phẩm của tôi"
+                          onAction="#handleMyProductsTab"/>
+            <ToggleButton fx:id="bottomNavProfile" styleClass="bottom-nav-tab" text="Cá nhân"
+                          onAction="#handleProfileTab"/>
         </HBox>
     </bottom>
 

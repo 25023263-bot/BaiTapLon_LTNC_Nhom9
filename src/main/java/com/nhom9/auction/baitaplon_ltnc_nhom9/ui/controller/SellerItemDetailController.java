@@ -5,7 +5,7 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.PhysicalItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.AuctionRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.HomeController.AuctionItem;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.AuctionCardModel;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
 
@@ -93,7 +93,7 @@ public class SellerItemDetailController {
     // ── State ────────────────────────────────────────────────────
 
     private Stage thisStage;
-    private AuctionItem item;                   // dữ liệu UI hiện tại
+    private AuctionCardModel item;                   // dữ liệu UI hiện tại
     private Runnable onDataChanged;             // callback → HomeController reload
     private boolean isEditing = false;
     private File newImageFile = null;           // ảnh mới nếu Seller thay ảnh
@@ -114,7 +114,7 @@ public class SellerItemDetailController {
      * @param item          Dữ liệu sản phẩm từ HomeController
      * @param onDataChanged Callback khi Seller save/delete → Home reload data
      */
-    public void configure(Stage stage, AuctionItem item, Runnable onDataChanged) {
+    public void configure(Stage stage, AuctionCardModel item, Runnable onDataChanged) {
         this.thisStage    = stage;
         this.item         = item;
         this.onDataChanged = onDataChanged;
@@ -138,7 +138,7 @@ public class SellerItemDetailController {
 
     // ── Populate ─────────────────────────────────────────────────
 
-    private void populateView(AuctionItem it) {
+    private void populateView(AuctionCardModel it) {
         lblTitle.setText(it.title());
 
         // Badge trạng thái
@@ -397,10 +397,10 @@ public class SellerItemDetailController {
 
             auctionRepo.update(dbItem);
 
-            // ── Cập nhật local AuctionItem record ───────────────
-            // AuctionItem là record (immutable) → tạo record mới với giá trị đã sửa.
+            // ── Cập nhật local AuctionCardModel record ───────────────
+            // AuctionCardModel là record (immutable) → tạo record mới với giá trị đã sửa.
             // Đây là pattern đúng khi dùng record: không thể mutate, phải tạo lại.
-            this.item = new AuctionItem(
+            this.item = new AuctionCardModel(
                     item.id(),
                     newTitle,
                     item.category(),
@@ -546,7 +546,7 @@ public class SellerItemDetailController {
                 try { auctionRepo.closeExpiredAuctions(); } catch (Exception ignored) {}
 
                 // Bước 2: cập nhật item record (immutable record → tạo mới)
-                this.item = new AuctionItem(
+                this.item = new AuctionCardModel(
                         item.id(), item.title(), item.category(), item.categoryEmoji(),
                         item.currentBid(), item.startingPrice(), item.description(),
                         item.bidCount(),

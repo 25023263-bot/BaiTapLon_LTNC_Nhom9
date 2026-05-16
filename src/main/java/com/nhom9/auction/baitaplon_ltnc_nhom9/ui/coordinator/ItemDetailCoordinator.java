@@ -3,7 +3,7 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.HelloApplication;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.BidDialogController;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.BidRequest;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.HomeController.AuctionItem;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.AuctionCardModel;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.ItemDetailController;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
 import javafx.fxml.FXMLLoader;
@@ -71,7 +71,7 @@ public final class ItemDetailCoordinator {
 
     // ── 1. Mở màn hình chi tiết ─────────────────────────────────
 
-    public void openForAuction(AuctionItem item) {
+    public void openForAuction(AuctionCardModel item) {
         try {
             FXMLLoader loader = new FXMLLoader(
                     HelloApplication.class.getResource("/fxml/ItemDetailView.fxml"));
@@ -162,7 +162,7 @@ public final class ItemDetailCoordinator {
 
     // ── 2. Mở popup đặt giá ──────────────────────────────────────
 
-    private void openBidDialog(AuctionItem item, Stage detailStage, ItemDetailController detailCtrl) {
+    private void openBidDialog(AuctionCardModel item, Stage detailStage, ItemDetailController detailCtrl) {
 
         // ── FIX Bug 1 (phía UI): Kiểm tra phiên còn hạn trước khi mở dialog ──
         //
@@ -274,7 +274,7 @@ public final class ItemDetailCoordinator {
      * → placeAutoBid() trả về Bid với amount = firstBid (mức tối thiểu hiện tại),
      *   không phải maxLimit. Hiển thị firstBid mới đúng với thực tế.
      */
-    private void onBidConfirmed(AuctionItem item, BidRequest request, ItemDetailController detailCtrl) {
+    private void onBidConfirmed(AuctionCardModel item, BidRequest request, ItemDetailController detailCtrl) {
         NumberFormat nf = NumberFormat.getIntegerInstance(new Locale("vi", "VN"));
 
         int buyerId   = UserSession.getInstance().getCurrentUserId();

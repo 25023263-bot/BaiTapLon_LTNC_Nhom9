@@ -4,7 +4,9 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.*;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auth.AuthService;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification.NotificationService;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.service.listing.ListingService;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.payment.WalletPayment;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.service.wallet.WalletDepositService;
 
 /**
  * Service Locator — khởi tạo toàn bộ dependency một lần duy nhất khi app start.
@@ -47,6 +49,8 @@ public class ServiceLocator {
     private final AuctionScheduler      auctionScheduler;
     private final NotificationService   notificationService;
     private final WalletPayment         walletPayment;
+    private final ListingService        listingService;
+    private final WalletDepositService  walletDepositService;
 
     // ─── Init ─────────────────────────────────────────────────────────────────
 
@@ -72,6 +76,8 @@ public class ServiceLocator {
         notificationService = new NotificationService(watchlistRepo, bidRepo, notifRepo);
         auctionScheduler    = new AuctionScheduler(auctionRepo, auctionHouse);
         walletPayment       = new WalletPayment(userRepo);
+        listingService      = new ListingService(auctionHouse);
+        walletDepositService = new WalletDepositService(userRepo);
 
         // 4. Kết nối Observer: AuctionHouse → NotificationService
         auctionHouse.addObserver(notificationService);
@@ -94,6 +100,8 @@ public class ServiceLocator {
     public AuctionScheduler      getAuctionScheduler()    { return auctionScheduler; }
     public NotificationService   getNotificationService() { return notificationService; }
     public WalletPayment         getWalletPayment()       { return walletPayment; }
+    public ListingService        getListingService()      { return listingService; }
+    public WalletDepositService  getWalletDepositService(){ return walletDepositService; }
 
     // ─── Cleanup ──────────────────────────────────────────────────────────────
 
