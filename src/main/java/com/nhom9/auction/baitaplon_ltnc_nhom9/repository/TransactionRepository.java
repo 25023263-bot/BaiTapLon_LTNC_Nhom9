@@ -8,8 +8,6 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DbUtil;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -55,18 +53,6 @@ public class TransactionRepository {
 
     // ─── Read ─────────────────────────────────────────────────────────────────
 
-    public Optional<Transaction> findById(int id) throws SQLException {
-        String sql = "SELECT * FROM transactions WHERE id=?";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return Optional.of(mapRow(rs));
-            }
-        }
-        return Optional.empty();
-    }
-
     public Optional<Transaction> findByAuctionId(int auctionId) throws SQLException {
         String sql = "SELECT * FROM transactions WHERE auction_id=? LIMIT 1";
         try (Connection conn = db();
@@ -77,43 +63,6 @@ public class TransactionRepository {
             }
         }
         return Optional.empty();
-    }
-
-    public List<Transaction> findByBuyerId(int buyerId) throws SQLException {
-        List<Transaction> list = new ArrayList<>();
-        String sql = "SELECT * FROM transactions WHERE buyer_id=? ORDER BY created_at DESC";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, buyerId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(mapRow(rs));
-            }
-        }
-        return list;
-    }
-
-    public List<Transaction> findBySellerId(int sellerId) throws SQLException {
-        List<Transaction> list = new ArrayList<>();
-        String sql = "SELECT * FROM transactions WHERE seller_id=? ORDER BY created_at DESC";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, sellerId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(mapRow(rs));
-            }
-        }
-        return list;
-    }
-
-    public List<Transaction> findAll() throws SQLException {
-        List<Transaction> list = new ArrayList<>();
-        String sql = "SELECT * FROM transactions ORDER BY created_at DESC";
-        try (Connection conn = db();
-             Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) list.add(mapRow(rs));
-        }
-        return list;
     }
 
     // ─── Update ───────────────────────────────────────────────────────────────
