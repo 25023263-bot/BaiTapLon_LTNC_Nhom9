@@ -84,7 +84,7 @@ public class AuthService implements Authenticatable {
             User newUser = switch (userRole) {
                 case BUYER  -> new Buyer (0, username.trim(), email.trim(), hash, fullName, phone);
                 case SELLER -> new Seller(0, username.trim(), email.trim(), hash, fullName, phone);
-                case ADMIN  -> new Admin (0, username.trim(), email.trim(), hash, fullName, phone, 1);
+                case ADMIN  -> new Admin(0, username.trim(), email.trim(), hash, fullName, phone);
             };
 
             userRepo.save(newUser);

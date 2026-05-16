@@ -5,61 +5,67 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
 import java.time.LocalDateTime;
 
 /**
- * Quản trị viên – có quyền quản lý user và phiên đấu giá.
+ * Quản trị viên – có thể xoá phiên đấu giá và vô hiệu hoá tài khoản người dùng.
+ *
+ * Admin không có dữ liệu đặc thù ngoài thông tin User cơ bản.
+ * Quyền hạn được xác định bằng role = ADMIN trong bảng users.
  */
 public class Admin extends User {
-
-    /** Cấp độ quyền hạn (1 = mặc định, có thể mở rộng sau) */
-    private int accessLevel;
 
     // ─── Constructor ────────────────────────────────────────────────────────
 
     public Admin() {
         super();
-        this.role        = UserRole.ADMIN;
-        this.accessLevel = 1;
+        this.role = UserRole.ADMIN;
     }
 
-    /** Dùng khi tạo admin mới, không cần chỉ định accessLevel (mặc định = 1) */
+    /** Dùng khi tạo Admin mới (ví dụ: AuthService.register) */
     public Admin(int id, String username, String email, String passwordHash,
                  String fullName, String phone) {
         super(id, username, email, passwordHash, fullName, phone, UserRole.ADMIN);
-        this.accessLevel = 1;
     }
 
-    /** Dùng khi tạo admin mới với accessLevel chỉ định — ví dụ: AuthService.register() */
-    public Admin(int id, String username, String email, String passwordHash,
-                 String fullName, String phone, int accessLevel) {
-        this(id, username, email, passwordHash, fullName, phone);
-        this.accessLevel = accessLevel;
-    }
-
-    /** Dùng khi load admin từ database — đầy đủ tất cả thông tin */
+    /** Dùng khi load Admin từ database */
     public Admin(int id, String username, String email, String passwordHash,
                  String fullName, String phone,
-                 int accessLevel, boolean active,
-                 LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this(id, username, email, passwordHash, fullName, phone, accessLevel);
+                 boolean active, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this(id, username, email, passwordHash, fullName, phone);
         this.active    = active;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    // ─── Getters / Setters ───────────────────────────────────────────────────
+    // ─── Business Logic ──────────────────────────────────────────────────────
 
-    public int getAccessLevel()              { return accessLevel; }
-    public void setAccessLevel(int level)    { this.accessLevel = level; }
+    /**
+     * Vô hiệu hoá một tài khoản người dùng.
+     *
+     * Tại sao method này nằm ở Admin?
+     * → Để rõ ý định: chỉ Admin mới được gọi hành động này.
+     *   Service layer kiểm tra instanceof Admin trước khi cho phép.
+     */
+    public void disableUser(User target) {
+        if (target == null) throw new IllegalArgumentException("User không được null.");
+        target.deactivate();
+    }
+
+    /**
+     * Kích hoạt lại một tài khoản đã bị vô hiệu hoá.
+     */
+    public void enableUser(User target) {
+        if (target == null) throw new IllegalArgumentException("User không được null.");
+        target.activate();
+    }
 
     // ─── Abstract Implementation ─────────────────────────────────────────────
 
     @Override
     public String getRoleDescription() {
-        return "Admin – toàn quyền quản trị hệ thống.";
+        return "Admin – có thể xoá phiên đấu giá và vô hiệu hoá tài khoản.";
     }
 
     @Override
     public String toString() {
-        return String.format("Admin{id=%d, username='%s', accessLevel=%d}",
-                id, username, accessLevel);
+        return String.format("Admin{id=%d, username='%s'}", id, username);
     }
 }
