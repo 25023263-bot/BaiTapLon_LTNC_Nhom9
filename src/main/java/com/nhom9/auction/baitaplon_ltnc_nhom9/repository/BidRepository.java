@@ -55,37 +55,6 @@ public class BidRepository {
 
     // ─── Read ─────────────────────────────────────────────────────────────────
 
-    public Optional<Bid> findById(int id) throws SQLException {
-        String sql = """
-                SELECT b.*, u.username AS buyer_username
-                FROM bids b JOIN users u ON b.buyer_id = u.id
-                WHERE b.id=?
-                """;
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return Optional.of(mapRow(rs));
-            }
-        }
-        return Optional.empty();
-    }
-
-    public List<Bid> findAll() throws SQLException {
-        List<Bid> list = new ArrayList<>();
-        String sql = """
-                SELECT b.*, u.username AS buyer_username
-                FROM bids b JOIN users u ON b.buyer_id = u.id
-                ORDER BY b.bid_time DESC
-                """;
-        try (Connection conn = db();
-             Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) list.add(mapRow(rs));
-        }
-        return list;
-    }
-
     public List<Bid> findByAuctionId(int auctionId) throws SQLException {
         List<Bid> list = new ArrayList<>();
         String sql = """
@@ -132,24 +101,6 @@ public class BidRepository {
         return Optional.empty();
     }
 
-    public List<Bid> findByBuyerId(int buyerId) throws SQLException {
-        List<Bid> list = new ArrayList<>();
-        String sql = """
-                SELECT b.*, u.username AS buyer_username
-                FROM bids b JOIN users u ON b.buyer_id = u.id
-                WHERE b.buyer_id=?
-                ORDER BY b.bid_time DESC
-                """;
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, buyerId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(mapRow(rs));
-            }
-        }
-        return list;
-    }
-
     /**
      * Trả về tập hợp buyer_id DISTINCT đã từng bid vào một phiên.
      *
@@ -172,28 +123,6 @@ public class BidRepository {
             }
         }
         return ids;
-    }
-
-    /**
-     * [CŨ] Tìm auto-bid của một buyer trong một phiên, sắp xếp theo limit giảm dần.
-     * Giữ lại để không phá code cũ. Dùng findTopAutoBidByBuyer() thay thế khi cần.
-     */
-    public Optional<Bid> findAutoBid(int auctionId, int buyerId) throws SQLException {
-        String sql = """
-                SELECT b.*, u.username AS buyer_username
-                FROM bids b JOIN users u ON b.buyer_id = u.id
-                WHERE b.auction_id=? AND b.buyer_id=? AND b.auto_bid=1
-                ORDER BY b.auto_bid_limit DESC LIMIT 1
-                """;
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, auctionId);
-            ps.setInt(2, buyerId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return Optional.of(mapRow(rs));
-            }
-        }
-        return Optional.empty();
     }
 
     // ─── [MỚI] Auto-bid Proxy Bidding ─────────────────────────────────────────
@@ -303,15 +232,6 @@ public class BidRepository {
     }
 
     // ─── Delete ───────────────────────────────────────────────────────────────
-
-    public void deleteById(int id) throws SQLException {
-        String sql = "DELETE FROM bids WHERE id=?";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            ps.executeUpdate();
-        }
-    }
 
     // ─── Mapping ──────────────────────────────────────────────────────────────
 

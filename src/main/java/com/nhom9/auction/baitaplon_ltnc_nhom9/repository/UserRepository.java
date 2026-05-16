@@ -174,18 +174,6 @@ public class UserRepository {
         return Optional.empty();
     }
 
-    public Optional<User> findByEmail(String email) throws SQLException {
-        String sql = "SELECT * FROM users WHERE LOWER(email) = LOWER(?)";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, email);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return Optional.of(mapWithExtension(conn, rs));
-            }
-        }
-        return Optional.empty();
-    }
-
     public List<User> findAll() throws SQLException {
         List<User> list = new ArrayList<>();
         String sql = "SELECT * FROM users ORDER BY created_at DESC";
@@ -193,19 +181,6 @@ public class UserRepository {
              Statement st = conn.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
             while (rs.next()) list.add(mapWithExtension(conn, rs));
-        }
-        return list;
-    }
-
-    public List<User> findByRole(UserRole role) throws SQLException {
-        List<User> list = new ArrayList<>();
-        String sql = "SELECT * FROM users WHERE role = ? ORDER BY username";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, role.name());
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(mapWithExtension(conn, rs));
-            }
         }
         return list;
     }

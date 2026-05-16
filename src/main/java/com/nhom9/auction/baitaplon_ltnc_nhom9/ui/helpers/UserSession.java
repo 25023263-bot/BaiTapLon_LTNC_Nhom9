@@ -45,11 +45,6 @@ public class UserSession {
         return currentUser.getUsername();
     }
 
-    public UserRole getCurrentRole() {
-        requireLogin();
-        return currentUser.getRole();
-    }
-
     public boolean isBuyer()  { return isLoggedIn() && currentUser.getRole() == UserRole.BUYER;  }
     public boolean isSeller() { return isLoggedIn() && currentUser.getRole() == UserRole.SELLER; }
     public boolean isAdmin()  { return isLoggedIn() && currentUser.getRole() == UserRole.ADMIN;  }

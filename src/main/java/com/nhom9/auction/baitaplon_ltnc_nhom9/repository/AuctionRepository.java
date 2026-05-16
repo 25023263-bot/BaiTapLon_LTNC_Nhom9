@@ -1,7 +1,5 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.repository;
 
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.common.FilterCriteria;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.common.Page;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.DigitalItem;
@@ -243,87 +241,6 @@ public class AuctionRepository {
             while (rs.next()) list.add(mapWithExtension(conn, rs));
         }
         return list;
-    }
-
-    // ─── Search / Filter ─────────────────────────────────────────────────────
-
-    public Page<AuctionItem> search(FilterCriteria f, int pageNumber, int pageSize) throws SQLException {
-        StringBuilder where = new StringBuilder("WHERE 1=1 ");
-        List<Object> params = new ArrayList<>();
-
-        if (f.hasKeyword()) {
-            where.append("AND (LOWER(a.title) LIKE ? OR LOWER(a.description) LIKE ?) ");
-            String kw = "%" + f.getKeyword().toLowerCase() + "%";
-            params.add(kw);
-            params.add(kw);
-        }
-        if (f.hasCategory()) {
-            where.append("AND a.category = ? ");
-            params.add(f.getCategory());
-        }
-        if (f.hasItemType()) {
-            where.append("AND a.item_type = ? ");
-            params.add(f.getItemType().toUpperCase());
-        }
-        if (f.hasStatus()) {
-            where.append("AND a.status = ? ");
-            params.add(f.getStatus().name());
-        } else if (f.isActiveOnly()) {
-            where.append("AND a.status = 'ACTIVE' ");
-        }
-        if (f.hasPriceRange()) {
-            if (f.getMinPrice() != null) {
-                where.append("AND a.current_price >= ? ");
-                params.add(f.getMinPrice().doubleValue());
-            }
-            if (f.getMaxPrice() != null) {
-                where.append("AND a.current_price <= ? ");
-                params.add(f.getMaxPrice().doubleValue());
-            }
-        }
-        if (f.hasSellerId()) {
-            where.append("AND a.seller_id = ? ");
-            params.add(f.getSellerId());
-        }
-
-        String orderBy = " ORDER BY ";
-        if (f.hasSort()) {
-            String col = switch (f.getSortBy()) {
-                case "price"   -> "a.current_price";
-                case "endTime" -> "a.end_time";
-                case "title"   -> "a.title";
-                default        -> "a.created_at";
-            };
-            orderBy += col + (f.isSortAscending() ? " ASC" : " DESC");
-        } else {
-            orderBy += "a.end_time ASC";
-        }
-
-        try (Connection conn = db()) {
-            // Đếm tổng số kết quả (cho phân trang)
-            String countSql = "SELECT COUNT(*) FROM auctions a " + where;
-            int total = 0;
-            try (PreparedStatement ps = conn.prepareStatement(countSql)) {
-                for (int i = 0; i < params.size(); i++) setParam(ps, i + 1, params.get(i));
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) total = rs.getInt(1);
-                }
-            }
-
-            // Lấy dữ liệu trang hiện tại
-            String dataSql = "SELECT a.* FROM auctions a " + where + orderBy + " LIMIT ? OFFSET ?";
-            List<AuctionItem> content = new ArrayList<>();
-            try (PreparedStatement ps = conn.prepareStatement(dataSql)) {
-                int idx = 1;
-                for (Object p : params) setParam(ps, idx++, p);
-                ps.setInt(idx++, pageSize);
-                ps.setInt(idx, pageNumber * pageSize);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) content.add(mapWithExtension(conn, rs));
-                }
-            }
-            return new Page<>(content, pageNumber, pageSize, total);
-        }
     }
 
     // ─── Update ───────────────────────────────────────────────────────────────

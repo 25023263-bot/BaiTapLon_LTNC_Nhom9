@@ -5,10 +5,8 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.PaymentStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DbUtil;
 
-import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 /**
  * Truy cập dữ liệu cho Transaction.
@@ -53,18 +51,6 @@ public class TransactionRepository {
 
     // ─── Read ─────────────────────────────────────────────────────────────────
 
-    public Optional<Transaction> findByAuctionId(int auctionId) throws SQLException {
-        String sql = "SELECT * FROM transactions WHERE auction_id=? LIMIT 1";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, auctionId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return Optional.of(mapRow(rs));
-            }
-        }
-        return Optional.empty();
-    }
-
     // ─── Update ───────────────────────────────────────────────────────────────
 
     public void updateStatus(int id, PaymentStatus status, LocalDateTime completedAt) throws SQLException {
@@ -80,17 +66,4 @@ public class TransactionRepository {
 
     // ─── Mapping ──────────────────────────────────────────────────────────────
 
-    private Transaction mapRow(ResultSet rs) throws SQLException {
-        return new Transaction(
-                rs.getInt("id"),
-                rs.getInt("auction_id"),
-                rs.getInt("buyer_id"),
-                rs.getInt("seller_id"),
-                BigDecimal.valueOf(rs.getDouble("amount")),
-                rs.getString("payment_method"),
-                PaymentStatus.valueOf(rs.getString("payment_status")),
-                DbUtil.fromDbString(rs.getString("created_at")),
-                DbUtil.fromDbString(rs.getString("completed_at"))
-        );
-    }
 }

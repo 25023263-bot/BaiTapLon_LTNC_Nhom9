@@ -3,8 +3,6 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.repository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Watchlist: buyers theo dõi các phiên đấu giá.
@@ -44,16 +42,6 @@ public class WatchlistRepository {
         }
     }
 
-    public void remove(int buyerId, int auctionId) throws SQLException {
-        String sql = "DELETE FROM watchlist WHERE buyer_id=? AND auction_id=?";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, buyerId);
-            ps.setInt(2, auctionId);
-            ps.executeUpdate();
-        }
-    }
-
     public boolean isWatching(int buyerId, int auctionId) throws SQLException {
         String sql = "SELECT 1 FROM watchlist WHERE buyer_id=? AND auction_id=?";
         try (Connection conn = db();
@@ -64,51 +52,4 @@ public class WatchlistRepository {
         }
     }
 
-    /** Auction IDs mà một buyer đang theo dõi. */
-    public List<Integer> findAuctionIdsByBuyer(int buyerId) throws SQLException {
-        List<Integer> ids = new ArrayList<>();
-        String sql = "SELECT auction_id FROM watchlist WHERE buyer_id=? ORDER BY added_at DESC";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, buyerId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) ids.add(rs.getInt("auction_id"));
-            }
-        }
-        return ids;
-    }
-
-    /** Buyer IDs đang theo dõi một auction (dùng để gửi notification). */
-    public List<Integer> findBuyerIdsByAuctionId(int auctionId) throws SQLException {
-        List<Integer> ids = new ArrayList<>();
-        String sql = "SELECT buyer_id FROM watchlist WHERE auction_id=?";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, auctionId);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) ids.add(rs.getInt("buyer_id"));
-            }
-        }
-        return ids;
-    }
-
-    public int countWatchers(int auctionId) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM watchlist WHERE auction_id=?";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, auctionId);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? rs.getInt(1) : 0;
-            }
-        }
-    }
-
-    public void clearByBuyer(int buyerId) throws SQLException {
-        String sql = "DELETE FROM watchlist WHERE buyer_id=?";
-        try (Connection conn = db();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, buyerId);
-            ps.executeUpdate();
-        }
-    }
 }
