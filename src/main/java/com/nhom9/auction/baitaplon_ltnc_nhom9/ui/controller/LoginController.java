@@ -3,11 +3,12 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.exception.AuthenticationException;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auth.AuthService;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.UserSession;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
@@ -16,6 +17,16 @@ import java.util.function.Consumer;
 
 /**
  * Controller cho UBID LoginView — có thể dùng fullscreen hoặc modal (qua {@link #configureForModal}).
+ *
+ * <p>Controller này có 2 trách nhiệm rõ ràng:
+ * <ol>
+ *   <li>Đọc input từ UI, gọi AuthService xác thực</li>
+ *   <li>Sau khi xác thực thành công → ghi vào UserSession, rồi gọi callback</li>
+ * </ol>
+ *
+ * <p>Lý do Controller ghi UserSession (không phải AuthService):
+ * UserSession là trạng thái của UI — chỉ tầng UI mới được đọc/ghi nó.
+ * AuthService chỉ biết "user này có hợp lệ không", không biết UI làm gì với kết quả.
  */
 public class LoginController {
 
@@ -23,18 +34,15 @@ public class LoginController {
     @FXML private PasswordField passwordField;
     @FXML private CheckBox      rememberCheckBox;
 
-    /** Dịch vụ xác thực; có thể null khi chỉ demo — modal flow luôn gán qua coordinator. */
+    /** Dịch vụ xác thực; coordinator gán qua {@link #configureForModal}. */
     private AuthService authService;
 
-    /**
-     * Khi đăng nhập OK: nhận user (đã nằm trong UserSession).
-     */
+    /** Callback khi đăng nhập OK — coordinator gán handler để đóng cửa sổ và refresh UI. */
     private Consumer<User> onLoginSuccess = u -> {};
 
     /**
-     * Khi user bấm "SIGN UP NOW": coordinator sẽ đóng Login và mở Register.
-     *
-     * Mặc định là no-op (không làm gì) — coordinator gán qua {@link #setOnSignUpRequest}.
+     * Callback khi user bấm "SIGN UP NOW" — coordinator gán để mở RegisterView.
+     * Mặc định no-op để tránh NullPointerException nếu quên gán.
      */
     private Runnable onSignUpRequest = () -> {};
 
@@ -53,7 +61,7 @@ public class LoginController {
      * Cấu hình khi mở từ {@link com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.HomeLoginCoordinator}.
      *
      * @param authService service xác thực
-     * @param onSuccess   callback khi đăng nhập thành công
+     * @param onSuccess   callback sau khi login thành công và session đã được ghi
      */
     public void configureForModal(AuthService authService, Consumer<User> onSuccess) {
         this.authService    = Objects.requireNonNull(authService);
@@ -62,12 +70,7 @@ public class LoginController {
 
     /**
      * Gán hành động khi user bấm "SIGN UP NOW".
-     *
-     * <p>Coordinator gọi setter này SAU {@link #configureForModal} để nối
-     * nút Sign Up với luồng mở RegisterView. Controller không cần biết
-     * Register hoạt động thế nào — nó chỉ gọi {@code onSignUpRequest.run()}.</p>
-     *
-     * @param onSignUpRequest lambda do coordinator cung cấp
+     * Coordinator gọi setter này SAU {@link #configureForModal}.
      */
     public void setOnSignUpRequest(Runnable onSignUpRequest) {
         this.onSignUpRequest = onSignUpRequest != null ? onSignUpRequest : () -> {};
@@ -81,20 +84,27 @@ public class LoginController {
 
     @FXML
     private void onLogin(ActionEvent event) {
-        String user = usernameField != null ? usernameField.getText() : "";
-        String pass = passwordField != null ? passwordField.getText() : "";
+        String username = usernameField != null ? usernameField.getText() : "";
+        String password = passwordField != null ? passwordField.getText() : "";
 
         if (authService == null) {
-            showError("AuthService chưa được khởi tạo — không đăng nhập được.");
+            AlertHelper.showError("UBID — Đăng nhập", "AuthService chưa được khởi tạo.");
             return;
         }
         try {
-            User loggedIn = authService.login(user, pass);
+            // 1. AuthService xác thực — chỉ trả về User, không ghi session
+            User loggedIn = authService.login(username, password);
+
+            // 2. UI layer tự ghi session — đây là đúng chỗ
+            UserSession.getInstance().login(loggedIn);
+
+            // 3. Thông báo coordinator để đóng cửa sổ và refresh Home
             onLoginSuccess.accept(loggedIn);
+
         } catch (AuthenticationException ex) {
-            showError(mapAuthMessage(ex));
+            AlertHelper.showError("UBID — Đăng nhập", mapAuthMessage(ex));
         } catch (Exception ex) {
-            showError("Lỗi hệ thống khi đăng nhập: " + ex.getMessage());
+            AlertHelper.showError("UBID — Đăng nhập", "Lỗi hệ thống: " + ex.getMessage());
         }
     }
 
@@ -106,7 +116,7 @@ public class LoginController {
 
     @FXML
     private void onForgotPassword(ActionEvent event) {
-        showInfo("Quên mật khẩu — ghép recovery/email theo đồ án.");
+        AlertHelper.showInfo("UBID", "Quên mật khẩu — ghép recovery/email theo đồ án.");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -115,21 +125,5 @@ public class LoginController {
         AuthenticationException.Reason reason = ex.getReason();
         if (reason != null) return reason.getMessage();
         return ex.getMessage() != null ? ex.getMessage() : "Đăng nhập thất bại.";
-    }
-
-    private static void showInfo(String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("UBID");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-
-    private static void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("UBID — Đăng nhập");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 }

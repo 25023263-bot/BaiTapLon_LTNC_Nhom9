@@ -183,10 +183,27 @@ public final class HomeLoginCoordinator {
         }
     }
 
-    /** Đăng xuất và thông báo Home refresh UI. */
+    /**
+     * Đăng xuất người dùng hiện tại.
+     *
+     * <p>Thứ tự quan trọng:
+     * <ol>
+     *   <li>Lấy username trước khi xoá session (để ghi log)</li>
+     *   <li>Xoá UserSession (UI state) — đây là trách nhiệm của tầng UI</li>
+     *   <li>Gọi authService.logout() để cleanup server-side (ghi log, invalidate token...)</li>
+     *   <li>Thông báo HomeController refresh UI</li>
+     * </ol>
+     */
     public void performLogout() {
-        authService.logout();
-        LOG.info("Đã đăng xuất");
+        UserSession session = UserSession.getInstance();
+        String username = session.isLoggedIn() ? session.getCurrentUsername() : "unknown";
+
+        // UI layer tự xoá session — AuthService không được biết UserSession tồn tại
+        session.logout();
+
+        // AuthService lo phần server-side (hiện chỉ ghi log; sau này invalidate token)
+        authService.logout(username);
+
         onAuthStateChanged.run();
     }
 

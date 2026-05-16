@@ -7,18 +7,36 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification.NotificationS
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.payment.WalletPayment;
 
 /**
- * Service Locator – khởi tạo toàn bộ dependency một lần duy nhất khi app start.
+ * Service Locator — khởi tạo toàn bộ dependency một lần duy nhất khi app start.
  * Các Controller lấy service qua ServiceLocator.getInstance().getXxx().
  *
- * (Thay thế gọn cho DI framework như Spring/Guice trong app desktop nhỏ.)
+ * <p>(Thay thế gọn cho DI framework như Spring/Guice trong app desktop nhỏ.)
+ *
+ * <h3>Tại sao dùng Eager Initialization thay vì Lazy?</h3>
+ * <pre>
+ *   // Lazy (cũ — có vấn đề):
+ *   if (instance == null) instance = new ServiceLocator(); // ← KHÔNG an toàn
+ *
+ *   // Eager (mới — an toàn):
+ *   private static final ServiceLocator INSTANCE = new ServiceLocator();
+ * </pre>
+ *
+ * <p>Lazy initialization bị "race condition" nếu 2 thread gọi {@code getInstance()}
+ * cùng lúc — cả hai đều thấy {@code instance == null} và tạo 2 instance khác nhau.
+ * Với desktop app một thread thì hiếm xảy ra, nhưng khi bạn thêm background thread
+ * (scheduler, poller) thì sẽ thành bug thật. Eager init an toàn hơn và đơn giản hơn.
+ *
+ * <p>Nếu muốn lazy AN TOÀN hơn mà không cần sửa nhiều, có thể dùng
+ * "Initialization-on-Demand Holder" pattern (tìm hiểu thêm khi học Java nâng cao).
  */
 public class ServiceLocator {
 
-    private static ServiceLocator instance;
+    // ── Eager initialization — JVM đảm bảo thread-safe, không cần synchronized ──
+    private static final ServiceLocator INSTANCE = new ServiceLocator();
 
     // ── Repositories ─────────────────────────────────────────────────────────
     private final UserRepository        userRepo;
-    private final AuctionRepository      auctionRepo;
+    private final AuctionRepository     auctionRepo;
     private final BidRepository         bidRepo;
     private final WatchlistRepository   watchlistRepo;
     private final TransactionRepository txRepo;
@@ -33,7 +51,7 @@ public class ServiceLocator {
     // ─── Init ─────────────────────────────────────────────────────────────────
 
     private ServiceLocator() {
-        // 1. DB connection (Singleton – tự chạy schema.sql)
+        // 1. DB connection (Singleton — tự chạy schema.sql)
         DatabaseConnection.getInstance();
 
         // 2. Repositories
@@ -60,14 +78,13 @@ public class ServiceLocator {
     }
 
     public static ServiceLocator getInstance() {
-        if (instance == null) instance = new ServiceLocator();
-        return instance;
+        return INSTANCE;
     }
 
     // ─── Getters ──────────────────────────────────────────────────────────────
 
     public UserRepository        getUserRepo()            { return userRepo; }
-    public AuctionRepository      getAuctionRepo()        { return auctionRepo; }
+    public AuctionRepository     getAuctionRepo()         { return auctionRepo; }
     public BidRepository         getBidRepo()             { return bidRepo; }
     public WatchlistRepository   getWatchlistRepo()       { return watchlistRepo; }
     public TransactionRepository getTxRepo()              { return txRepo; }

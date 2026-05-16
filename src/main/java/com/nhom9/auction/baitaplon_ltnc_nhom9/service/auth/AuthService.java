@@ -5,13 +5,19 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.*;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.exception.AuthenticationException;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.exception.DuplicateUserException;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.UserRepository;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.UserSession;
 
 import java.sql.SQLException;
 import java.util.logging.Logger;
 
 /**
  * Xử lý đăng nhập, đăng ký, đổi mật khẩu.
+ *
+ * <p><b>Nguyên tắc quan trọng:</b> AuthService là tầng Service — nó KHÔNG biết
+ * UI tồn tại. Việc ghi vào UserSession (UI state) là trách nhiệm của Controller
+ * hoặc Coordinator, không phải của Service.
+ *
+ * <p>Lý do: nếu sau này bạn xây REST API, AuthService vẫn dùng được nguyên vẹn
+ * mà không cần sửa, vì nó không phụ thuộc vào bất kỳ thứ gì của JavaFX/UI.
  */
 public class AuthService implements Authenticatable {
 
@@ -25,6 +31,16 @@ public class AuthService implements Authenticatable {
 
     // ─── Login ────────────────────────────────────────────────────────────────
 
+    /**
+     * Xác thực thông tin đăng nhập và trả về User nếu hợp lệ.
+     *
+     * <p><b>Lưu ý cho người gọi:</b> method này CHỈ xác thực và trả về User.
+     * Người gọi (Controller/Coordinator) tự quyết định phải làm gì tiếp theo,
+     * ví dụ: {@code UserSession.getInstance().login(user)}.
+     *
+     * @return User đã xác thực thành công
+     * @throws AuthenticationException nếu thông tin sai hoặc tài khoản bị khoá
+     */
     @Override
     public User login(String username, String rawPassword) throws AuthenticationException {
         if (username == null || username.isBlank() || rawPassword == null || rawPassword.isBlank())
@@ -41,9 +57,9 @@ public class AuthService implements Authenticatable {
             if (!PasswordHasher.verify(rawPassword, user.getPasswordHash()))
                 throw new AuthenticationException(AuthenticationException.Reason.INVALID_CREDENTIALS);
 
-            // Lưu vào session
-            UserSession.getInstance().login(user);
-            LOG.info("Đăng nhập thành công: " + user.getUsername());
+            // KHÔNG ghi UserSession ở đây — đó là việc của UI layer.
+            // Service chỉ xác nhận "user này hợp lệ" rồi trả về.
+            LOG.info("Xác thực thành công: " + user.getUsername());
             return user;
 
         } catch (SQLException e) {
@@ -54,11 +70,17 @@ public class AuthService implements Authenticatable {
 
     // ─── Logout ───────────────────────────────────────────────────────────────
 
+    /**
+     * Thực hiện các tác vụ cleanup phía server khi đăng xuất (nếu có).
+     *
+     * <p>Việc xoá UserSession là trách nhiệm của Coordinator, không phải ở đây.
+     * Khi tích hợp Spring Boot sau này, đây là nơi bạn sẽ invalidate JWT token.
+     *
+     * @param username username đang đăng xuất — chỉ dùng để ghi log
+     */
     @Override
-    public void logout() {
-        String username = UserSession.getInstance().isLoggedIn()
-                ? UserSession.getInstance().getCurrentUser().getUsername() : "unknown";
-        UserSession.getInstance().logout();
+    public void logout(String username) {
+        // TODO: khi có Spring Security — invalidate token tại đây
         LOG.info("Đã đăng xuất: " + username);
     }
 
@@ -69,7 +91,6 @@ public class AuthService implements Authenticatable {
                          String fullName, String phone, String role)
             throws DuplicateUserException, Exception {
 
-        // Validate input
         validateRegistration(username, email, rawPassword);
 
         try {
