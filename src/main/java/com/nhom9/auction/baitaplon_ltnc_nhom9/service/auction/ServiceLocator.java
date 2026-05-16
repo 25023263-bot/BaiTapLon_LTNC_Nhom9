@@ -2,11 +2,8 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.*;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionHouse;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionScheduler;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auth.AuthService;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification.NotificationService;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.service.payment.CreditCardPayment;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.payment.WalletPayment;
 
 /**
@@ -32,7 +29,6 @@ public class ServiceLocator {
     private final AuctionScheduler      auctionScheduler;
     private final NotificationService   notificationService;
     private final WalletPayment         walletPayment;
-    private final CreditCardPayment     creditCardPayment;
 
     // ─── Init ─────────────────────────────────────────────────────────────────
 
@@ -48,18 +44,16 @@ public class ServiceLocator {
         txRepo        = new TransactionRepository();
 
         // 3. Services
-        authService         = new AuthService(userRepo);
-        auctionHouse        = new AuctionHouse(auctionRepo, bidRepo, userRepo, txRepo);
-        // NotificationRepository — mới, lưu thông báo persistent vào DB
+        authService  = new AuthService(userRepo);
+        auctionHouse = new AuctionHouse(auctionRepo, bidRepo, userRepo, txRepo);
+
         NotificationRepository notifRepo = new NotificationRepository();
-        // Dọn thông báo cũ hơn 30 ngày mỗi lần app start
         try { notifRepo.deleteOlderThan(30); }
         catch (Exception e) { /* không critical, bỏ qua */ }
 
         notificationService = new NotificationService(watchlistRepo, bidRepo, notifRepo);
         auctionScheduler    = new AuctionScheduler(auctionRepo, auctionHouse);
         walletPayment       = new WalletPayment(userRepo);
-        creditCardPayment   = new CreditCardPayment();
 
         // 4. Kết nối Observer: AuctionHouse → NotificationService
         auctionHouse.addObserver(notificationService);
@@ -72,18 +66,17 @@ public class ServiceLocator {
 
     // ─── Getters ──────────────────────────────────────────────────────────────
 
-    public UserRepository        getUserRepo()           { return userRepo; }
-    public AuctionRepository      getAuctionRepo()       { return auctionRepo; }
-    public BidRepository         getBidRepo()            { return bidRepo; }
-    public WatchlistRepository   getWatchlistRepo()      { return watchlistRepo; }
-    public TransactionRepository getTxRepo()             { return txRepo; }
+    public UserRepository        getUserRepo()            { return userRepo; }
+    public AuctionRepository      getAuctionRepo()        { return auctionRepo; }
+    public BidRepository         getBidRepo()             { return bidRepo; }
+    public WatchlistRepository   getWatchlistRepo()       { return watchlistRepo; }
+    public TransactionRepository getTxRepo()              { return txRepo; }
 
-    public AuthService           getAuthService()        { return authService; }
-    public AuctionHouse          getAuctionHouse()       { return auctionHouse; }
-    public AuctionScheduler      getAuctionScheduler()   { return auctionScheduler; }
-    public NotificationService   getNotificationService(){ return notificationService; }
-    public WalletPayment         getWalletPayment()      { return walletPayment; }
-    public CreditCardPayment     getCreditCardPayment()  { return creditCardPayment; }
+    public AuthService           getAuthService()         { return authService; }
+    public AuctionHouse          getAuctionHouse()        { return auctionHouse; }
+    public AuctionScheduler      getAuctionScheduler()    { return auctionScheduler; }
+    public NotificationService   getNotificationService() { return notificationService; }
+    public WalletPayment         getWalletPayment()       { return walletPayment; }
 
     // ─── Cleanup ──────────────────────────────────────────────────────────────
 

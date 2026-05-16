@@ -636,10 +636,6 @@ public class AuctionHouse implements Auctionable {
         Buyer  buyer  = loadBuyer(buyerId);
         Seller seller = loadSeller(item.getSellerId());
 
-        BigDecimal shippingFee = BigDecimal.ZERO;
-        if (item instanceof PhysicalItem p)
-            shippingFee = p.getShippingCost() != null ? p.getShippingCost() : BigDecimal.ZERO;
-
         // Trừ ví buyer
         buyer.deduct(totalCost);
         userRepo.updateWalletBalance(buyerId, buyer.getWalletBalance());
@@ -647,24 +643,19 @@ public class AuctionHouse implements Auctionable {
         // Tạo transaction
         Transaction tx = new Transaction(
                 item.getId(), buyerId, item.getSellerId(),
-                item.getCurrentPrice(), shippingFee,
-                AppConfig.PLATFORM_FEE_RATE, "WALLET");
+                item.getCurrentPrice(), "WALLET");
         txRepo.save(tx);
 
-        // Cộng tiền seller (trừ platform fee)
-        seller.receivePayment(tx.getSellerReceives());
+        // Cộng tiền seller (toàn bộ giá thắng đấu giá)
+        seller.receivePayment(item.getCurrentPrice());
         userRepo.updateEarningsBalance(item.getSellerId(), seller.getEarningsBalance());
-
-        // Cập nhật wins cho buyer
-        buyer.incrementWins();
-        userRepo.update(buyer);
 
         // Đánh dấu transaction hoàn thành
         tx.markCompleted();
         txRepo.updateStatus(tx.getId(), tx.getPaymentStatus(), tx.getCompletedAt());
 
         LOG.info(String.format("Thanh toán: buyer #%d trả %,.0f đ, seller #%d nhận %,.0f đ",
-                buyerId, totalCost, item.getSellerId(), tx.getSellerReceives()));
+                buyerId, totalCost, item.getSellerId(), item.getCurrentPrice()));
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

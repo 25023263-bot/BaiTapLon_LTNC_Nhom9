@@ -5,9 +5,13 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
-// Transaction — tính platformFee, sellerReceives, markCompleted/Failed/Refunded
+
 /**
  * Giao dịch tài chính sau khi phiên đấu giá kết thúc thành công.
+ *
+ * Giữ đơn giản ở giai đoạn này: chỉ lưu thông tin cốt lõi.
+ * Các trường như platformFee, sellerReceives, externalRef sẽ thêm lại
+ * khi tích hợp cổng thanh toán thật (VNPay, Stripe, v.v.).
  */
 public class Transaction {
 
@@ -16,28 +20,13 @@ public class Transaction {
     private int buyerId;
     private int sellerId;
 
-    /** Số tiền thanh toán (giá thắng đấu giá) */
+    /** Số tiền thắng đấu giá (chưa bao gồm phí ship) */
     private BigDecimal amount;
 
-    /** Phí vận chuyển (0 với vật phẩm số) */
-    private BigDecimal shippingFee;
-
-    /** Phí nền tảng (VD: 2% hoa hồng) */
-    private BigDecimal platformFee;
-
-    /** Tổng số tiền buyer trả = amount + shippingFee */
-    private BigDecimal totalPaid;
-
-    /** Số tiền seller nhận = amount - platformFee */
-    private BigDecimal sellerReceives;
-
-    private PaymentStatus paymentStatus;
-
-    /** Phương thức thanh toán: WALLET, CREDIT_CARD */
+    /** Phương thức thanh toán: WALLET */
     private String paymentMethod;
 
-    /** Mã tham chiếu giao dịch bên ngoài (nếu có) */
-    private String externalRef;
+    private PaymentStatus paymentStatus;
 
     private LocalDateTime createdAt;
     private LocalDateTime completedAt;
@@ -50,40 +39,29 @@ public class Transaction {
      * Constructor tạo giao dịch mới khi phiên đấu giá kết thúc.
      */
     public Transaction(int auctionId, int buyerId, int sellerId,
-                       BigDecimal amount, BigDecimal shippingFee,
-                       double platformFeeRate, String paymentMethod) {
+                       BigDecimal amount, String paymentMethod) {
         this.auctionId     = auctionId;
         this.buyerId       = buyerId;
         this.sellerId      = sellerId;
         this.amount        = amount;
-        this.shippingFee   = shippingFee != null ? shippingFee : BigDecimal.ZERO;
-        this.platformFee   = amount.multiply(BigDecimal.valueOf(platformFeeRate));
-        this.totalPaid     = amount.add(this.shippingFee);
-        this.sellerReceives = amount.subtract(this.platformFee);
         this.paymentMethod = paymentMethod;
         this.paymentStatus = PaymentStatus.PENDING;
         this.createdAt     = LocalDateTime.now();
     }
 
     public Transaction(int id, int auctionId, int buyerId, int sellerId,
-                       BigDecimal amount, BigDecimal shippingFee, BigDecimal platformFee,
-                       BigDecimal totalPaid, BigDecimal sellerReceives,
-                       PaymentStatus paymentStatus, String paymentMethod,
-                       String externalRef, LocalDateTime createdAt, LocalDateTime completedAt) {
-        this.id              = id;
-        this.auctionId       = auctionId;
-        this.buyerId         = buyerId;
-        this.sellerId        = sellerId;
-        this.amount          = amount;
-        this.shippingFee     = shippingFee;
-        this.platformFee     = platformFee;
-        this.totalPaid       = totalPaid;
-        this.sellerReceives  = sellerReceives;
-        this.paymentStatus   = paymentStatus;
-        this.paymentMethod   = paymentMethod;
-        this.externalRef     = externalRef;
-        this.createdAt       = createdAt;
-        this.completedAt     = completedAt;
+                       BigDecimal amount, String paymentMethod,
+                       PaymentStatus paymentStatus,
+                       LocalDateTime createdAt, LocalDateTime completedAt) {
+        this.id            = id;
+        this.auctionId     = auctionId;
+        this.buyerId       = buyerId;
+        this.sellerId      = sellerId;
+        this.amount        = amount;
+        this.paymentMethod = paymentMethod;
+        this.paymentStatus = paymentStatus;
+        this.createdAt     = createdAt;
+        this.completedAt   = completedAt;
     }
 
     // ─── Business Logic ──────────────────────────────────────────────────────
@@ -113,7 +91,7 @@ public class Transaction {
     public void setId(int id)                           { this.id = id; }
 
     public int getAuctionId()                           { return auctionId; }
-    public void setAuctionId(int auctionId)           { this.auctionId = auctionId; }
+    public void setAuctionId(int auctionId)             { this.auctionId = auctionId; }
 
     public int getBuyerId()                             { return buyerId; }
     public void setBuyerId(int buyerId)                 { this.buyerId = buyerId; }
@@ -124,26 +102,11 @@ public class Transaction {
     public BigDecimal getAmount()                       { return amount; }
     public void setAmount(BigDecimal amount)            { this.amount = amount; }
 
-    public BigDecimal getShippingFee()                  { return shippingFee; }
-    public void setShippingFee(BigDecimal shippingFee)  { this.shippingFee = shippingFee; }
-
-    public BigDecimal getPlatformFee()                  { return platformFee; }
-    public void setPlatformFee(BigDecimal platformFee)  { this.platformFee = platformFee; }
-
-    public BigDecimal getTotalPaid()                    { return totalPaid; }
-    public void setTotalPaid(BigDecimal totalPaid)      { this.totalPaid = totalPaid; }
-
-    public BigDecimal getSellerReceives()               { return sellerReceives; }
-    public void setSellerReceives(BigDecimal amount)    { this.sellerReceives = amount; }
-
-    public PaymentStatus getPaymentStatus()             { return paymentStatus; }
-    public void setPaymentStatus(PaymentStatus status)  { this.paymentStatus = status; }
-
     public String getPaymentMethod()                    { return paymentMethod; }
     public void setPaymentMethod(String method)         { this.paymentMethod = method; }
 
-    public String getExternalRef()                      { return externalRef; }
-    public void setExternalRef(String ref)              { this.externalRef = ref; }
+    public PaymentStatus getPaymentStatus()             { return paymentStatus; }
+    public void setPaymentStatus(PaymentStatus status)  { this.paymentStatus = status; }
 
     public LocalDateTime getCreatedAt()                 { return createdAt; }
     public void setCreatedAt(LocalDateTime t)           { this.createdAt = t; }
@@ -166,6 +129,6 @@ public class Transaction {
     @Override
     public String toString() {
         return String.format("Transaction{id=%d, auctionId=%d, amount=%s, status=%s}",
-                id, auctionId, totalPaid, paymentStatus);
+                id, auctionId, amount, paymentStatus);
     }
 }

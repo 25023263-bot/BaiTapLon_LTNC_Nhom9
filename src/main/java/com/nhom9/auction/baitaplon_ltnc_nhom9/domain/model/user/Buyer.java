@@ -14,31 +14,25 @@ public class Buyer extends User {
     /** Số dư ví (VND hoặc đơn vị tiền tệ nội bộ) */
     private BigDecimal walletBalance;
 
-    /** Tổng số lần thắng đấu giá */
-    private int totalWins;
-
     // ─── Constructor ────────────────────────────────────────────────────────
 
     public Buyer() {
         super();
         this.role          = UserRole.BUYER;
         this.walletBalance = BigDecimal.ZERO;
-        this.totalWins     = 0;
     }
 
     public Buyer(int id, String username, String email, String passwordHash,
                  String fullName, String phone) {
         super(id, username, email, passwordHash, fullName, phone, UserRole.BUYER);
         this.walletBalance = BigDecimal.ZERO;
-        this.totalWins     = 0;
     }
 
     public Buyer(int id, String username, String email, String passwordHash,
-                 String fullName, String phone, BigDecimal walletBalance, int totalWins,
+                 String fullName, String phone, BigDecimal walletBalance,
                  boolean active, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this(id, username, email, passwordHash, fullName, phone);
         this.walletBalance = walletBalance != null ? walletBalance : BigDecimal.ZERO;
-        this.totalWins     = totalWins;
         this.active        = active;
         this.createdAt     = createdAt;
         this.updatedAt     = updatedAt;
@@ -79,14 +73,6 @@ public class Buyer extends User {
         return walletBalance.compareTo(amount) >= 0;
     }
 
-    /**
-     * Tăng số lần thắng khi kết thúc đấu giá thành công.
-     */
-    public void incrementWins() {
-        totalWins++;
-        updatedAt = LocalDateTime.now();
-    }
-
     @Override
     public String getRoleDescription() {
         return "Người mua – có thể đặt bid và theo dõi sản phẩm.";
@@ -94,15 +80,12 @@ public class Buyer extends User {
 
     // ─── Getters / Setters ───────────────────────────────────────────────────
 
-    public BigDecimal getWalletBalance()                { return walletBalance; }
-    public void setWalletBalance(BigDecimal balance)    { this.walletBalance = balance; }
-
-    public int getTotalWins()                           { return totalWins; }
-    public void setTotalWins(int totalWins)             { this.totalWins = totalWins; }
+    public BigDecimal getWalletBalance()             { return walletBalance; }
+    public void setWalletBalance(BigDecimal balance) { this.walletBalance = balance; }
 
     @Override
     public String toString() {
-        return String.format("Buyer{id=%d, username='%s', balance=%s, wins=%d}",
-                id, username, walletBalance, totalWins);
+        return String.format("Buyer{id=%d, username='%s', balance=%s}",
+                id, username, walletBalance);
     }
 }

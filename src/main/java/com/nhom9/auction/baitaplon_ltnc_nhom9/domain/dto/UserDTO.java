@@ -23,12 +23,7 @@ public class UserDTO {
 
     // Thông tin theo role (null nếu không áp dụng)
     private BigDecimal walletBalance;    // Buyer
-    private int totalWins;              // Buyer
-    private BigDecimal earningsBalance; // Seller
-    private int totalSold;             // Seller
-    private double rating;             // Seller
-    private int ratingCount;           // Seller
-    private int accessLevel;           // Admin
+    private BigDecimal earningsBalance;  // Seller
 
     // ─── Constructor ────────────────────────────────────────────────────────
 
@@ -73,23 +68,8 @@ public class UserDTO {
     public BigDecimal getWalletBalance()                { return walletBalance; }
     public void setWalletBalance(BigDecimal balance)    { this.walletBalance = balance; }
 
-    public int getTotalWins()                           { return totalWins; }
-    public void setTotalWins(int totalWins)             { this.totalWins = totalWins; }
-
     public BigDecimal getEarningsBalance()              { return earningsBalance; }
     public void setEarningsBalance(BigDecimal balance)  { this.earningsBalance = balance; }
-
-    public int getTotalSold()                           { return totalSold; }
-    public void setTotalSold(int totalSold)             { this.totalSold = totalSold; }
-
-    public double getRating()                           { return rating; }
-    public void setRating(double rating)                { this.rating = rating; }
-
-    public int getRatingCount()                         { return ratingCount; }
-    public void setRatingCount(int ratingCount)         { this.ratingCount = ratingCount; }
-
-    public int getAccessLevel()                         { return accessLevel; }
-    public void setAccessLevel(int accessLevel)         { this.accessLevel = accessLevel; }
 
     @Override
     public String toString() {

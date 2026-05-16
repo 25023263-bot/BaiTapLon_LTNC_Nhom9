@@ -32,17 +32,11 @@ public class UserMapper {
         // Thông tin đặc thù theo role
         if (user instanceof Buyer buyer) {
             dto.setWalletBalance(buyer.getWalletBalance());
-            dto.setTotalWins(buyer.getTotalWins());
 
         } else if (user instanceof Seller seller) {
             dto.setEarningsBalance(seller.getEarningsBalance());
-            dto.setTotalSold(seller.getTotalSold());
-            dto.setRating(seller.getRating());
-            dto.setRatingCount(seller.getRatingCount());
-
-        } else if (user instanceof Admin admin) {
-            dto.setAccessLevel(admin.getAccessLevel());
         }
+        // Admin không có trường đặc thù nào cần map
 
         return dto;
     }
@@ -58,7 +52,6 @@ public class UserMapper {
         Buyer buyer = new Buyer();
         applyCommonFields(buyer, dto);
         buyer.setWalletBalance(dto.getWalletBalance());
-        buyer.setTotalWins(dto.getTotalWins());
         return buyer;
     }
 
@@ -67,9 +60,6 @@ public class UserMapper {
         Seller seller = new Seller();
         applyCommonFields(seller, dto);
         seller.setEarningsBalance(dto.getEarningsBalance());
-        seller.setTotalSold(dto.getTotalSold());
-        seller.setRating(dto.getRating());
-        seller.setRatingCount(dto.getRatingCount());
         return seller;
     }
 
@@ -77,7 +67,6 @@ public class UserMapper {
         if (dto == null) return null;
         Admin admin = new Admin();
         applyCommonFields(admin, dto);
-        admin.setAccessLevel(dto.getAccessLevel());
         return admin;
     }
 

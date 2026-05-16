@@ -53,18 +53,17 @@ public class UserRepository {
      * @return user với id được DB gán
      */
     public User save(User user) throws SQLException {
-        // Dùng 1 connection duy nhất cho cả transaction
         try (Connection conn = db()) {
-            conn.setAutoCommit(false); // Bắt đầu transaction
+            conn.setAutoCommit(false);
             try {
                 insertUser(conn, user);
                 insertRoleExtension(conn, user);
                 conn.commit();
             } catch (SQLException e) {
-                conn.rollback(); // Có lỗi → hoàn tác tất cả
+                conn.rollback();
                 throw e;
             } finally {
-                conn.setAutoCommit(true); // Khôi phục auto-commit
+                conn.setAutoCommit(true);
             }
         }
         return user;
@@ -105,64 +104,47 @@ public class UserRepository {
     private void insertRoleExtension(Connection conn, User user) throws SQLException {
         if (user instanceof Buyer b) {
             if (DbUtil.rowExists(conn, "buyers", "user_id", b.getId())) {
-                String sql = "UPDATE buyers SET wallet_balance=?, total_wins=? WHERE user_id=?";
+                String sql = "UPDATE buyers SET wallet_balance=? WHERE user_id=?";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setDouble(1, b.getWalletBalance().doubleValue());
-                    ps.setInt   (2, b.getTotalWins());
-                    ps.setInt   (3, b.getId());
+                    ps.setInt   (2, b.getId());
                     ps.executeUpdate();
                 }
             } else {
-                String sql = "INSERT INTO buyers (user_id, wallet_balance, total_wins) VALUES (?,?,?)";
+                String sql = "INSERT INTO buyers (user_id, wallet_balance) VALUES (?,?)";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setInt   (1, b.getId());
                     ps.setDouble(2, b.getWalletBalance().doubleValue());
-                    ps.setInt   (3, b.getTotalWins());
                     ps.executeUpdate();
                 }
             }
 
         } else if (user instanceof Seller s) {
             if (DbUtil.rowExists(conn, "sellers", "user_id", s.getId())) {
-                String sql = "UPDATE sellers SET earnings_balance=?, total_sold=?, rating=?, rating_count=? WHERE user_id=?";
+                String sql = "UPDATE sellers SET earnings_balance=? WHERE user_id=?";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setDouble(1, s.getEarningsBalance().doubleValue());
-                    ps.setInt   (2, s.getTotalSold());
-                    ps.setDouble(3, s.getRating());
-                    ps.setInt   (4, s.getRatingCount());
-                    ps.setInt   (5, s.getId());
+                    ps.setInt   (2, s.getId());
                     ps.executeUpdate();
                 }
             } else {
-                String sql = "INSERT INTO sellers (user_id, earnings_balance, total_sold, rating, rating_count) VALUES (?,?,?,?,?)";
+                String sql = "INSERT INTO sellers (user_id, earnings_balance) VALUES (?,?)";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
                     ps.setInt   (1, s.getId());
                     ps.setDouble(2, s.getEarningsBalance().doubleValue());
-                    ps.setInt   (3, s.getTotalSold());
-                    ps.setDouble(4, s.getRating());
-                    ps.setInt   (5, s.getRatingCount());
                     ps.executeUpdate();
                 }
             }
 
         } else if (user instanceof Admin a) {
-            if (DbUtil.rowExists(conn, "admins", "user_id", a.getId())) {
-                String sql = "UPDATE admins SET access_level=?, notes=? WHERE user_id=?";
+            if (!DbUtil.rowExists(conn, "admins", "user_id", a.getId())) {
+                String sql = "INSERT INTO admins (user_id) VALUES (?)";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setInt   (1, a.getAccessLevel());
-                    ps.setString(2, a.getNotes());
-                    ps.setInt   (3, a.getId());
-                    ps.executeUpdate();
-                }
-            } else {
-                String sql = "INSERT INTO admins (user_id, access_level, notes) VALUES (?,?,?)";
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setInt   (1, a.getId());
-                    ps.setInt   (2, a.getAccessLevel());
-                    ps.setString(3, a.getNotes());
+                    ps.setInt(1, a.getId());
                     ps.executeUpdate();
                 }
             }
+            // Admin không có trường đặc thù cần update
         }
     }
 
@@ -181,9 +163,6 @@ public class UserRepository {
     }
 
     public Optional<User> findByUsername(String username) throws SQLException {
-        // COLLATE NOCASE: SQLite. MySQL dùng collation ci (case-insensitive) trên cột → không cần keyword này.
-        // Câu query này hoạt động trên cả hai vì MySQL bỏ qua COLLATE không hiểu.
-        // Tuy nhiên nếu muốn sạch hơn: dùng LOWER(username) = LOWER(?)
         String sql = "SELECT * FROM users WHERE LOWER(username) = LOWER(?)";
         try (Connection conn = db();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -272,7 +251,7 @@ public class UserRepository {
                     ps.setInt   (6, user.getId());
                     ps.executeUpdate();
                 }
-                insertRoleExtension(conn, user); // insert or update bảng phụ
+                insertRoleExtension(conn, user);
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -299,22 +278,14 @@ public class UserRepository {
      *
      * Thực hiện 2 bước trong cùng một transaction:
      *   1. UPDATE bảng users: đổi cột role từ 'BUYER' → 'SELLER'
-     *   2. INSERT vào bảng sellers: tạo row với giá trị mặc định
-     *      (earnings = 0, totalSold = 0, rating = 0)
-     *
-     * Tại sao dùng transaction?
-     * → Nếu bước 1 thành công nhưng bước 2 lỗi, DB sẽ có user với role=SELLER
-     *   nhưng không có row trong bảng sellers → crash khi load user đó.
-     *   Transaction đảm bảo hoặc cả 2 bước đều thành công, hoặc rollback về trạng thái cũ.
+     *   2. INSERT vào bảng sellers: tạo row với earnings_balance = 0
      *
      * @param userId ID của Buyer cần nâng cấp
-     * @throws SQLException nếu DB lỗi hoặc userId không tồn tại
      */
     public void upgradeToSeller(int userId) throws SQLException {
         try (Connection conn = db()) {
             conn.setAutoCommit(false);
             try {
-                // Bước 1: đổi role trong bảng users
                 String updateRole = "UPDATE users SET role=?, updated_at=? WHERE id=?";
                 try (PreparedStatement ps = conn.prepareStatement(updateRole)) {
                     ps.setString(1, UserRole.SELLER.name());
@@ -323,12 +294,8 @@ public class UserRepository {
                     ps.executeUpdate();
                 }
 
-                // Bước 2: tạo row trong bảng sellers nếu chưa có
-                // (dùng kiểm tra trước để tránh duplicate key error)
                 if (!DbUtil.rowExists(conn, "sellers", "user_id", userId)) {
-                    String insertSeller =
-                            "INSERT INTO sellers (user_id, earnings_balance, total_sold, rating, rating_count) " +
-                                    "VALUES (?, 0, 0, 0, 0)";
+                    String insertSeller = "INSERT INTO sellers (user_id, earnings_balance) VALUES (?, 0)";
                     try (PreparedStatement ps = conn.prepareStatement(insertSeller)) {
                         ps.setInt(1, userId);
                         ps.executeUpdate();
@@ -344,8 +311,6 @@ public class UserRepository {
             }
         }
     }
-
-
 
     public void updateWalletBalance(int buyerId, BigDecimal balance) throws SQLException {
         String sql = "UPDATE buyers SET wallet_balance=? WHERE user_id=?";
@@ -407,7 +372,6 @@ public class UserRepository {
             try (ResultSet r2 = ps.executeQuery()) {
                 if (r2.next()) {
                     b.setWalletBalance(BigDecimal.valueOf(r2.getDouble("wallet_balance")));
-                    b.setTotalWins(r2.getInt("total_wins"));
                 }
             }
         }
@@ -423,9 +387,6 @@ public class UserRepository {
             try (ResultSet r2 = ps.executeQuery()) {
                 if (r2.next()) {
                     s.setEarningsBalance(BigDecimal.valueOf(r2.getDouble("earnings_balance")));
-                    s.setTotalSold(r2.getInt("total_sold"));
-                    s.setRating(r2.getDouble("rating"));
-                    s.setRatingCount(r2.getInt("rating_count"));
                 }
             }
         }
@@ -435,16 +396,7 @@ public class UserRepository {
     private Admin loadAdmin(Connection conn, int id, ResultSet rs) throws SQLException {
         Admin a = new Admin();
         applyBaseFields(a, rs);
-        String sql = "SELECT * FROM admins WHERE user_id=?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, id);
-            try (ResultSet r2 = ps.executeQuery()) {
-                if (r2.next()) {
-                    a.setAccessLevel(r2.getInt("access_level"));
-                    a.setNotes(r2.getString("notes"));
-                }
-            }
-        }
+        // Admin không có bảng phụ chứa dữ liệu cần load ở giai đoạn này
         return a;
     }
 

@@ -15,9 +15,9 @@ import java.util.Optional;
 /**
  * Truy cập dữ liệu cho Transaction.
  *
- * Thay đổi so với phiên bản cũ:
- *  - Mỗi method mở Connection riêng và đóng trong try-with-resources.
- *  - Dùng DbUtil.toDbString/fromDbString.
+ * Cấu trúc bảng transactions tối giản:
+ *   id, auction_id, buyer_id, seller_id, amount,
+ *   payment_method, payment_status, created_at, completed_at
  */
 public class TransactionRepository {
 
@@ -30,26 +30,20 @@ public class TransactionRepository {
     public Transaction save(Transaction t) throws SQLException {
         String sql = """
                 INSERT INTO transactions
-                  (auction_id, buyer_id, seller_id, amount, shipping_fee, platform_fee,
-                   total_paid, seller_receives, payment_status, payment_method,
-                   external_ref, created_at, completed_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                  (auction_id, buyer_id, seller_id, amount,
+                   payment_method, payment_status, created_at, completed_at)
+                VALUES (?,?,?,?,?,?,?,?)
                 """;
         try (Connection conn = db();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setInt   (1,  t.getAuctionId());
-            ps.setInt   (2,  t.getBuyerId());
-            ps.setInt   (3,  t.getSellerId());
-            ps.setDouble(4,  t.getAmount().doubleValue());
-            ps.setDouble(5,  t.getShippingFee().doubleValue());
-            ps.setDouble(6,  t.getPlatformFee().doubleValue());
-            ps.setDouble(7,  t.getTotalPaid().doubleValue());
-            ps.setDouble(8,  t.getSellerReceives().doubleValue());
-            ps.setString(9,  t.getPaymentStatus().name());
-            ps.setString(10, t.getPaymentMethod());
-            ps.setString(11, t.getExternalRef());
-            ps.setString(12, DbUtil.toDbString(t.getCreatedAt()));
-            ps.setString(13, DbUtil.toDbString(t.getCompletedAt()));
+            ps.setInt   (1, t.getAuctionId());
+            ps.setInt   (2, t.getBuyerId());
+            ps.setInt   (3, t.getSellerId());
+            ps.setDouble(4, t.getAmount().doubleValue());
+            ps.setString(5, t.getPaymentMethod());
+            ps.setString(6, t.getPaymentStatus().name());
+            ps.setString(7, DbUtil.toDbString(t.getCreatedAt()));
+            ps.setString(8, DbUtil.toDbString(t.getCompletedAt()));
             ps.executeUpdate();
 
             try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -135,19 +129,6 @@ public class TransactionRepository {
         }
     }
 
-    // ─── Stats ────────────────────────────────────────────────────────────────
-
-    /** Tổng doanh thu nền tảng từ platform_fee. */
-    public BigDecimal totalPlatformRevenue() throws SQLException {
-        String sql = "SELECT SUM(platform_fee) FROM transactions WHERE payment_status='COMPLETED'";
-        try (Connection conn = db();
-             Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-            if (rs.next()) return BigDecimal.valueOf(rs.getDouble(1));
-        }
-        return BigDecimal.ZERO;
-    }
-
     // ─── Mapping ──────────────────────────────────────────────────────────────
 
     private Transaction mapRow(ResultSet rs) throws SQLException {
@@ -157,13 +138,8 @@ public class TransactionRepository {
                 rs.getInt("buyer_id"),
                 rs.getInt("seller_id"),
                 BigDecimal.valueOf(rs.getDouble("amount")),
-                BigDecimal.valueOf(rs.getDouble("shipping_fee")),
-                BigDecimal.valueOf(rs.getDouble("platform_fee")),
-                BigDecimal.valueOf(rs.getDouble("total_paid")),
-                BigDecimal.valueOf(rs.getDouble("seller_receives")),
-                PaymentStatus.valueOf(rs.getString("payment_status")),
                 rs.getString("payment_method"),
-                rs.getString("external_ref"),
+                PaymentStatus.valueOf(rs.getString("payment_status")),
                 DbUtil.fromDbString(rs.getString("created_at")),
                 DbUtil.fromDbString(rs.getString("completed_at"))
         );
