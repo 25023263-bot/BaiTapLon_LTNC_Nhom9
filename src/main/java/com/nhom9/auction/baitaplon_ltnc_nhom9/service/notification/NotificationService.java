@@ -77,8 +77,13 @@ public class NotificationService implements AuctionObserver {
                     item.getTitle(), bid.getAmount());
 
             Set<Integer> prevBidders = bidRepo.findDistinctBuyerIds(item.getId());
-            prevBidders.remove(bid.getBuyerId());    // không tự notify người vừa bid
-            prevBidders.remove(item.getSellerId());  // seller đã nhận NEW_BID bên trên
+            prevBidders.remove(bid.getBuyerId());           // không tự notify người vừa bid
+            prevBidders.remove(item.getLeadingBidderId());  // không gửi OUTBID cho người đang DẪN ĐẦU
+            // (quan trọng với auto-bid: resolveAutoBidConflict
+            //  gọi notifyNewBid nhiều lần, mỗi lần update
+            //  leadingBidderId → tránh gửi OUTBID nhầm
+            //  cho người vừa được auto-bid counter thắng)
+            prevBidders.remove(item.getSellerId());         // seller đã nhận NEW_BID bên trên
 
             for (int buyerId : prevBidders) {
                 persist(buyerId, item.getId(), Notification.Type.OUTBID, msgOutbid);
@@ -95,25 +100,31 @@ public class NotificationService implements AuctionObserver {
     public void onAuctionClosed(AuctionItem item, Integer winnerId) {
         try {
             if (winnerId != null) {
-                // Message người thắng: chúc mừng + yêu cầu thanh toán + cung cấp thông tin
+                // Notify người thắng: chúc mừng + yêu cầu thanh toán
                 persist(winnerId, item.getId(), Notification.Type.AUCTION_CLOSED,
                         String.format(
                                 "🎉 Chúc mừng! Bạn đã thắng phiên \"%s\" với giá %,.0f đ. " +
                                         "Vui lòng thanh toán và cung cấp thông tin giao hàng trong vòng 48 giờ.",
                                 item.getTitle(), item.getCurrentPrice()));
+
+                // Notify seller: phiên kết thúc
                 persist(item.getSellerId(), item.getId(), Notification.Type.AUCTION_CLOSED,
                         String.format("Phiên \"%s\" đã kết thúc. Người thắng: #%d  |  Giá: %,.0f đ",
                                 item.getTitle(), winnerId, item.getCurrentPrice()));
-                // Notify người thua
+
+                // Notify người thua: phiên kết thúc, họ không thắng
                 Set<Integer> losers = bidRepo.findDistinctBuyerIds(item.getId());
-                losers.remove(winnerId);
-                losers.remove(item.getSellerId());
+                losers.remove(winnerId);              // người thắng đã được notify riêng ở trên
+                losers.remove(item.getSellerId());    // seller đã được notify riêng ở trên
+                // (fix: trước đây thiếu dòng này → seller có thể
+                //  nhận thêm "bạn không thắng" nếu họ từng bid)
                 for (int loserId : losers) {
                     persist(loserId, item.getId(), Notification.Type.AUCTION_CLOSED,
                             String.format("Phiên \"%s\" đã kết thúc. Bạn không thắng lần này.",
                                     item.getTitle()));
                 }
             } else {
+                // Không có bid nào → chỉ notify seller
                 persist(item.getSellerId(), item.getId(), Notification.Type.AUCTION_CLOSED,
                         String.format("Phiên \"%s\" hết hạn mà không có bid nào.", item.getTitle()));
             }

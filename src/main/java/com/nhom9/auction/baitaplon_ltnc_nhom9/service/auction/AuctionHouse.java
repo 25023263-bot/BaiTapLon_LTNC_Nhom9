@@ -322,7 +322,26 @@ public class AuctionHouse implements Auctionable {
             //   → Ghi B tại 2.000.000đ (B dùng hết limit)
             //   → Ghi A counter tại 2.001.000đ (A thắng)
             //   → Biểu đồ: 800K → 2.0M → 2.001M  ✅ không bao giờ dip
-            BigDecimal counterPrice = newLimit.add(increment);
+
+            // ── FIX BUG #3: counterPrice phải được cap tại oldLimit ────────────
+            //
+            // Vấn đề gốc: counterPrice = newLimit + increment
+            // Khi increment lớn hơn khoảng cách (oldLimit - newLimit),
+            // counterPrice vượt qua oldLimit → điều kiện `counterPrice <= oldLimit`
+            // trả về FALSE → A không counter → B thắng DÙ B.limit < A.limit.
+            //
+            // Ví dụ bug:
+            //   A.limit=120.000, B.limit=110.000, increment=15.000
+            //   counterPrice = 110.000 + 15.000 = 125.000 > 120.000 → A thua oan!
+            //   Nhưng A hoàn toàn có thể bid 111.000đ để thắng B.
+            //
+            // Fix: counterPrice = min(newLimit + increment, oldLimit)
+            //   → A counter ở mức tối thiểu đủ để thắng B, không bao giờ vượt limit
+            //   → Nếu oldLimit nằm giữa [newLimit, newLimit+increment):
+            //      A counter đúng bằng oldLimit (A dùng hết limit nhưng vẫn thắng)
+            //   → Biểu đồ: ...→ B.limit → A.limit  (hoặc B.limit+increment nếu đủ room)
+            //              luôn tăng ✅
+            BigDecimal counterPrice = newLimit.add(increment).min(oldLimit);
 
             // Ghi bid của B ở mức limit thực của B (không phải firstBid thấp)
             // newBid chưa được lưu vào DB → lưu tại đây với amount = newLimit
@@ -335,9 +354,10 @@ public class AuctionHouse implements Auctionable {
                     newBuyer.getUsername(), newLimit));
             notifyNewBid(item, newBid);
 
-            // A counter lên B.limit + increment để dẫn đầu lại
-            if (counterPrice.compareTo(oldLimit) <= 0
-                    && oldBuyer.hasSufficientBalance(counterPrice)) {
+            // A counter lên counterPrice để dẫn đầu lại.
+            // counterPrice đã được cap tại oldLimit nên điều kiện <= luôn đúng
+            // — chỉ còn cần kiểm tra số dư ví.
+            if (oldBuyer.hasSufficientBalance(counterPrice)) {
 
                 Bid aCounterBid = new Bid(item.getId(), existingBid.getBuyerId(), counterPrice);
                 aCounterBid.setBuyerUsername(oldBuyer.getUsername());
@@ -355,8 +375,8 @@ public class AuctionHouse implements Auctionable {
                 notifyNewBid(item, aCounterBid);
             } else {
                 LOG.warning(String.format(
-                        "Auto-bid conflict: %s không thể counter (counterPrice=%,.0fđ, limit=%,.0fđ)",
-                        oldBuyer.getUsername(), counterPrice, oldLimit));
+                        "Auto-bid conflict: %s không đủ số dư để counter %,.0fđ → B (%s) thắng",
+                        oldBuyer.getUsername(), counterPrice, newBuyer.getUsername()));
             }
 
         } else {
@@ -368,6 +388,32 @@ public class AuctionHouse implements Auctionable {
             // Ví dụ: A.limit=B.limit=100.000đ, giá hiện tại 50.000đ, increment=1.000đ
             //   → Ghi B tại 100.000đ, A counter tại 101.000đ → A dẫn đầu
             BigDecimal tieBreakPrice = newLimit.add(increment); // = oldLimit + increment
+
+            // ── FIX BUG #1: Guard chống DIP ──────────────────────────────────
+            //
+            // Vấn đề: nếu limit của 2 người ĐÃ thấp hơn giá hiện tại
+            // (ví dụ giá đang là 210k, cả 2 cùng limit 200k),
+            // ghi newBid.amount = newLimit = 200k sẽ kéo currentPrice XUỐNG
+            // → biểu đồ đường giá bị DIP — điều vô lý với app đấu giá.
+            //
+            // Nguyên nhân root: B không được phép đặt auto-bid với limit
+            // thấp hơn giá hiện tại. Validation ở placeAutoBid() đã chặn
+            // trường hợp B.limit < nextMinimumBid khi B MỚI ĐẶT.
+            // Nhưng nếu giá leo qua limit sau đó (do bid thủ công của người
+            // khác), thì auto-bid đã lưu của A/B trở thành "stale" và không
+            // bao giờ được trigger nữa — đây là trường hợp bình thường.
+            //
+            // Tuy nhiên nếu resolveAutoBidConflict() được gọi khi cả 2 limit
+            // đều < currentPrice (edge case hiếm nhưng có thể xảy ra nếu giá
+            // leo lên bởi bid thủ công sau khi B đã đặt auto), ta phải bỏ qua
+            // và không ghi bất kỳ bid nào để tránh DIP.
+            if (newLimit.compareTo(item.getCurrentPrice()) < 0) {
+                LOG.info(String.format(
+                        "Auto-bid tie: cả 2 limit (%,.0fđ) thấp hơn giá hiện tại (%,.0fđ)" +
+                                " → bỏ qua, A (%s) giữ nguyên vị trí dẫn đầu.",
+                        newLimit, item.getCurrentPrice(), oldBuyer.getUsername()));
+                return;
+            }
 
             // Ghi bid của B ở mức limit (dùng hết giới hạn, thua tie-break)
             newBid.setAmount(newLimit);
@@ -393,9 +439,17 @@ public class AuctionHouse implements Auctionable {
                         oldLimit, oldBuyer.getUsername(), tieBreakPrice));
 
                 notifyNewBid(item, aTieBreakBid);
+            } else {
+                // tieBreakPrice > limit: A không thể counter qua B.
+                // B thắng tie-break tình cờ — giá dừng ở newLimit (đã ghi ở trên).
+                // Không cần log warning vì đây là kết quả hợp lệ:
+                //   cả 2 cùng limit, giá đã đúng bằng limit, A hết room.
+                LOG.info(String.format(
+                        "Auto-bid tie: %s không counter được (tieBreakPrice=%,.0fđ > limit=%,.0fđ)" +
+                                " → %s thắng tình cờ ở %,.0fđ",
+                        oldBuyer.getUsername(), tieBreakPrice, oldLimit,
+                        newBuyer.getUsername(), newLimit));
             }
-            // Nếu tieBreakPrice > limit (không thể counter): B thắng tình cờ.
-            // Trường hợp này cực kỳ hiếm và chỉ xảy ra khi giá đã ở sát limit.
         }
     }
 
@@ -546,10 +600,27 @@ public class AuctionHouse implements Auctionable {
         if (item instanceof PhysicalItem p)
             totalCost = p.getTotalCostForBuyer();
 
-        processPayment(item, winnerId, totalCost);
+        // ── FIX: Tách payment khỏi notification ──────────────────────────────
+        //
+        // Vấn đề cũ: processPayment() ném Exception → notifyClosed() không được
+        // gọi → người thắng, người thua, seller đều không nhận được thông báo.
+        //
+        // Giải pháp: wrap processPayment() trong try-catch riêng.
+        //   - Nếu payment OK  → log bình thường, tiếp tục notify
+        //   - Nếu payment fail → log warning, vẫn gọi notifyClosed() để
+        //     tất cả các bên được thông báo phiên đã đóng
+        try {
+            processPayment(item, winnerId, totalCost);
+            LOG.info(String.format("Phiên kết thúc: item #%d, winner #%d, price=%,.0f",
+                    itemId, winnerId, item.getCurrentPrice()));
+        } catch (Exception paymentEx) {
+            LOG.warning(String.format(
+                    "Phiên #%d: đóng thành công nhưng processPayment thất bại"
+                            + " (winner=#%d, price=%,.0f) — vẫn gửi notification. Lỗi: %s",
+                    itemId, winnerId, item.getCurrentPrice(), paymentEx.getMessage()));
+        }
 
-        LOG.info(String.format("Phiên kết thúc: item #%d, winner #%d, price=%,.0f",
-                itemId, winnerId, item.getCurrentPrice()));
+        // Notification luôn được gửi, bất kể payment thành công hay thất bại
         notifyClosed(item, winnerId);
     }
 

@@ -69,7 +69,7 @@ public class NotificationRepository {
         String sql = """
                 SELECT * FROM notifications
                 WHERE user_id = ?
-                ORDER BY created_at DESC
+                ORDER BY created_at DESC, id DESC
                 LIMIT ?
                 """;
         try (Connection conn = db();
