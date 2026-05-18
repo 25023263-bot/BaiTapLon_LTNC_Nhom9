@@ -25,9 +25,15 @@ public class Request implements Serializable {
         // --- Seller ---
         CREATE_LISTING,
         UPGRADE_TO_SELLER,
+        UPDATE_AUCTION,
         // --- Admin ---
         GET_USERS,
-        TOGGLE_USER_LOCK
+        TOGGLE_USER_LOCK,
+        // --- Notifications ---
+        GET_NOTIFICATIONS,
+        MARK_NOTIFICATION_READ,
+        MARK_ALL_NOTIFICATIONS_READ,
+        CLEAR_NOTIFICATIONS
     }
 
     private final Type type;

@@ -1,8 +1,8 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.presenter;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Notification;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification.NotificationService;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.UserSession;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.network.ServerConnection;
 
 import javafx.application.Platform;
 import javafx.geometry.Pos;
@@ -18,17 +18,24 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.logging.Logger;
 
 /**
  * Chuông thông báo và panel danh sách.
  *
- * <h3>Bước 8 — Xoá getCurrentUser():</h3>
- * Thay tất cả {@code getCurrentUser().getId()} bằng {@code getCurrentUserId()}.
- * Không còn phụ thuộc vào {@code User} domain object phía client.
+ * <p>Phiên bản này không còn phụ thuộc vào {@code NotificationService} hay {@code ServiceLocator}.
+ * Mọi thao tác (lấy danh sách, đánh dấu đọc, xóa) đều đi qua {@link ServerConnection} qua socket.
+ *
+ * <p>Badge được cập nhật qua 2 cơ chế:
+ * <ul>
+ *   <li><b>Polling:</b> mỗi 30 giây gọi {@code GET_NOTIFICATIONS} để đếm unread.</li>
+ *   <li><b>Push (realtime):</b> server gửi {@code NOTIFICATION} qua socket khi có sự kiện mới →
+ *       {@link #onServerNotification()} được gọi để tăng badge ngay lập tức.</li>
+ * </ul>
  */
 public final class HomeNotificationPresenter {
 
-    private final NotificationService notifService;
+    private static final Logger LOG = Logger.getLogger(HomeNotificationPresenter.class.getName());
 
     private Label lblBellBadge;
     private VBox notifList;
@@ -38,9 +45,7 @@ public final class HomeNotificationPresenter {
 
     private ScheduledExecutorService badgePoller;
 
-    public HomeNotificationPresenter(NotificationService notifService) {
-        this.notifService = notifService;
-    }
+    // ── Bind ──────────────────────────────────────────────────────────────────
 
     public void bind(
             Label lblBellBadge,
@@ -55,13 +60,13 @@ public final class HomeNotificationPresenter {
         this.onOpenPanel       = onOpenPanel;
     }
 
-    public void start() {
-        notifService.addUiListener(event -> Platform.runLater(() -> {
-            if (!UserSession.getInstance().isLoggedIn()) return;
-            int userId = UserSession.getInstance().getCurrentUserId();
-            refreshBadge(notifService.unreadCountFresh(userId));
-        }));
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
 
+    /**
+     * Khởi động polling badge mỗi 30 giây.
+     * Gọi sau khi bind() và sau khi user đăng nhập.
+     */
+    public void start() {
         badgePoller = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "notif-badge-poll");
             t.setDaemon(true);
@@ -70,10 +75,45 @@ public final class HomeNotificationPresenter {
         badgePoller.scheduleAtFixedRate(() -> {
             if (!UserSession.getInstance().isLoggedIn()) return;
             int userId = UserSession.getInstance().getCurrentUserId();
-            int count  = notifService.unreadCount(userId);
-            Platform.runLater(() -> refreshBadge(count));
-        }, 5, 30, TimeUnit.SECONDS);
+            try {
+                List<Notification> notifs = ServerConnection.getNotifications(userId);
+                long unread = notifs.stream().filter(n -> !n.isRead()).count();
+                Platform.runLater(() -> refreshBadge((int) unread));
+            } catch (Exception e) {
+                LOG.warning("Lỗi poll badge thông báo: " + e.getMessage());
+            }
+        }, 0, 30, TimeUnit.SECONDS);
     }
+
+    public void shutdown() {
+        if (badgePoller != null && !badgePoller.isShutdown()) {
+            badgePoller.shutdownNow();
+        }
+    }
+
+    // ── Realtime push từ socket ───────────────────────────────────────────────
+
+    /**
+     * Gọi khi server push NOTIFICATION qua socket (từ HomeController).
+     * Tăng badge ngay lập tức mà không cần chờ polling.
+     * Phải gọi trên JavaFX thread (đã được đảm bảo bởi Platform.runLater trong SocketClient).
+     */
+    public void onServerNotification() {
+        if (!UserSession.getInstance().isLoggedIn()) return;
+        // Fetch lại count từ server để chính xác
+        int userId = UserSession.getInstance().getCurrentUserId();
+        new Thread(() -> {
+            try {
+                List<Notification> notifs = ServerConnection.getNotifications(userId);
+                long unread = notifs.stream().filter(n -> !n.isRead()).count();
+                Platform.runLater(() -> refreshBadge((int) unread));
+            } catch (Exception e) {
+                LOG.warning("Lỗi refresh badge sau notification push: " + e.getMessage());
+            }
+        }, "notif-push-refresh").start();
+    }
+
+    // ── Panel actions ─────────────────────────────────────────────────────────
 
     public void openPanel() {
         if (!UserSession.getInstance().isLoggedIn()) {
@@ -81,10 +121,23 @@ public final class HomeNotificationPresenter {
             return;
         }
         int userId = UserSession.getInstance().getCurrentUserId();
-        notifService.markAllRead(userId);
-        refreshBadge(0);
-        render(userId);
-        onOpenPanel.accept(userId);
+        // Đánh dấu tất cả đã đọc khi mở panel
+        new Thread(() -> {
+            try {
+                ServerConnection.markAllNotificationsRead(userId);
+                Platform.runLater(() -> {
+                    refreshBadge(0);
+                    renderAsync(userId);
+                    onOpenPanel.accept(userId);
+                });
+            } catch (Exception e) {
+                LOG.warning("Lỗi markAllRead khi mở panel: " + e.getMessage());
+                Platform.runLater(() -> {
+                    renderAsync(userId);
+                    onOpenPanel.accept(userId);
+                });
+            }
+        }, "notif-open-panel").start();
     }
 
     public void closePanel() {
@@ -99,20 +152,38 @@ public final class HomeNotificationPresenter {
     public void markAllRead() {
         if (!UserSession.getInstance().isLoggedIn()) return;
         int userId = UserSession.getInstance().getCurrentUserId();
-        notifService.clearAll(userId);
-        refreshBadge(0);
-        render(userId);
+        new Thread(() -> {
+            try {
+                ServerConnection.clearNotifications(userId);
+                Platform.runLater(() -> {
+                    refreshBadge(0);
+                    renderAsync(userId);
+                });
+            } catch (Exception e) {
+                LOG.warning("Lỗi clearNotifications: " + e.getMessage());
+            }
+        }, "notif-clear").start();
     }
 
-    public void shutdown() {
-        if (badgePoller != null && !badgePoller.isShutdown()) {
-            badgePoller.shutdownNow();
-        }
+    // ── Render ────────────────────────────────────────────────────────────────
+
+    /**
+     * Load danh sách thông báo từ server rồi render (background thread → UI thread).
+     */
+    private void renderAsync(int userId) {
+        new Thread(() -> {
+            try {
+                List<Notification> items = ServerConnection.getNotifications(userId);
+                Platform.runLater(() -> render(items, userId));
+            } catch (Exception e) {
+                LOG.warning("Lỗi load notifications: " + e.getMessage());
+                Platform.runLater(() -> render(List.of(), userId));
+            }
+        }, "notif-render").start();
     }
 
-    private void render(int userId) {
+    private void render(List<Notification> items, int userId) {
         notifList.getChildren().clear();
-        List<Notification> items = notifService.getNotifications(userId);
 
         if (items.isEmpty()) {
             Label empty = new Label("Không có thông báo nào");
@@ -149,12 +220,24 @@ public final class HomeNotificationPresenter {
 
         row.setOnMouseClicked(e -> {
             if (n.isRead()) return;
-            notifService.markRead(n.getId(), userId);
             row.getStyleClass().remove("notif-item-unread");
-            refreshBadge(notifService.unreadCount(userId));
+            // Đánh dấu đọc trên server (fire-and-forget)
+            new Thread(() -> {
+                try {
+                    ServerConnection.markNotificationRead(n.getId(), userId);
+                    // Refresh badge sau khi đánh dấu
+                    List<Notification> updated = ServerConnection.getNotifications(userId);
+                    long unread = updated.stream().filter(x -> !x.isRead()).count();
+                    Platform.runLater(() -> refreshBadge((int) unread));
+                } catch (Exception ex) {
+                    LOG.warning("Lỗi markRead #" + n.getId() + ": " + ex.getMessage());
+                }
+            }, "notif-mark-read").start();
         });
         return row;
     }
+
+    // ── Badge ─────────────────────────────────────────────────────────────────
 
     private void refreshBadge(int count) {
         if (count <= 0) {

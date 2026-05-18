@@ -144,12 +144,6 @@ public final class AdminPanelPresenter {
      * Load danh sách phiên đấu giá từ server qua {@link ServerConnection#getAuctions()}.
      */
     public void loadAuctions() {
-        if (!ServerConnection.isConnected()) {
-            // Fallback sang ServiceLocator nếu chưa kết nối server
-            loadAuctionsLocal();
-            return;
-        }
-
         Thread t = new Thread(() -> {
             try {
                 List<AuctionItem> items = ServerConnection.getAuctions();
@@ -158,29 +152,10 @@ public final class AdminPanelPresenter {
                     searchAuctions();
                 });
             } catch (Exception e) {
-                LOG.warning("Admin: lỗi load phiên đấu giá qua socket: " + e.getMessage()
-                        + " — fallback sang local");
-                loadAuctionsLocal();
-            }
-        }, "admin-load-auctions");
-        t.setDaemon(true);
-        t.start();
-    }
-
-    private void loadAuctionsLocal() {
-        Thread t = new Thread(() -> {
-            try {
-                var locator = com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator.getInstance();
-                List<AuctionItem> items = locator.getAuctionRepo().findAll();
-                Platform.runLater(() -> {
-                    adminAllItems = new ArrayList<>(items);
-                    searchAuctions();
-                });
-            } catch (Exception e) {
-                LOG.warning("Admin: không load được danh sách phiên (local): " + e.getMessage());
+                LOG.warning("Admin: lỗi load phiên đấu giá qua socket: " + e.getMessage());
                 Platform.runLater(() -> AlertHelper.showToast("Lỗi tải danh sách phiên đấu giá"));
             }
-        }, "admin-load-auctions-local");
+        }, "admin-load-auctions");
         t.setDaemon(true);
         t.start();
     }
@@ -404,12 +379,6 @@ public final class AdminPanelPresenter {
         confirm.showAndWait().ifPresent(result -> {
             if (result != ButtonType.OK) return;
 
-            if (!ServerConnection.isConnected()) {
-                // Fallback sang local nếu server không kết nối
-                forceCloseAuctionLocal(item);
-                return;
-            }
-
             Thread t = new Thread(() -> {
                 try {
                     ServerConnection.cancelAuction(item.getId());
@@ -419,32 +388,14 @@ public final class AdminPanelPresenter {
                     });
                 } catch (Exception e) {
                     LOG.warning("Admin: lỗi đóng phiên #" + item.getId()
-                            + " qua socket: " + e.getMessage() + " — thử local");
-                    forceCloseAuctionLocal(item);
+                            + " qua socket: " + e.getMessage());
+                    Platform.runLater(() ->
+                            AlertHelper.showToast("Lỗi: không thể đóng phiên này"));
                 }
             }, "admin-force-close-thread");
             t.setDaemon(true);
             t.start();
         });
-    }
-
-    private void forceCloseAuctionLocal(AuctionItem item) {
-        Thread t = new Thread(() -> {
-            try {
-                var locator = com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator.getInstance();
-                locator.getAuctionHouse().closeAuction(item.getId());
-                Platform.runLater(() -> {
-                    AlertHelper.showToast("Đã đóng phiên: " + item.getTitle());
-                    loadAuctions();
-                });
-            } catch (Exception e) {
-                LOG.warning("Admin: lỗi đóng phiên #" + item.getId() + " (local): " + e.getMessage());
-                Platform.runLater(() ->
-                        AlertHelper.showToast("Lỗi: không thể đóng phiên này"));
-            }
-        }, "admin-force-close-local-thread");
-        t.setDaemon(true);
-        t.start();
     }
 
     // ── Private helper ────────────────────────────────────────────────────────

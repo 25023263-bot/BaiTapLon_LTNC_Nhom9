@@ -153,16 +153,10 @@ public final class SellerProductsPresenter {
         Thread t = new Thread(() -> {
             List<AuctionItem> items;
             try {
-                if (ServerConnection.isConnected()) {
-                    // Lọc theo sellerId phía client tạm thời
-                    items = ServerConnection.getAuctions().stream()
-                            .filter(i -> i.getSellerId() == sellerId)
-                            .toList();
-                } else {
-                    // Fallback local nếu server chưa kết nối
-                    items = ServiceLocator.getInstance().getAuctionRepo()
-                            .findBySellerId(sellerId);
-                }
+                // Lọc theo sellerId phía client tạm thời
+                items = ServerConnection.getAuctions().stream()
+                        .filter(i -> i.getSellerId() == sellerId)
+                        .toList();
             } catch (Exception e) {
                 LOG.log(Level.WARNING, "Lỗi load sản phẩm của seller #" + sellerId, e);
                 items = List.of();

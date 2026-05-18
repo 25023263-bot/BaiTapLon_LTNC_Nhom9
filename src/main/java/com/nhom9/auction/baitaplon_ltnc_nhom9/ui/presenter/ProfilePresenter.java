@@ -211,6 +211,9 @@ public final class ProfilePresenter {
     }
 
     private void refreshInfo(UserDTO dto) {
+        // Bật card thông tin cá nhân lên (mặc định ẩn trong FXML)
+        if (view.profileInfoSection() != null) setVisible(view.profileInfoSection(), true);
+
         if (view.infoFullName() != null)
             view.infoFullName().setText(dto.getFullName() != null ? dto.getFullName() : "—");
         if (view.infoEmail() != null)

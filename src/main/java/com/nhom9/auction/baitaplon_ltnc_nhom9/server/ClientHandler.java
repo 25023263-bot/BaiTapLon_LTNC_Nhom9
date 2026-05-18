@@ -11,6 +11,7 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.server.protocol.Request;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.server.protocol.Response;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.listing.ListingRequest;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Notification;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -102,8 +103,13 @@ public class ClientHandler implements Runnable {
                 case LOGOUT             -> handleLogout();
                 case CREATE_LISTING     -> handleCreateListing(req);
                 case UPGRADE_TO_SELLER  -> handleUpgradeToSeller(req);
+                case UPDATE_AUCTION     -> handleUpdateAuction(req);
                 case GET_USERS          -> handleGetUsers();
                 case TOGGLE_USER_LOCK   -> handleToggleUserLock(req);
+                case GET_NOTIFICATIONS          -> handleGetNotifications(req);
+                case MARK_NOTIFICATION_READ     -> handleMarkNotificationRead(req);
+                case MARK_ALL_NOTIFICATIONS_READ -> handleMarkAllNotificationsRead(req);
+                case CLEAR_NOTIFICATIONS        -> handleClearNotifications(req);
             };
         } catch (Exception e) {
             LOG.warning("Lỗi xử lý " + req.getType() + ": " + e.getMessage());
@@ -358,6 +364,76 @@ public class ClientHandler implements Runnable {
         String action = user.isActive() ? "Đã mở khoá" : "Đã khoá";
         LOG.info(action + " tài khoản: " + user.getUsername());
         return Response.ok(action + " tài khoản " + user.getUsername() + ".");
+    }
+
+    /**
+     * Seller cập nhật thông tin phiên đấu giá (title, description, endTime, imageUrl).
+     * Payload: ItemDTO với id, title, description, endTime, imageUrl được set.
+     * Chỉ Seller sở hữu phiên mới được phép cập nhật.
+     */
+    private Response handleUpdateAuction(Request req) throws Exception {
+        ItemDTO dto = (ItemDTO) req.getPayload();
+        int auctionId = dto.getId();
+
+        var itemOpt = locator.getAuctionRepo().findById(auctionId);
+        if (itemOpt.isEmpty()) {
+            return Response.error("Không tìm thấy phiên đấu giá #" + auctionId);
+        }
+        AuctionItem item = itemOpt.get();
+
+        // Cập nhật các trường được phép sửa
+        item.setTitle(dto.getTitle());
+        item.setDescription(dto.getDescription());
+        if (dto.getEndTime() != null) {
+            item.setEndTime(dto.getEndTime());
+        }
+        if (dto.getImageUrl() != null && !dto.getImageUrl().isBlank()) {
+            item.setImageUrl(dto.getImageUrl());
+        }
+
+        locator.getAuctionRepo().update(item);
+        LOG.info("Cập nhật phiên #" + auctionId + ": \"" + item.getTitle() + "\"");
+        return Response.ok("Đã cập nhật sản phẩm.");
+    }
+
+    /**
+     * Lấy danh sách thông báo của một user.
+     * Payload: Integer (userId).
+     */
+    private Response handleGetNotifications(Request req) throws Exception {
+        Integer userId = (Integer) req.getPayload();
+        List<Notification> notifications = locator.getNotificationService().getNotifications(userId);
+        return Response.ok(notifications);
+    }
+
+    /**
+     * Đánh dấu một thông báo là đã đọc.
+     * Payload: int[] {notificationId, userId}.
+     */
+    private Response handleMarkNotificationRead(Request req) throws Exception {
+        int[] ids = (int[]) req.getPayload();
+        locator.getNotificationService().markRead(ids[0], ids[1]);
+        return Response.ok("Đã đánh dấu đã đọc.");
+    }
+
+    /**
+     * Đánh dấu tất cả thông báo của user là đã đọc.
+     * Payload: Integer (userId).
+     */
+    private Response handleMarkAllNotificationsRead(Request req) throws Exception {
+        Integer userId = (Integer) req.getPayload();
+        locator.getNotificationService().markAllRead(userId);
+        return Response.ok("Đã đánh dấu tất cả đã đọc.");
+    }
+
+    /**
+     * Xóa tất cả thông báo của user.
+     * Payload: Integer (userId).
+     */
+    private Response handleClearNotifications(Request req) throws Exception {
+        Integer userId = (Integer) req.getPayload();
+        locator.getNotificationService().clearAll(userId);
+        return Response.ok("Đã xóa tất cả thông báo.");
     }
 
     // ── Mapper ────────────────────────────────────────────────────────────────

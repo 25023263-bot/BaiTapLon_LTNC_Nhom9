@@ -1,7 +1,5 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
 
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.AuctionCardModel;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.network.ServerConnection;
@@ -307,12 +305,7 @@ public class SellerItemDetailController {
     }
 
     /**
-     * Lưu thay đổi.
-     *
-     * TODO: Thêm request type UPDATE_AUCTION vào protocol để hoàn toàn loại bỏ DB ở client.
-     *       Hiện tại sử dụng ServiceLocator tạm thời vì server chưa có endpoint update.
-     *       Khi server hỗ trợ UPDATE_AUCTION, thay khối try bên dưới bằng:
-     *         ServerConnection.updateAuction(auctionId, newTitle, newDesc, newEndDate, newImagePath)
+     * Lưu thay đổi qua socket — gửi request UPDATE_AUCTION lên server (background thread).
      */
     @FXML
     private void handleSave() {
@@ -333,41 +326,40 @@ public class SellerItemDetailController {
             return;
         }
 
-        // TODO: Thay bằng ServerConnection.updateAuction(...) khi server hỗ trợ.
-        // Hiện tại: dùng ServiceLocator tạm thời.
-        try {
-            int auctionId = Integer.parseInt(item.id());
-            var locator = com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator.getInstance();
-            AuctionItem dbItem = locator.getAuctionRepo().findById(auctionId)
-                    .orElseThrow(() -> new IllegalStateException("Không tìm thấy sản phẩm #" + auctionId));
+        int auctionId = Integer.parseInt(item.id());
+        LocalDateTime newEndTime = newEndDate.atTime(23, 59, 59);
+        String newImagePath = newImageFile != null ? newImageFile.getAbsolutePath() : item.imageUrl();
 
-            dbItem.setTitle(newTitle);
-            dbItem.setDescription(newDesc);
-            dbItem.setEndTime(newEndDate.atTime(23, 59, 59));
-            if (newImageFile != null) {
-                dbItem.setImageUrl(newImageFile.getAbsolutePath());
+        Thread t = new Thread(() -> {
+            try {
+                ServerConnection.updateAuction(auctionId, newTitle, newDesc, newEndTime, newImagePath);
+
+                // Cập nhật model local sau khi server xác nhận thành công
+                AuctionCardModel updated = new AuctionCardModel(
+                        item.id(), newTitle, item.category(), item.categoryEmoji(),
+                        item.currentBid(), item.startingPrice(), newDesc,
+                        item.bidCount(), item.isLive(),
+                        newEndTime,
+                        item.imagePlaceholderEmoji(),
+                        newImagePath,
+                        item.sellerId()
+                );
+
+                Platform.runLater(() -> {
+                    this.item = updated;
+                    lblTitle.setText(newTitle);
+                    refreshImageDisplay(this.item.imageUrl(), this.item.imagePlaceholderEmoji());
+                    if (onDataChanged != null) onDataChanged.run();
+                    handleCancelEdit();
+                    AlertHelper.showInfo("Đã lưu!", "Thông tin sản phẩm đã được cập nhật.");
+                });
+            } catch (Exception e) {
+                Platform.runLater(() ->
+                        AlertHelper.showError("Lỗi", "Không thể lưu: " + e.getMessage()));
             }
-            locator.getAuctionRepo().update(dbItem);
-
-            this.item = new AuctionCardModel(
-                    item.id(), newTitle, item.category(), item.categoryEmoji(),
-                    item.currentBid(), item.startingPrice(), newDesc,
-                    item.bidCount(), item.isLive(),
-                    newEndDate.atTime(23, 59, 59),
-                    item.imagePlaceholderEmoji(),
-                    newImageFile != null ? newImageFile.getAbsolutePath() : item.imageUrl(),
-                    item.sellerId()
-            );
-
-            lblTitle.setText(newTitle);
-            refreshImageDisplay(this.item.imageUrl(), this.item.imagePlaceholderEmoji());
-            if (onDataChanged != null) onDataChanged.run();
-            handleCancelEdit();
-            AlertHelper.showInfo("Đã lưu!", "Thông tin sản phẩm đã được cập nhật.");
-
-        } catch (Exception e) {
-            AlertHelper.showError("Lỗi", "Không thể lưu: " + e.getMessage());
-        }
+        }, "update-auction-thread");
+        t.setDaemon(true);
+        t.start();
     }
 
     @FXML

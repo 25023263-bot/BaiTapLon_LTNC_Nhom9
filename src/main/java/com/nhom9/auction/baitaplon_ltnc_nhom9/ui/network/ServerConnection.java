@@ -193,6 +193,76 @@ public class ServerConnection {
         requireOk(res);
     }
 
+    /**
+     * Seller cập nhật thông tin phiên đấu giá.
+     * Chỉ gửi các trường được phép sửa: title, description, endTime, imageUrl.
+     *
+     * @param auctionId  ID phiên đấu giá
+     * @param title      Tên mới
+     * @param description Mô tả mới
+     * @param endTime    Thời gian kết thúc mới
+     * @param imageUrl   Đường dẫn ảnh mới (null hoặc empty = giữ nguyên)
+     */
+    public static void updateAuction(int auctionId, String title, String description,
+                                     java.time.LocalDateTime endTime, String imageUrl) throws Exception {
+        ItemDTO dto = new ItemDTO();
+        dto.setId(auctionId);
+        dto.setTitle(title);
+        dto.setDescription(description);
+        dto.setEndTime(endTime);
+        dto.setImageUrl(imageUrl);
+
+        Response res = send(Request.Type.UPDATE_AUCTION, dto);
+        requireOk(res);
+    }
+
+    // ── Notifications ─────────────────────────────────────────────────────────
+
+    /**
+     * Lấy danh sách thông báo của user.
+     *
+     * @param userId ID người dùng
+     * @return List&lt;Notification&gt; (có thể rỗng, không null)
+     */
+    @SuppressWarnings("unchecked")
+    public static List<com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Notification>
+    getNotifications(int userId) throws Exception {
+        Response res = send(Request.Type.GET_NOTIFICATIONS, userId);
+        requireOk(res);
+        return (List<com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Notification>) res.getData();
+    }
+
+    /**
+     * Đánh dấu một thông báo là đã đọc.
+     *
+     * @param notificationId ID thông báo
+     * @param userId         ID người dùng (để verify quyền)
+     */
+    public static void markNotificationRead(int notificationId, int userId) throws Exception {
+        Response res = send(Request.Type.MARK_NOTIFICATION_READ, new int[]{notificationId, userId});
+        requireOk(res);
+    }
+
+    /**
+     * Đánh dấu tất cả thông báo của user là đã đọc.
+     *
+     * @param userId ID người dùng
+     */
+    public static void markAllNotificationsRead(int userId) throws Exception {
+        Response res = send(Request.Type.MARK_ALL_NOTIFICATIONS_READ, userId);
+        requireOk(res);
+    }
+
+    /**
+     * Xóa tất cả thông báo của user.
+     *
+     * @param userId ID người dùng
+     */
+    public static void clearNotifications(int userId) throws Exception {
+        Response res = send(Request.Type.CLEAR_NOTIFICATIONS, userId);
+        requireOk(res);
+    }
+
     // ── Seller ────────────────────────────────────────────────────────────────
 
     /**

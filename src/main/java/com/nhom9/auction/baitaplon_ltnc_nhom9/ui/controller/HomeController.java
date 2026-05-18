@@ -1,10 +1,7 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
 
 import java.util.logging.Logger;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionObserver;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification.NotificationService;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.client.SocketClient;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.HomeLoginCoordinator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.ItemDetailCoordinator;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator.SellerItemDetailCoordinator;
@@ -63,7 +60,7 @@ import java.util.ResourceBundle;
  *   4. sellerTermsOverlay    — điều khoản khi Buyer muốn nâng cấp thành Seller
  *   5. listProductOverlay    — form đăng bán sản phẩm mới
  */
-public class HomeController implements Initializable, AuctionObserver {
+public class HomeController implements Initializable {
 
     private static final Logger LOG = Logger.getLogger(HomeController.class.getName());
 
@@ -187,10 +184,6 @@ public class HomeController implements Initializable, AuctionObserver {
 
     // ── Trạng thái nội bộ ────────────────────────────────────────────────────
 
-    /** NotificationService — lấy từ ServiceLocator (singleton) */
-    private final NotificationService notifService =
-            ServiceLocator.getInstance().getNotificationService();
-
     private HomeLoginCoordinator loginCoordinator;
     private ItemDetailCoordinator itemDetailCoordinator;
     private SellerItemDetailCoordinator sellerItemDetailCoordinator;
@@ -290,7 +283,7 @@ public class HomeController implements Initializable, AuctionObserver {
                 adminUserSearchField, adminUserRoleFilter, adminUsersList, adminUsersEmpty,
                 adminAuctionSearchField, adminAuctionStatusFilter, adminAuctionsList, adminAuctionsEmpty));
 
-        notificationPresenter = new HomeNotificationPresenter(notifService);
+        notificationPresenter = new HomeNotificationPresenter();
         notificationPresenter.bind(
                 lblBellBadge, notifList, notifOverlay,
                 () -> showInfoPlaceholder("Vui lòng đăng nhập để xem thông báo"),
@@ -319,7 +312,16 @@ public class HomeController implements Initializable, AuctionObserver {
         Platform.runLater(this::bootstrapCoordinatorIfPossible);
         buildAvatarMenu();
 
-        ServiceLocator.getInstance().getAuctionHouse().addObserver(this);
+        // Đăng ký nhận NOTIFICATION realtime từ server qua socket.
+        // Khi server push (bid mới, phiên đóng...) → cập nhật badge chuông ngay lập tức.
+        // Đây thay thế cho AuctionHouse.addObserver() (observer local không có ý nghĩa
+        // khi AuctionHouse thật sự đang chạy trên server từ xa).
+        SocketClient.getInstance().setNotificationHandler(response -> {
+            // Đã chạy trên JavaFX thread (Platform.runLater trong SocketClient.readerThread)
+            notificationPresenter.onServerNotification();
+            catalogPresenter.refreshAll(); // reload giá / trạng thái phiên
+        });
+
         notificationPresenter.start();
     }
 
@@ -626,50 +628,19 @@ public class HomeController implements Initializable, AuctionObserver {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // AuctionObserver — nhận sự kiện từ AuctionHouse và refresh UI
+    // Realtime refresh — được trigger khi server push NOTIFICATION qua socket.
     //
-    // Các method này được gọi từ background thread (AuctionScheduler),
-    // nên BẮT BUỘC phải dùng Platform.runLater() để chạm vào UI.
-    // Không dùng Platform.runLater() → crash hoặc hành vi không xác định.
+    // Trước đây HomeController implements AuctionObserver và đăng ký vào
+    // AuctionHouse local. Điều đó không có ý nghĩa khi AuctionHouse chạy trên
+    // server từ xa. Giờ server chủ động push NOTIFICATION qua socket →
+    // SocketClient gọi handler đã set trong initialize() → catalogPresenter.refreshAll().
+    //
+    // refreshProfile() vẫn được giữ để dùng sau khi Buy Now hoặc auction đóng.
     // ─────────────────────────────────────────────────────────────────────────
 
-    @Override
-    public void onAuctionClosed(
-            com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem item,
-            Integer winnerId) {
-        Platform.runLater(() -> {
-            catalogPresenter.refreshAll();
-            if (!UserSession.getInstance().isLoggedIn()) return;
-            int currentUserId = UserSession.getInstance().getCurrentUserId();
-            boolean isWinner = winnerId != null && currentUserId == winnerId;
-            boolean isSeller = currentUserId == item.getSellerId();
-            // Reload profile/wallet nếu user liên quan đến phiên vừa đóng
-            if (isWinner || isSeller) {
-                profilePresenter.refresh(true);
-            }
-        });
-    }
-
-    @Override
-    public void onAuctionStarted(
-            com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem item) {
-        // Phiên mới chuyển PENDING → ACTIVE → hiện lên trang chủ
-        Platform.runLater(catalogPresenter::refreshAll);
-    }
-
-    @Override
-    public void onNewBid(
-            com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem item,
-            Bid bid) {
-        // Có bid mới → tuỳ chọn refresh giá trên card nếu muốn real-time
-        // Tạm để trống — badge thông báo đã được xử lý bởi NotificationService
-    }
-
-    @Override
-    public void onAuctionCancelled(
-            com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem item) {
-        // Phiên bị huỷ → xóa khỏi danh sách
-        Platform.runLater(catalogPresenter::refreshAll);
+    /** Gọi để reload wallet/profile sau khi user liên quan đến phiên vừa đóng. */
+    public void refreshProfile() {
+        Platform.runLater(() -> profilePresenter.refresh(true));
     }
 
     public void shutdown() {
