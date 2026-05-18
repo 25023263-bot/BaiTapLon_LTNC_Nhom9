@@ -3,11 +3,15 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.io.Serializable;
 
+    // ... giữ nguyên toàn bộ phần còn lại
 /**
  * A single bid placed by a buyer on an auction listing.
  */
-public class Bid {
+public class Bid implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private int id;
     private int auctionId;

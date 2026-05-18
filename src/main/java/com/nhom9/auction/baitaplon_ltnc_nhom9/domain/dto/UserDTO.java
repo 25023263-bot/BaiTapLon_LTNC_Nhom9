@@ -2,15 +2,13 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * Data Transfer Object cho User.
- * Dùng để truyền dữ liệu giữa Service → Controller → UI.
- * KHÔNG chứa passwordHash – an toàn khi truyền ra ngoài.
- */
-public class UserDTO {
+public class UserDTO implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private int id;
     private String username;
@@ -21,15 +19,10 @@ public class UserDTO {
     private boolean active;
     private LocalDateTime createdAt;
 
-    // Thông tin theo role (null nếu không áp dụng)
-    private BigDecimal walletBalance;    // Buyer
-    private BigDecimal earningsBalance;  // Seller
-
-    // ─── Constructor ────────────────────────────────────────────────────────
+    private BigDecimal walletBalance;
+    private BigDecimal earningsBalance;
 
     public UserDTO() {}
-
-    // ─── Utility ─────────────────────────────────────────────────────────────
 
     public boolean isBuyer()  { return role == UserRole.BUYER; }
     public boolean isSeller() { return role == UserRole.SELLER; }
@@ -38,8 +31,6 @@ public class UserDTO {
     public String getDisplayName() {
         return (fullName != null && !fullName.isBlank()) ? fullName : username;
     }
-
-    // ─── Getters / Setters ───────────────────────────────────────────────────
 
     public int getId()                                  { return id; }
     public void setId(int id)                           { this.id = id; }

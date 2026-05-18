@@ -1,10 +1,6 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
 
 import java.util.logging.Logger;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.AuctionRepository;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.UserRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionObserver;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
@@ -191,13 +187,6 @@ public class HomeController implements Initializable, AuctionObserver {
 
     // ── Trạng thái nội bộ ────────────────────────────────────────────────────
 
-    private final AuctionRepository auctionRepo =
-            ServiceLocator.getInstance().getAuctionRepo();
-    private final BidRepository bidRepo =
-            ServiceLocator.getInstance().getBidRepo();
-    private final UserRepository userRepo =
-            ServiceLocator.getInstance().getUserRepo();
-
     /** NotificationService — lấy từ ServiceLocator (singleton) */
     private final NotificationService notifService =
             ServiceLocator.getInstance().getNotificationService();
@@ -222,14 +211,11 @@ public class HomeController implements Initializable, AuctionObserver {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        ServiceLocator locator = ServiceLocator.getInstance();
-        AuctionCardMapper cardMapper = new AuctionCardMapper(auctionRepo, bidRepo);
-
         overlayManager = new HomeOverlayManager(
                 homeScrollPane, profileOverlay, myProductsOverlay, sellerTermsOverlay,
                 listProductOverlay, resultsOverlay, adminOverlay, notifOverlay);
 
-        catalogPresenter = new HomeCatalogPresenter(bidRepo, cardMapper);
+        catalogPresenter = new HomeCatalogPresenter();
         catalogPresenter.bind(
                 new HomeCatalogView(hotCardsContainer, allProductsGrid, searchField, resultCountLabel, chipAll),
                 this::handlePlaceBid,
@@ -238,9 +224,7 @@ public class HomeController implements Initializable, AuctionObserver {
         catalogPresenter.loadAllAuctions();
         catalogPresenter.startTimers();
 
-        sellerProductsPresenter = new SellerProductsPresenter(
-                auctionRepo, bidRepo, cardMapper,
-                locator.getListingService(), userRepo);
+        sellerProductsPresenter = new SellerProductsPresenter();
         sellerProductsPresenter.bind(
                 new SellerProductsView(
                         bottomNavHome, bottomNavMyProducts, myProductsList,
@@ -278,7 +262,7 @@ public class HomeController implements Initializable, AuctionObserver {
         );
         sellerProductsPresenter.initForm();
 
-        profilePresenter = new ProfilePresenter(locator.getWalletDepositService());
+        profilePresenter = new ProfilePresenter();
         profilePresenter.bind(
                 new ProfileView(
                         profileScrollPane, guestProfilePane,
@@ -298,7 +282,7 @@ public class HomeController implements Initializable, AuctionObserver {
                 }
         );
 
-        adminPresenter = new AdminPanelPresenter(userRepo, auctionRepo);
+        adminPresenter = new AdminPanelPresenter();
         adminPresenter.bind(new AdminPanelView(
                 adminOverlay, adminSubtitleLabel, adminTabUsers, adminTabAuctions,
                 adminTabUsersIndicator, adminTabAuctionsIndicator,
@@ -436,32 +420,23 @@ public class HomeController implements Initializable, AuctionObserver {
         btnUserAvatar.setManaged(logged);
         if (logged) {
             updateAvatarGraphic();
-            User u = UserSession.getInstance().getCurrentUser();
-            profilePresenter.updateHeroMonogram(u.getUsername(), u.getFullName());
+            String username  = UserSession.getInstance().getCurrentUsername();
+            String fullName  = UserSession.getInstance().getCurrentFullName();
+            profilePresenter.updateHeroMonogram(username, fullName);
         }
         profilePresenter.refresh(logged);
-
-        // Khi auth state thay đổi (đăng nhập / đăng xuất / đổi tài khoản),
-        // PHẢI rebuild lại toàn bộ card vì mỗi card tính isOwner tại thời điểm build:
-        //
-        //   boolean isOwner = UserSession.getCurrentUserId() == item.sellerId()
-        //
-        // Nếu không rebuild → card từ phiên Yana vẫn hiện "Sản phẩm của bạn"
-        // dù buyer mới đăng nhập có userId khác hoàn toàn.
-        // loadHotAuctions() + loadAllAuctions() build lại card từ đầu → isOwner
-        // được tính lại với userId của user hiện tại → đúng.
         catalogPresenter.refreshAll();
-
         if (bottomNavMyProducts.isSelected()) {
             Platform.runLater(sellerProductsPresenter::onMyProductsTabSelected);
         }
     }
 
     private void updateAvatarGraphic() {
-        User u = UserSession.getInstance().getCurrentUser();
-        String monogram = (u.getFullName() != null && !u.getFullName().isBlank())
-                ? firstLetter(u.getFullName())
-                : firstLetter(u.getUsername());
+        String username = UserSession.getInstance().getCurrentUsername();
+        String fullName = UserSession.getInstance().getCurrentFullName();
+        String monogram = (fullName != null && !fullName.isBlank())
+                ? firstLetter(fullName)
+                : firstLetter(username);
 
         StackPane inner = new StackPane();
         inner.getStyleClass().add("avatar-inner-fill");
@@ -662,37 +637,15 @@ public class HomeController implements Initializable, AuctionObserver {
     public void onAuctionClosed(
             com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem item,
             Integer winnerId) {
-        // Phiên kết thúc → xóa khỏi trang chủ, cập nhật mục kết quả
         Platform.runLater(() -> {
             catalogPresenter.refreshAll();
-
-            // ── FIX: Sync số dư hiển thị ngay sau khi phiên kết thúc ──────────
-            //
-            // Vấn đề trước đây:
-            //   processPayment() cập nhật DB đúng, nhưng UserSession đang giữ
-            //   object currentUser trong RAM với số dư CŨ. refreshWalletSection()
-            //   đọc từ UserSession nên luôn hiện số cũ cho đến khi đăng xuất (đã fix qua profilePresenter).
-            //
-            // Giải pháp:
-            //   Sau khi phiên đóng, nếu người dùng hiện tại là người thắng (buyer)
-            //   hoặc người bán (seller), reload fresh data từ DB vào UserSession
-            //   rồi refresh UI. Các người dùng không liên quan không bị ảnh hưởng.
             if (!UserSession.getInstance().isLoggedIn()) return;
-
             int currentUserId = UserSession.getInstance().getCurrentUserId();
             boolean isWinner = winnerId != null && currentUserId == winnerId;
             boolean isSeller = currentUserId == item.getSellerId();
-
+            // Reload profile/wallet nếu user liên quan đến phiên vừa đóng
             if (isWinner || isSeller) {
-                try {
-                    // Đọc lại từ DB để lấy số dư mới nhất sau khi thanh toán
-                    userRepo.findById(currentUserId).ifPresent(freshUser -> {
-                        UserSession.getInstance().login(freshUser); // cập nhật RAM
-                        profilePresenter.refresh(true);             // cập nhật tab Cá nhân / ví
-                    });
-                } catch (Exception e) {
-                    LOG.warning("Không thể refresh balance sau khi phiên đóng: " + e.getMessage());
-                }
+                profilePresenter.refresh(true);
             }
         });
     }

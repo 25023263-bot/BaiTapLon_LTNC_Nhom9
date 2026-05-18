@@ -4,12 +4,15 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.io.Serializable;
 
 /**
  * Data Transfer Object cho AuctionItem (cả Physical và Digital).
  * Kết hợp các trường của cả hai loại – null nếu không áp dụng.
  */
-public class ItemDTO {
+public class ItemDTO implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private int id;
     private int sellerId;

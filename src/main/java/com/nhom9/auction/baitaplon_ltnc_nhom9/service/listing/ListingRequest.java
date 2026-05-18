@@ -1,5 +1,6 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.service.listing;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -12,4 +13,6 @@ public record ListingRequest(
         BigDecimal startingPrice,
         LocalDateTime endTime,
         String imagePath
-) {}
+) implements Serializable {
+    private static final long serialVersionUID = 1L;
+}

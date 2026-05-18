@@ -10,6 +10,14 @@ import java.util.List;
 
 /**
  * Ánh xạ domain {@link AuctionItem} → {@link AuctionCardModel} cho UI.
+ *
+ * <h3>Thay đổi so với phiên bản cũ:</h3>
+ * Bổ sung {@link #toCardSimple(AuctionItem)} — static method không cần
+ * {@link BidRepository}. Dùng khi dữ liệu đến từ server qua socket
+ * (bidCount đã có trong AuctionItem hoặc không cần thiết ở màn hình này).
+ *
+ * Instance method {@link #toCard(AuctionItem)} vẫn giữ nguyên cho
+ * các component cũ còn dùng trực tiếp repository.
  */
 public final class AuctionCardMapper {
 
@@ -20,6 +28,8 @@ public final class AuctionCardMapper {
         this.auctionRepo = auctionRepo;
         this.bidRepo = bidRepo;
     }
+
+    // ── Instance methods (dùng khi có BidRepository) ─────────────────────────
 
     public AuctionCardModel toCard(AuctionItem dbItem) {
         int bidCount = 0;
@@ -64,6 +74,61 @@ public final class AuctionCardMapper {
             return List.of();
         }
     }
+
+    // ── Static method (dùng khi không có BidRepository — socket path) ─────────
+
+    /**
+     * Chuyển đổi AuctionItem sang AuctionCardModel mà không cần BidRepository.
+     *
+     * <p>Dùng trong luồng socket (HomeCatalogPresenter, ItemDetailCoordinator)
+     * khi dữ liệu đến từ server, không cần query DB thêm để đếm bid.
+     * bidCount mặc định về 0; nếu server gửi kèm trong ItemDTO thì
+     * dùng {@link #toCardFromDTO} thay thế.
+     */
+    public static AuctionCardModel toCardSimple(AuctionItem dbItem) {
+        String emoji = categoryEmoji(dbItem.getCategory());
+        boolean isLive = dbItem.getStatus() == AuctionStatus.ACTIVE;
+        String imageUrl = dbItem.getImageUrl() != null ? dbItem.getImageUrl() : "";
+        String description = dbItem.getDescription() != null ? dbItem.getDescription() : "";
+        double startingPrice = dbItem.getStartingPrice() != null
+                ? dbItem.getStartingPrice().doubleValue() : 0;
+        double currentPrice = dbItem.getCurrentPrice() != null
+                ? dbItem.getCurrentPrice().doubleValue() : startingPrice;
+
+        return new AuctionCardModel(
+                String.valueOf(dbItem.getId()),
+                dbItem.getTitle(),
+                dbItem.getCategory(),
+                emoji,
+                currentPrice,
+                startingPrice,
+                description,
+                0,        // bidCount không có qua socket đơn giản
+                isLive,
+                dbItem.getEndTime(),
+                emoji,
+                imageUrl,
+                dbItem.getSellerId()
+        );
+    }
+
+    /**
+     * Chuyển đổi AuctionItem sang AuctionCardModel với bidCount được cung cấp.
+     *
+     * <p>Dùng khi server gửi kèm bidCount (ví dụ trong ItemDTO.totalBids).
+     */
+    public static AuctionCardModel toCardSimple(AuctionItem dbItem, int bidCount) {
+        AuctionCardModel base = toCardSimple(dbItem);
+        return new AuctionCardModel(
+                base.id(), base.title(), base.category(), base.categoryEmoji(),
+                base.currentBid(), base.startingPrice(), base.description(),
+                bidCount,
+                base.isLive(), base.endTime(), base.imagePlaceholderEmoji(),
+                base.imageUrl(), base.sellerId()
+        );
+    }
+
+    // ── Shared static helpers ─────────────────────────────────────────────────
 
     public static String categoryEmoji(String category) {
         if (category == null) return "📦";

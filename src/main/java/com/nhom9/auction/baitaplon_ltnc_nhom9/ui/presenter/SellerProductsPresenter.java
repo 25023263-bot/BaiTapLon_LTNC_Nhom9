@@ -1,21 +1,19 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.presenter;
 
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.UserDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.AuctionRepository;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.UserRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.listing.ListingRequest;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.service.listing.ListingService;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.CurrencyFormatHelper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.ProductImageHelper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.UserSession;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.mapper.AuctionCardMapper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.AuctionCardModel;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.network.ServerConnection;
 
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -32,41 +30,42 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * Tab Sản phẩm của tôi: danh sách SP, nâng cấp Seller, form đăng bán.
+ * Tab "Sản phẩm của tôi": danh sách SP, nâng cấp Seller, form đăng bán.
+ *
+ * <h3>Thay đổi so với phiên bản cũ:</h3>
+ * <ul>
+ *   <li>Bỏ hoàn toàn constructor nhận {@code AuctionRepository, BidRepository,
+ *       AuctionCardMapper, ListingService, UserRepository} — không còn inject DB repo.</li>
+ *   <li>{@link #loadMyProducts()} lấy danh sách phiên qua
+ *       {@link ServerConnection#getAuctions()} trên background thread, lọc theo sellerId.</li>
+ *   <li>{@link #submitProduct()} gửi {@code CREATE_LISTING} lên server qua socket
+ *       (background thread). Không còn dùng ServiceLocator.</li>
+ *   <li>{@link #acceptSellerTerms()} gửi {@code UPGRADE_TO_SELLER} lên server qua socket.</li>
+ *   <li>{@code UserSession} đọc bằng {@code getCurrentUserDTO()} (socket path) thay vì
+ *       {@code getCurrentUser()} (local path).</li>
+ * </ul>
  */
 public final class SellerProductsPresenter {
 
-    private final AuctionRepository auctionRepo;
-    private final BidRepository bidRepo;
-    private final AuctionCardMapper cardMapper;
-    private final ListingService listingService;
-    private final UserRepository userRepo;
+    private static final Logger LOG = Logger.getLogger(SellerProductsPresenter.class.getName());
 
     private SellerProductsView view;
     private SellerProductsHost host;
     private File selectedProductImage;
 
-    public SellerProductsPresenter(
-            AuctionRepository auctionRepo,
-            BidRepository bidRepo,
-            AuctionCardMapper cardMapper,
-            ListingService listingService,
-            UserRepository userRepo) {
-        this.auctionRepo = auctionRepo;
-        this.bidRepo = bidRepo;
-        this.cardMapper = cardMapper;
-        this.listingService = listingService;
-        this.userRepo = userRepo;
-    }
+    public SellerProductsPresenter() {}
 
     public void bind(SellerProductsView view, SellerProductsHost host) {
         this.view = view;
         this.host = host;
     }
+
+    // ── Init ─────────────────────────────────────────────────────────────────
 
     public void initForm() {
         if (view.listProductCategoryCombo() != null) {
@@ -77,105 +76,41 @@ public final class SellerProductsPresenter {
             );
         }
         if (view.listProductEndHour() != null) {
-            for (int h = 0; h < 24; h++) {
+            for (int h = 0; h < 24; h++)
                 view.listProductEndHour().getItems().add(String.format("%02d", h));
-            }
-            int defaultHour = Math.min(LocalTime.now().getHour() + 1, 23);
-            view.listProductEndHour().setValue(String.format("%02d", defaultHour));
+            view.listProductEndHour().getSelectionModel().select("18");
         }
         if (view.listProductEndMinute() != null) {
-            for (int m = 0; m < 60; m += 5) {
-                view.listProductEndMinute().getItems().add(String.format("%02d", m));
-            }
-            view.listProductEndMinute().setValue("00");
+            view.listProductEndMinute().getItems().addAll("00", "15", "30", "45");
+            view.listProductEndMinute().getSelectionModel().select("00");
         }
 
+        // Live preview ngày kết thúc
         Runnable updatePreview = () -> {
-            if (view.lblEndTimePreview() == null) return;
-            var date = view.listProductEndDate() != null ? view.listProductEndDate().getValue() : null;
-            var hour = view.listProductEndHour() != null ? view.listProductEndHour().getValue() : null;
-            var min = view.listProductEndMinute() != null ? view.listProductEndMinute().getValue() : null;
-            if (date != null && hour != null && min != null) {
-                view.lblEndTimePreview().setText(String.format(
-                        "→ Kết thúc: %02d/%02d lúc %s:%s",
-                        date.getDayOfMonth(), date.getMonthValue(), hour, min));
-                view.lblEndTimePreview().setVisible(true);
-                view.lblEndTimePreview().setManaged(true);
-            } else {
-                view.lblEndTimePreview().setVisible(false);
-                view.lblEndTimePreview().setManaged(false);
-            }
+            if (view.listProductEndDate().getValue() == null
+                    || view.listProductEndHour().getValue() == null
+                    || view.listProductEndMinute().getValue() == null) return;
+            try {
+                int h = Integer.parseInt(view.listProductEndHour().getValue());
+                int m = Integer.parseInt(view.listProductEndMinute().getValue());
+                var date = view.listProductEndDate().getValue();
+                view.lblEndTimePreview().setText(
+                        String.format("Kết thúc: %02d/%02d/%04d %02d:%02d",
+                                date.getDayOfMonth(), date.getMonthValue(), date.getYear(), h, m));
+            } catch (Exception ignored) {}
         };
-        if (view.listProductEndDate() != null) {
+        if (view.listProductEndDate() != null)
             view.listProductEndDate().valueProperty().addListener((obs, o, n) -> updatePreview.run());
-        }
-        if (view.listProductEndHour() != null) {
+        if (view.listProductEndHour() != null)
             view.listProductEndHour().valueProperty().addListener((obs, o, n) -> updatePreview.run());
-        }
-        if (view.listProductEndMinute() != null) {
+        if (view.listProductEndMinute() != null)
             view.listProductEndMinute().valueProperty().addListener((obs, o, n) -> updatePreview.run());
-        }
     }
 
-    public void onMyProductsTabSelected() {
-        UserSession session = UserSession.getInstance();
+    // ── Navigation ────────────────────────────────────────────────────────────
 
-        // Bước 1: Luôn hiện overlay "Sản phẩm của tôi" trước
-        host.showMyProductsOverlay().run();
-
-        // Bước 2: Hiện nội dung phù hợp với trạng thái đăng nhập
-        if (!session.isLoggedIn()) {
-            showGuestState();   // Màn hình "Bạn cần đăng nhập"
-            return;
-        }
-
-        if (session.isSeller() || session.isAdmin()) {
-            loadMyProducts();   // Màn hình danh sách sản phẩm
-        } else {
-            showSellerTermsPanel(); // Màn hình điều khoản nâng cấp Seller
-        }
-    }
-
-    /**
-     * Màn hình guest: hiển thị trong overlay khi chưa đăng nhập.
-     * Có nút "Đăng nhập" để mở cửa sổ login trực tiếp.
-     */
-    private void showGuestState() {
-        view.myProductsList().getChildren().clear();
-
-        VBox container = new VBox(20);
-        container.setAlignment(Pos.CENTER);
-        container.setStyle("-fx-padding: 80 40 60 40;");
-
-        Label icon = new Label("🔒");
-        icon.setStyle("-fx-font-size: 56px;");
-
-        Label title = new Label("Bạn cần đăng nhập để tiếp tục");
-        title.setStyle("-fx-text-fill: #f4f4f4; -fx-font-size: 20px; -fx-font-weight: bold;");
-        title.setWrapText(true);
-        title.setAlignment(Pos.CENTER);
-
-        Label hint = new Label("Đăng nhập để xem và quản lý sản phẩm đấu giá của bạn.");
-        hint.setStyle("-fx-text-fill: #888888; -fx-font-size: 13px;");
-        hint.setWrapText(true);
-        hint.setAlignment(Pos.CENTER);
-
-        Button btnLogin = new Button("  Đăng nhập");
-        btnLogin.setStyle(
-                "-fx-background-color: #c9a84c;" +
-                        "-fx-text-fill: #0a0a0a;" +
-                        "-fx-font-size: 14px;" +
-                        "-fx-font-weight: bold;" +
-                        "-fx-background-radius: 8;" +
-                        "-fx-padding: 12 32 12 32;" +
-                        "-fx-cursor: hand;"
-        );
-        // Bấm nút → mở cửa sổ đăng nhập trực tiếp (không qua dialog xác nhận)
-        btnLogin.setOnAction(e -> host.requireLogin().run());
-
-        container.getChildren().addAll(icon, title, hint, btnLogin);
-        view.myProductsList().getChildren().add(container);
-    }
+    /** Alias giữ tương thích với HomeController. */
+    public void onMyProductsTabSelected() { showMyProductsPanel(); }
 
     public void showMyProductsPanel() {
         host.showMyProductsOverlay().run();
@@ -196,58 +131,172 @@ public final class SellerProductsPresenter {
         host.showHomeOverlay().run();
     }
 
+    // ── Load my products (qua socket) ─────────────────────────────────────────
+
+    /**
+     * Load sản phẩm của Seller hiện tại từ server qua socket (background thread).
+     * Lọc theo sellerId vì server trả toàn bộ danh sách.
+     *
+     * TODO: Khi server hỗ trợ GET_MY_AUCTIONS (có sellerId filter) thì thay
+     *       ServerConnection.getAuctions() bằng ServerConnection.getMyAuctions(sellerId).
+     */
+    private void loadMyProducts() {
+        view.myProductsList().getChildren().clear();
+
+        int sellerId = UserSession.getInstance().getCurrentUserId();
+
+        // Hiện loading placeholder
+        Label loading = new Label("Đang tải...");
+        loading.setStyle("-fx-text-fill: #888; -fx-padding: 20;");
+        view.myProductsList().getChildren().add(loading);
+
+        Thread t = new Thread(() -> {
+            List<AuctionItem> items;
+            try {
+                if (ServerConnection.isConnected()) {
+                    // Lọc theo sellerId phía client tạm thời
+                    items = ServerConnection.getAuctions().stream()
+                            .filter(i -> i.getSellerId() == sellerId)
+                            .toList();
+                } else {
+                    // Fallback local nếu server chưa kết nối
+                    items = ServiceLocator.getInstance().getAuctionRepo()
+                            .findBySellerId(sellerId);
+                }
+            } catch (Exception e) {
+                LOG.log(Level.WARNING, "Lỗi load sản phẩm của seller #" + sellerId, e);
+                items = List.of();
+            }
+
+            final List<AuctionItem> finalItems = items;
+            Platform.runLater(() -> {
+                view.myProductsList().getChildren().clear();
+                if (finalItems.isEmpty()) {
+                    showMyProductsEmptyState();
+                } else {
+                    for (AuctionItem dbItem : finalItems) {
+                        view.myProductsList().getChildren().add(buildMyProductCard(dbItem));
+                    }
+                }
+            });
+        }, "seller-load-products-thread");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    // ── Submit product (tạm dùng ListingService) ──────────────────────────────
+
+    /**
+     * Đăng bán sản phẩm mới.
+     * Gửi request CREATE_LISTING lên server qua socket (background thread).
+     */
+    public void submitProduct() {
+        if (!validateListProductForm()) return;
+
+        String title = view.listProductTitleField().getText().trim();
+        int endHour   = Integer.parseInt(view.listProductEndHour().getValue());
+        int endMinute = Integer.parseInt(view.listProductEndMinute().getValue());
+        LocalDateTime endTime = view.listProductEndDate().getValue().atTime(endHour, endMinute, 0);
+        String imagePath = selectedProductImage != null
+                ? selectedProductImage.getAbsolutePath() : "";
+
+        ListingRequest request = new ListingRequest(
+                UserSession.getInstance().getCurrentUserId(),
+                title,
+                view.listProductCategoryCombo().getValue(),
+                view.listProductDescArea().getText().trim(),
+                new BigDecimal(view.listProductPriceField().getText().trim()),
+                endTime,
+                imagePath
+        );
+
+        // Gửi lên server trên background thread — không block JavaFX thread
+        Thread t = new Thread(() -> {
+            try {
+                ServerConnection.createListing(request);
+                Platform.runLater(() -> {
+                    host.refreshCatalog().run();
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("UBid");
+                    alert.setHeaderText("✓ Đăng bán thành công!");
+                    alert.setContentText("Sản phẩm \"" + title + "\" đã được đăng. "
+                            + "Người mua có thể thấy và đặt giá ngay!");
+                    alert.showAndWait();
+                    backToMyProducts();
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    view.submitProductError().setText("⚠  Lỗi khi lưu: " + e.getMessage());
+                    showError(view.submitProductError());
+                });
+                LOG.warning("[ListProduct] Lỗi save: " + e.getMessage());
+            }
+        }, "create-listing-thread");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    // ── Upgrade to Seller ──────────────────────────────────────────────────────
+
+    /**
+     * Nâng cấp Buyer lên Seller sau khi đồng ý điều khoản.
+     * Gửi request UPGRADE_TO_SELLER lên server qua socket (background thread).
+     */
     public void acceptSellerTerms() {
         boolean valid = true;
         if (!view.upgradeTermsMerchandise().isSelected()) {
-            showError(view.upgradeTermsMerchandiseError());
-            valid = false;
+            showError(view.upgradeTermsMerchandiseError()); valid = false;
         } else hideError(view.upgradeTermsMerchandiseError());
 
         if (!view.upgradeTermsContent().isSelected()) {
-            showError(view.upgradeTermsContentError());
-            valid = false;
+            showError(view.upgradeTermsContentError()); valid = false;
         } else hideError(view.upgradeTermsContentError());
 
         if (!view.upgradeTermsPrivacy().isSelected()) {
-            showError(view.upgradeTermsPrivacyError());
-            valid = false;
+            showError(view.upgradeTermsPrivacyError()); valid = false;
         } else hideError(view.upgradeTermsPrivacyError());
 
         if (!valid) return;
 
-        User currentUser = UserSession.getInstance().getCurrentUser();
-        try {
-            userRepo.upgradeToSeller(currentUser.getId());
-        } catch (Exception e) {
-            Alert err = new Alert(Alert.AlertType.ERROR);
-            err.setTitle("UBid");
-            err.setHeaderText("Lỗi nâng cấp tài khoản");
-            err.setContentText("Không thể lưu vào cơ sở dữ liệu: " + e.getMessage()
-                    + "\nVui lòng thử lại.");
-            err.showAndWait();
-            return;
-        }
+        int userId = UserSession.getInstance().getCurrentUserId();
 
-        Seller newSeller = new Seller();
-        newSeller.setId(currentUser.getId());
-        newSeller.setUsername(currentUser.getUsername());
-        newSeller.setEmail(currentUser.getEmail());
-        newSeller.setFullName(currentUser.getFullName());
-        newSeller.setPhone(currentUser.getPhone());
-        newSeller.setRole(UserRole.SELLER);
-        newSeller.setActive(currentUser.isActive());
-        UserSession.getInstance().login(newSeller);
+        Thread t = new Thread(() -> {
+            try {
+                ServerConnection.upgradeToSeller(userId);
+                Platform.runLater(() -> {
+                    // Cập nhật role trong UserSession (không cần logout-login lại)
+                    UserDTO dto = UserSession.getInstance().getCurrentUserDTO();
+                    if (dto != null) {
+                        dto.setRole(UserRole.SELLER);
+                    }
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("UBid");
-        alert.setHeaderText("🎉 Chào mừng bạn trở thành Người bán!");
-        alert.setContentText("Tài khoản của bạn đã được nâng cấp thành Người bán. "
-                + "Bạn có thể bắt đầu đăng bán sản phẩm ngay bây giờ.");
-        alert.showAndWait();
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("UBid");
+                    alert.setHeaderText("🎉 Chào mừng bạn trở thành Người bán!");
+                    alert.setContentText("Tài khoản của bạn đã được nâng cấp thành Người bán. "
+                            + "Bạn có thể bắt đầu đăng bán sản phẩm ngay bây giờ.");
+                    alert.showAndWait();
 
-        host.onSessionChanged().run();
-        showMyProductsPanel();
+                    host.onSessionChanged().run();
+                    showMyProductsPanel();
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    Alert err = new Alert(Alert.AlertType.ERROR);
+                    err.setTitle("UBid");
+                    err.setHeaderText("Lỗi nâng cấp tài khoản");
+                    err.setContentText("Không thể lưu vào cơ sở dữ liệu: " + e.getMessage()
+                            + "\nVui lòng thử lại.");
+                    err.showAndWait();
+                });
+                LOG.warning("[UpgradeSeller] Lỗi: " + e.getMessage());
+            }
+        }, "upgrade-seller-thread");
+        t.setDaemon(true);
+        t.start();
     }
+
+    // ── Seller terms view ─────────────────────────────────────────────────────
 
     public void viewMerchandiseTerms() {
         showTermsDialog("Chính sách Hàng hóa",
@@ -269,6 +318,8 @@ public final class SellerProductsPresenter {
                         + "Chúng tôi không bán thông tin của bạn cho bên thứ ba. "
                         + "Thông tin giao dịch được mã hóa và lưu trữ an toàn theo tiêu chuẩn quốc tế.");
     }
+
+    // ── Image upload ──────────────────────────────────────────────────────────
 
     public void uploadImage() {
         Stage stage = host.ownerStage().get();
@@ -311,62 +362,7 @@ public final class SellerProductsPresenter {
                 "-fx-border-color: #c9a84c; -fx-background-color: rgba(201,168,76,0.08);");
     }
 
-    public void submitProduct() {
-        if (!validateListProductForm()) return;
-
-        String title = view.listProductTitleField().getText().trim();
-        int endHour = Integer.parseInt(view.listProductEndHour().getValue());
-        int endMinute = Integer.parseInt(view.listProductEndMinute().getValue());
-        LocalDateTime endTime = view.listProductEndDate().getValue().atTime(endHour, endMinute, 0);
-        String imagePath = selectedProductImage != null
-                ? selectedProductImage.getAbsolutePath() : "";
-
-        ListingRequest request = new ListingRequest(
-                UserSession.getInstance().getCurrentUserId(),
-                title,
-                view.listProductCategoryCombo().getValue(),
-                view.listProductDescArea().getText().trim(),
-                new BigDecimal(view.listProductPriceField().getText().trim()),
-                endTime,
-                imagePath
-        );
-
-        try {
-            listingService.createListing(request);
-            host.refreshCatalog().run();
-
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("UBid");
-            alert.setHeaderText("✓ Đăng bán thành công!");
-            alert.setContentText("Sản phẩm \"" + title + "\" đã được đăng. "
-                    + "Người mua có thể thấy và đặt giá ngay!");
-            alert.showAndWait();
-            backToMyProducts();
-        } catch (Exception e) {
-            view.submitProductError().setText("⚠  Lỗi khi lưu: " + e.getMessage());
-            showError(view.submitProductError());
-            System.err.println("[ListProduct] Lỗi save: " + e.getMessage());
-        }
-    }
-
-    private void loadMyProducts() {
-        view.myProductsList().getChildren().clear();
-        int sellerId = UserSession.getInstance().getCurrentUserId();
-        List<AuctionItem> items;
-        try {
-            items = auctionRepo.findBySellerId(sellerId);
-        } catch (Exception e) {
-            System.err.println("[MyProducts] Lỗi load từ DB: " + e.getMessage());
-            items = List.of();
-        }
-        if (items.isEmpty()) {
-            showMyProductsEmptyState();
-        } else {
-            for (AuctionItem dbItem : items) {
-                view.myProductsList().getChildren().add(buildMyProductCard(dbItem));
-            }
-        }
-    }
+    // ── Private helpers ───────────────────────────────────────────────────────
 
     private void showMyProductsEmptyState() {
         VBox emptyState = new VBox(16);
@@ -417,15 +413,12 @@ public final class SellerProductsPresenter {
         statusBadge.getStyleClass().add(
                 item.getStatus() == AuctionStatus.ACTIVE
                         ? "my-product-badge-live" : "my-product-badge-ended");
+
         row.getChildren().addAll(imgNode, info, statusBadge);
         card.getChildren().add(row);
 
-        int bidCount = 0;
-        try {
-            bidCount = bidRepo.countByAuctionId(item.getId());
-        } catch (Exception ignored) {
-        }
-        AuctionCardModel uiItem = cardMapper.toCard(item, bidCount);
+        // Map sang AuctionCardModel để truyền cho coordinator
+        AuctionCardModel uiItem = AuctionCardMapper.toCardSimple(item);
 
         card.setOnMouseClicked(e -> {
             host.ensureCoordinators().run();
@@ -438,46 +431,55 @@ public final class SellerProductsPresenter {
         return card;
     }
 
-    private void showSellerTermsPanel() {
-        view.upgradeTermsMerchandise().setSelected(false);
-        view.upgradeTermsContent().setSelected(false);
-        view.upgradeTermsPrivacy().setSelected(false);
-        hideError(view.upgradeTermsMerchandiseError());
-        hideError(view.upgradeTermsContentError());
-        hideError(view.upgradeTermsPrivacyError());
-        host.showSellerTermsOverlay().run();
+    private boolean validateListProductForm() {
+        boolean valid = true;
+
+        String title = view.listProductTitleField().getText().trim();
+        if (title.length() < 5) {
+            view.listProductTitleError().setText("Tên phải có ít nhất 5 ký tự.");
+            showError(view.listProductTitleError()); valid = false;
+        } else hideError(view.listProductTitleError());
+
+        if (view.listProductCategoryCombo().getValue() == null) {
+            view.listProductCategoryError().setText("Vui lòng chọn danh mục.");
+            showError(view.listProductCategoryError()); valid = false;
+        } else hideError(view.listProductCategoryError());
+
+        String desc = view.listProductDescArea().getText().trim();
+        if (desc.length() < 10) {
+            view.listProductDescError().setText("Mô tả cần ít nhất 10 ký tự.");
+            showError(view.listProductDescError()); valid = false;
+        } else hideError(view.listProductDescError());
+
+        String priceText = view.listProductPriceField().getText().trim();
+        try {
+            BigDecimal price = new BigDecimal(priceText);
+            if (price.compareTo(BigDecimal.ZERO) <= 0)
+                throw new NumberFormatException("price ≤ 0");
+            hideError(view.listProductPriceError());
+        } catch (NumberFormatException e) {
+            view.listProductPriceError().setText("Giá phải là số dương hợp lệ.");
+            showError(view.listProductPriceError()); valid = false;
+        }
+
+        if (view.listProductEndDate().getValue() == null
+                || !view.listProductEndDate().getValue().isAfter(java.time.LocalDate.now())) {
+            view.listProductDateError().setText("Ngày kết thúc phải sau hôm nay.");
+            showError(view.listProductDateError()); valid = false;
+        } else hideError(view.listProductDateError());
+
+        return valid;
     }
 
     private void resetListProductForm() {
         view.listProductTitleField().clear();
-        view.listProductCategoryCombo().setValue(null);
+        view.listProductCategoryCombo().getSelectionModel().clearSelection();
         view.listProductDescArea().clear();
         view.listProductPriceField().clear();
         view.listProductEndDate().setValue(null);
-        if (view.listProductEndHour() != null) {
-            int defaultHour = Math.min(LocalTime.now().getHour() + 1, 23);
-            view.listProductEndHour().setValue(String.format("%02d", defaultHour));
-        }
-        if (view.listProductEndMinute() != null) {
-            view.listProductEndMinute().setValue("00");
-        }
-        if (view.lblEndTimePreview() != null) {
-            view.lblEndTimePreview().setVisible(false);
-            view.lblEndTimePreview().setManaged(false);
-        }
-        selectedProductImage = null;
+        view.lblEndTimePreview().setText("");
         view.imageUploadBox().getChildren().clear();
-        VBox defaultContent = new VBox(10);
-        defaultContent.setAlignment(Pos.CENTER);
-        Label defaultIcon = new Label("📷");
-        defaultIcon.getStyleClass().add("image-upload-icon");
-        Label defaultHint = new Label("Bấm để chọn hình ảnh");
-        defaultHint.getStyleClass().add("image-upload-hint");
-        Label defaultSub = new Label("JPG, PNG, GIF · Tối đa 10MB");
-        defaultSub.getStyleClass().add("image-upload-sub");
-        defaultContent.getChildren().addAll(defaultIcon, defaultHint, defaultSub);
-        view.imageUploadBox().getChildren().add(defaultContent);
-        view.imageUploadBox().setStyle("");
+        selectedProductImage = null;
 
         hideError(view.listProductTitleError());
         hideError(view.listProductCategoryError());
@@ -488,140 +490,25 @@ public final class SellerProductsPresenter {
         hideError(view.submitProductError());
     }
 
-    private boolean validateListProductForm() {
-        boolean valid = true;
-        if (view.listProductTitleField().getText().isBlank()) {
-            showError(view.listProductTitleError());
-            valid = false;
-        } else hideError(view.listProductTitleError());
-
-        if (view.listProductCategoryCombo().getValue() == null) {
-            showError(view.listProductCategoryError());
-            valid = false;
-        } else hideError(view.listProductCategoryError());
-
-        if (view.listProductDescArea().getText().trim().length() < 20) {
-            showError(view.listProductDescError());
-            valid = false;
-        } else hideError(view.listProductDescError());
-
-        try {
-            double price = Double.parseDouble(view.listProductPriceField().getText().trim());
-            if (price <= 0) throw new NumberFormatException();
-            hideError(view.listProductPriceError());
-        } catch (NumberFormatException e) {
-            view.listProductPriceError().setText("⚠  Giá phải là số dương (ví dụ: 500000)");
-            showError(view.listProductPriceError());
-            valid = false;
-        }
-
-        if (view.listProductEndDate().getValue() == null) {
-            view.listProductDateError().setText("⚠  Vui lòng chọn ngày kết thúc");
-            showError(view.listProductDateError());
-            valid = false;
-        } else if (view.listProductEndHour().getValue() == null
-                || view.listProductEndMinute().getValue() == null) {
-            view.listProductDateError().setText("⚠  Vui lòng chọn giờ kết thúc");
-            showError(view.listProductDateError());
-            valid = false;
-        } else {
-            int h = Integer.parseInt(view.listProductEndHour().getValue());
-            int m = Integer.parseInt(view.listProductEndMinute().getValue());
-            LocalDateTime chosenEnd = view.listProductEndDate().getValue().atTime(h, m, 0);
-            if (!chosenEnd.isAfter(LocalDateTime.now().plusMinutes(5))) {
-                view.listProductDateError().setText(
-                        "⚠  Thời gian kết thúc phải sau thời điểm hiện tại ít nhất 5 phút");
-                showError(view.listProductDateError());
-                valid = false;
-            } else {
-                hideError(view.listProductDateError());
-            }
-        }
-
-        if (selectedProductImage == null) {
-            showError(view.listProductImageError());
-            valid = false;
-        } else hideError(view.listProductImageError());
-
-        return valid;
+    private void showTermsDialog(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("UBid — " + title);
+        alert.setHeaderText(title);
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 
     private void showUploadFallbackLabel(String fileName) {
-        view.imageUploadBox().getChildren().clear();
-        VBox fallback = new VBox(8);
-        fallback.setAlignment(Pos.CENTER);
-        Label icon = new Label("🖼");
-        icon.setStyle("-fx-font-size: 32px;");
-        Label name = new Label("✓  " + fileName);
-        name.setStyle("-fx-text-fill: #c9a84c; -fx-font-size: 12px;");
-        fallback.getChildren().addAll(icon, name);
+        Label fallback = new Label("✓  " + fileName);
+        fallback.setStyle("-fx-text-fill: #c9a84c; -fx-font-size: 13px;");
         view.imageUploadBox().getChildren().add(fallback);
     }
 
-    private void showTermsDialog(String title, String content) {
-        var owner = host.dialogOwner().get();
-        if (owner == null) return;
-
-        Stage dialog = new Stage();
-        dialog.initModality(javafx.stage.Modality.WINDOW_MODAL);
-        dialog.initOwner(owner);
-        dialog.setTitle("UBid — " + title);
-        dialog.setResizable(false);
-
-        Label lblIcon = new Label("📋");
-        lblIcon.setStyle("-fx-font-size: 28px;");
-        Label lblTitle = new Label(title);
-        lblTitle.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #f0e6c8;");
-        lblTitle.setWrapText(true);
-        VBox header = new VBox(10, lblIcon, lblTitle);
-        header.setAlignment(Pos.CENTER);
-        header.setStyle("-fx-padding: 28 32 20 32;");
-
-        javafx.scene.control.Separator sep = new javafx.scene.control.Separator();
-        sep.setStyle("-fx-background-color: #2a2a3e;");
-
-        Label lblContent = new Label(content);
-        lblContent.setWrapText(true);
-        lblContent.setStyle("-fx-font-size: 13.5px; -fx-text-fill: #a0a0c0; -fx-line-spacing: 4;");
-        VBox contentBox = new VBox(lblContent);
-        contentBox.setStyle("-fx-padding: 0 32 0 32;");
-        ScrollPane scroll = new ScrollPane(contentBox);
-        scroll.setFitToWidth(true);
-        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scroll.setPrefHeight(220);
-        scroll.setStyle("-fx-background-color: #13131f; -fx-background: #13131f; -fx-border-color: transparent;");
-
-        Button btnClose = new Button("  Đã hiểu");
-        btnClose.setMaxWidth(Double.MAX_VALUE);
-        btnClose.setStyle(
-                "-fx-background-color: linear-gradient(to right,#c9a84c,#d9b65c);"
-                        + "-fx-background-radius:10;-fx-text-fill:#0e0e18;"
-                        + "-fx-font-size:14px;-fx-font-weight:bold;-fx-padding:13 0 13 0;-fx-cursor:hand;");
-        btnClose.setOnAction(e -> dialog.close());
-        VBox footer = new VBox(btnClose);
-        footer.setStyle("-fx-padding: 20 32 28 32;");
-
-        VBox root = new VBox(header, sep, scroll, footer);
-        root.setStyle(
-                "-fx-background-color:#0e0e18;"
-                        + "-fx-background-radius:16;-fx-border-radius:16;"
-                        + "-fx-border-color:#252538;-fx-border-width:1.5;");
-        root.setPrefWidth(500);
-
-        javafx.scene.Scene scene = new javafx.scene.Scene(root);
-        scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
-        dialog.setScene(scene);
-        dialog.showAndWait();
+    private static void showError(javafx.scene.Node node) {
+        node.setVisible(true); node.setManaged(true);
     }
 
-    private static void showError(Label errorLabel) {
-        errorLabel.setVisible(true);
-        errorLabel.setManaged(true);
-    }
-
-    private static void hideError(Label errorLabel) {
-        errorLabel.setVisible(false);
-        errorLabel.setManaged(false);
+    private static void hideError(javafx.scene.Node node) {
+        node.setVisible(false); node.setManaged(false);
     }
 }

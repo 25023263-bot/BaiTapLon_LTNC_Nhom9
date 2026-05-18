@@ -4,12 +4,15 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.io.Serializable;
 
 /**
  * Lớp cơ sở trừu tượng cho mọi người dùng trong hệ thống.
  * Được kế thừa bởi Buyer, Seller, Admin.
  */
-public abstract class User {
+public abstract class User implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     protected int id;
     protected String username;

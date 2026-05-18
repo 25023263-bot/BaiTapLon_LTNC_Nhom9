@@ -5,6 +5,7 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.PaymentStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.io.Serializable;
 
 /**
  * Giao dịch tài chính sau khi phiên đấu giá kết thúc thành công.
@@ -13,7 +14,10 @@ import java.util.Objects;
  * Các trường như platformFee, sellerReceives, externalRef sẽ thêm lại
  * khi tích hợp cổng thanh toán thật (VNPay, Stripe, v.v.).
  */
-public class Transaction {
+
+public class Transaction implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private int id;
     private int auctionId;

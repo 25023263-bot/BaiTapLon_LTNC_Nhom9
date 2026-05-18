@@ -6,12 +6,15 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
+import java.io.Serializable;
 
 /**
  * Aggregate root for a seller listing ({@code auctions} row + physical/digital detail).
  * Subtypes: {@link PhysicalItem}, {@link DigitalItem}.
  */
-public abstract class AuctionItem {
+public abstract class AuctionItem implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     protected int id;
     protected int sellerId;

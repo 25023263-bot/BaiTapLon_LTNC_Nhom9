@@ -1,13 +1,10 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.PhysicalItem;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.AuctionRepository;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.AuctionCardModel;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.AuctionCardModel;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.network.ServerConnection;
 
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -25,10 +22,11 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Controller cho màn hình chi tiết sản phẩm của NGƯỜI BÁN.
@@ -39,12 +37,20 @@ import java.util.concurrent.TimeUnit;
  *   2. Chỉnh sửa tiêu đề, mô tả, ảnh (nếu chưa có bid nào)
  *   3. Xóa sản phẩm (nếu chưa có bid nào)
  *
- * Tại sao không cho sửa nếu đã có bid?
- * → Khi người mua đã đặt giá, họ kỳ vọng thông tin sản phẩm không đổi.
- *   Cho phép Seller sửa giá/thông tin lúc đó là không công bằng.
- *   Đây là một business rule quan trọng trong hệ thống đấu giá.
+ * <h3>Thay đổi so với phiên bản cũ:</h3>
+ * <ul>
+ *   <li>Bỏ {@code AuctionRepository} và {@code BidRepository} (không còn import
+ *       ServiceLocator).</li>
+ *   <li>Mọi thao tác dữ liệu đi qua {@link ServerConnection}.</li>
+ *   <li>Lịch sử bid load qua {@code GET_AUCTION_DETAIL}.</li>
+ *   <li>Save và Delete gửi request CANCEL_AUCTION / (TODO: UPDATE_AUCTION)
+ *       qua socket. Trong giai đoạn chuyển tiếp, update vẫn dùng DB trực tiếp
+ *       vì chưa có request type UPDATE_AUCTION — xem TODO bên dưới.</li>
+ * </ul>
  */
 public class SellerItemDetailController {
+
+    private static final Logger LOG = Logger.getLogger(SellerItemDetailController.class.getName());
 
     // ── FXML fields ──────────────────────────────────────────────
 
@@ -73,7 +79,7 @@ public class SellerItemDetailController {
     @FXML private VBox vboxBidHistory;
     @FXML private Label lblBidCountSmall;
 
-    // Edit form (hiện/ẩn theo trạng thái)
+    // Edit form
     @FXML private VBox editFormPane;
     @FXML private TextField editTitleField;
     @FXML private TextArea  editDescArea;
@@ -93,26 +99,17 @@ public class SellerItemDetailController {
     // ── State ────────────────────────────────────────────────────
 
     private Stage thisStage;
-    private AuctionCardModel item;                   // dữ liệu UI hiện tại
-    private Runnable onDataChanged;             // callback → HomeController reload
+    private AuctionCardModel item;
+    private Runnable onDataChanged;
     private boolean isEditing = false;
-    private File newImageFile = null;           // ảnh mới nếu Seller thay ảnh
-
-    private final AuctionRepository auctionRepo =
-            ServiceLocator.getInstance().getAuctionRepo();
-    private final BidRepository bidRepo =
-            ServiceLocator.getInstance().getBidRepo();
-
+    private File newImageFile = null;
     private ScheduledExecutorService timerScheduler;
 
     // ── Public API ───────────────────────────────────────────────
 
     /**
      * Gọi bởi SellerItemDetailCoordinator ngay sau khi load FXML.
-     *
-     * @param stage         Stage của cửa sổ này (để handleBack() đóng đúng)
-     * @param item          Dữ liệu sản phẩm từ HomeController
-     * @param onDataChanged Callback khi Seller save/delete → Home reload data
+     * Load lịch sử bid từ server qua socket.
      */
     public void configure(Stage stage, AuctionCardModel item, Runnable onDataChanged) {
         this.thisStage    = stage;
@@ -120,11 +117,8 @@ public class SellerItemDetailController {
         this.onDataChanged = onDataChanged;
 
         populateView(item);
+        loadBidHistoryFromServer();
 
-        // Load lịch sử bid thật từ DB
-        loadBidHistory();
-
-        // Countdown timer
         if (item.isLive() && item.endTime() != null) {
             startCountdownTimer(item.endTime());
         } else {
@@ -132,7 +126,6 @@ public class SellerItemDetailController {
             lblMinutes.setText("00"); lblSeconds.setText("00");
         }
 
-        // Hiển thị nút edit/delete nhưng vô hiệu hóa nếu đã có bid
         refreshActionButtons();
     }
 
@@ -141,27 +134,18 @@ public class SellerItemDetailController {
     private void populateView(AuctionCardModel it) {
         lblTitle.setText(it.title());
 
-        // Badge trạng thái
         String statusText = it.isLive() ? "● Đang đấu giá" : "✓ Đã kết thúc";
         lblStatusBadge.setText(statusText);
         lblStatusBadge.getStyleClass().removeAll("seller-badge-live", "seller-badge-ended");
         lblStatusBadge.getStyleClass().add(it.isLive() ? "seller-badge-live" : "seller-badge-ended");
 
-        // Ảnh hoặc emoji
         refreshImageDisplay(it.imageUrl(), it.imagePlaceholderEmoji());
 
-        // Giá
         lblStartingPrice.setText(formatPrice(it.startingPrice()));
         lblCurrentPrice.setText(formatPrice(it.currentBid()));
-
-        // Số lượt bid (sẽ được cập nhật lại từ loadBidHistory)
         lblBidCount.setText(it.bidCount() + " lượt đấu giá");
     }
 
-    /**
-     * Hiển thị ảnh sản phẩm trong imageContainer.
-     * Nếu không có ảnh hợp lệ → fallback sang emoji.
-     */
     private void refreshImageDisplay(String imageUrl, String emoji) {
         imageContainer.getChildren().clear();
         boolean loaded = false;
@@ -188,94 +172,86 @@ public class SellerItemDetailController {
         }
     }
 
-    // ── Bid history ──────────────────────────────────────────────
-
-    private void loadBidHistory() {
-        vboxBidHistory.getChildren().clear();
-        try {
-            int auctionId = Integer.parseInt(item.id());
-            List<Bid> bids = bidRepo.findByAuctionId(auctionId);
-            int count = bids.size();
-
-            lblBidCount.setText(count + " lượt đấu giá");
-            if (lblBidCountSmall != null)
-                lblBidCountSmall.setText(count + " lượt");
-
-            if (bids.isEmpty()) {
-                Label empty = new Label("Chưa có lượt đấu giá nào.");
-                empty.setStyle("-fx-text-fill: #888; -fx-padding: 12;");
-                vboxBidHistory.getChildren().add(empty);
-            } else {
-                DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm  dd/MM");
-                for (int i = 0; i < bids.size(); i++) {
-                    Bid b = bids.get(i);
-                    String name    = b.getBuyerUsername() != null ? b.getBuyerUsername() : "Ẩn danh";
-                    String timeStr = b.getBidTime() != null ? b.getBidTime().format(fmt) : "--";
-                    vboxBidHistory.getChildren().add(
-                            buildBidRow(name, b.getAmount().doubleValue(), timeStr, i == 0)
-                    );
-                }
-            }
-        } catch (Exception e) {
-            Label err = new Label("Không thể tải lịch sử đấu giá.");
-            err.setStyle("-fx-text-fill: #e74c3c; -fx-padding: 12;");
-            vboxBidHistory.getChildren().add(err);
-        }
-    }
+    // ── Bid history (qua socket) ─────────────────────────────────
 
     /**
-     * Tạo một row trong lịch sử đặt giá.
-     * Cấu trúc giống ItemDetailController.buildBidRow() để giao diện đồng nhất.
+     * Load lịch sử bid từ server qua GET_AUCTION_DETAIL (background thread).
+     * Sau khi nhận dữ liệu, cập nhật UI trên FX thread.
      */
-    private HBox buildBidRow(String name, double amount, String timeStr, boolean isLeading) {
-        Label avatarLabel = new Label(String.valueOf(name.charAt(0)).toUpperCase());
-        avatarLabel.getStyleClass().add(isLeading ? "history-avatar-lead" : "history-avatar");
-        StackPane avatarWrap = new StackPane(avatarLabel);
-        avatarWrap.getStyleClass().add("history-avatar-wrap");
-        avatarWrap.setMinSize(40, 40);
-        avatarWrap.setMaxSize(40, 40);
+    private void loadBidHistoryFromServer() {
+        vboxBidHistory.getChildren().clear();
+        if (!ServerConnection.isConnected()) {
+            showBidHistoryError("Server chưa kết nối.");
+            return;
+        }
 
-        Label lblName = new Label(name);
-        lblName.getStyleClass().add("history-name");
-        Label lblSub  = new Label(isLeading ? "👑  Đang dẫn đầu" : "Đã đặt giá");
-        lblSub.getStyleClass().add(isLeading ? "history-sub-lead" : "history-sub");
-        VBox nameBox = new VBox(2, lblName, lblSub);
-        nameBox.setAlignment(Pos.CENTER_LEFT);
+        int auctionId = Integer.parseInt(item.id());
+        Thread t = new Thread(() -> {
+            try {
+                var dto = ServerConnection.getAuctionDetail(auctionId);
+                Platform.runLater(() -> {
+                    int count = dto.getTotalBids();
+                    lblBidCount.setText(count + " lượt đấu giá");
+                    if (lblBidCountSmall != null)
+                        lblBidCountSmall.setText(count + " lượt");
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+                    // Cập nhật giá hiện tại nếu server có dữ liệu mới hơn
+                    if (dto.getCurrentPrice() != null) {
+                        lblCurrentPrice.setText(formatPrice(dto.getCurrentPrice().doubleValue()));
+                    }
 
-        Label lblAmount = new Label(formatPrice(amount));
-        lblAmount.getStyleClass().add(isLeading ? "history-price-lead" : "history-price");
-        Label lblTime = new Label(timeStr);
-        lblTime.getStyleClass().add("history-time");
-        VBox priceBox = new VBox(2, lblAmount, lblTime);
-        priceBox.setAlignment(Pos.CENTER_RIGHT);
+                    // bidCount từ server → cập nhật item (để refreshActionButtons đúng)
+                    item = new AuctionCardModel(
+                            item.id(), item.title(), item.category(), item.categoryEmoji(),
+                            dto.getCurrentPrice() != null ? dto.getCurrentPrice().doubleValue() : item.currentBid(),
+                            item.startingPrice(), item.description(),
+                            count,
+                            item.isLive(), item.endTime(), item.imagePlaceholderEmoji(),
+                            item.imageUrl(), item.sellerId()
+                    );
+                    refreshActionButtons();
 
-        HBox row = new HBox(12, avatarWrap, nameBox, spacer, priceBox);
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.getStyleClass().add(isLeading ? "history-row-lead" : "history-row");
-        row.setMinHeight(56);
-        return row;
+                    // Server GET_AUCTION_DETAIL không trả về danh sách bid chi tiết
+                    // (chỉ trả totalBids). Hiển thị thông báo phù hợp.
+                    if (count == 0) {
+                        Label empty = new Label("Chưa có lượt đấu giá nào.");
+                        empty.setStyle("-fx-text-fill: #888; -fx-padding: 12;");
+                        vboxBidHistory.getChildren().add(empty);
+                    } else {
+                        Label info = new Label("✓  " + count + " lượt đã được đặt.");
+                        info.setStyle("-fx-text-fill: #c9a84c; -fx-padding: 12;");
+                        if (dto.getLeadingBidderUsername() != null) {
+                            Label leader = new Label("👑  Đang dẫn đầu: "
+                                    + dto.getLeadingBidderUsername());
+                            leader.setStyle("-fx-text-fill: #2ecc71; -fx-padding: 4 12;");
+                            vboxBidHistory.getChildren().addAll(info, leader);
+                        } else {
+                            vboxBidHistory.getChildren().add(info);
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                LOG.log(Level.WARNING, "Không thể load bid history qua socket", e);
+                Platform.runLater(() -> showBidHistoryError("Không thể tải lịch sử: " + e.getMessage()));
+            }
+        }, "seller-detail-bid-loader");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    private void showBidHistoryError(String msg) {
+        Label err = new Label(msg);
+        err.setStyle("-fx-text-fill: #e74c3c; -fx-padding: 12;");
+        vboxBidHistory.getChildren().add(err);
     }
 
     // ── Action buttons ───────────────────────────────────────────
 
-    /**
-     * Cập nhật trạng thái nút dựa theo:
-     *   - Phiên đã kết thúc → không cho sửa/xóa
-     *   - Đã có bid        → không cho sửa/xóa (để bảo vệ người mua)
-     *   - Chưa có bid      → cho phép sửa và xóa
-     *
-     * Đây là business rule: "Seller không được thay đổi điều kiện đấu giá
-     * khi đã có người tham gia."
-     */
     private void refreshActionButtons() {
         boolean hasAnyBid = item.bidCount() > 0;
         boolean isEnded   = !item.isLive();
 
         if (isEnded) {
-            // Phiên đã kết thúc → ẩn cả 2 nút
             setButtonsVisible(false, false);
             if (lblEditWarning != null) {
                 lblEditWarning.setText("⏰  Phiên đấu giá đã kết thúc — không thể chỉnh sửa.");
@@ -283,7 +259,6 @@ public class SellerItemDetailController {
                 lblEditWarning.setManaged(true);
             }
         } else if (hasAnyBid) {
-            // Đang live nhưng đã có bid → ẩn nút, hiện cảnh báo
             setButtonsVisible(false, false);
             if (lblEditWarning != null) {
                 lblEditWarning.setText("⚠  Đã có lượt đặt giá — không thể sửa hoặc xóa sản phẩm.");
@@ -291,7 +266,6 @@ public class SellerItemDetailController {
                 lblEditWarning.setManaged(true);
             }
         } else {
-            // Đang live, chưa có bid → cho phép edit/delete
             setButtonsVisible(true, true);
             if (lblEditWarning != null) {
                 lblEditWarning.setVisible(false);
@@ -307,27 +281,15 @@ public class SellerItemDetailController {
 
     // ── Edit mode ────────────────────────────────────────────────
 
-    /**
-     * Seller bấm "Chỉnh sửa" → hiện form edit.
-     *
-     * Tại sao dùng toggle edit mode thay vì mở màn hình mới?
-     * → Trải nghiệm liền mạch hơn: Seller thấy ngay kết quả chỉnh sửa
-     *   ngay trên cùng màn hình, không cần điều hướng qua lại.
-     */
     @FXML
     private void handleEdit() {
         isEditing = true;
-
-        // Điền sẵn dữ liệu hiện tại vào form
         editTitleField.setText(item.title());
         editDescArea.setText(item.description());
         if (item.endTime() != null)
             editEndDatePicker.setValue(item.endTime().toLocalDate());
-
         newImageFile = null;
         resetEditImageBox();
-
-        // Hiện form, ẩn nút Edit/Delete
         setVisible(editFormPane, true);
         setVisible(btnEdit,   false);
         setVisible(btnDelete, false);
@@ -335,7 +297,6 @@ public class SellerItemDetailController {
         setVisible(btnCancelEdit, true);
     }
 
-    /** Seller bấm "Hủy" trong khi đang edit → quay về view mode */
     @FXML
     private void handleCancelEdit() {
         isEditing = false;
@@ -346,21 +307,17 @@ public class SellerItemDetailController {
     }
 
     /**
-     * Seller bấm "Lưu" → validate, update DB, cập nhật UI và thông báo Home reload.
+     * Lưu thay đổi.
      *
-     * Flow:
-     *   1. Validate (title không trống, ngày hợp lệ)
-     *   2. Load lại PhysicalItem từ DB theo id
-     *   3. Cập nhật các trường thay đổi
-     *   4. Gọi auctionRepo.update()
-     *   5. Gọi onDataChanged callback → HomeController reload danh sách
-     *   6. Cập nhật lại UI này (không cần đóng màn)
+     * TODO: Thêm request type UPDATE_AUCTION vào protocol để hoàn toàn loại bỏ DB ở client.
+     *       Hiện tại sử dụng ServiceLocator tạm thời vì server chưa có endpoint update.
+     *       Khi server hỗ trợ UPDATE_AUCTION, thay khối try bên dưới bằng:
+     *         ServerConnection.updateAuction(auctionId, newTitle, newDesc, newEndDate, newImagePath)
      */
     @FXML
     private void handleSave() {
-        // ── Validate ────────────────────────────────────────────
-        String newTitle = editTitleField.getText().trim();
-        String newDesc  = editDescArea.getText().trim();
+        String newTitle  = editTitleField.getText().trim();
+        String newDesc   = editDescArea.getText().trim();
         LocalDate newEndDate = editEndDatePicker.getValue();
 
         if (newTitle.isBlank()) {
@@ -376,56 +333,36 @@ public class SellerItemDetailController {
             return;
         }
 
-        // ── Load và update domain object ────────────────────────
+        // TODO: Thay bằng ServerConnection.updateAuction(...) khi server hỗ trợ.
+        // Hiện tại: dùng ServiceLocator tạm thời.
         try {
             int auctionId = Integer.parseInt(item.id());
-
-            // Lấy item hiện tại từ DB để không mất các field không có trên form
-            // (condition, weight, shippingCost, v.v.)
-            com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem dbItem =
-                    auctionRepo.findById(auctionId)
-                            .orElseThrow(() -> new IllegalStateException("Không tìm thấy sản phẩm #" + auctionId));
+            var locator = com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator.getInstance();
+            AuctionItem dbItem = locator.getAuctionRepo().findById(auctionId)
+                    .orElseThrow(() -> new IllegalStateException("Không tìm thấy sản phẩm #" + auctionId));
 
             dbItem.setTitle(newTitle);
             dbItem.setDescription(newDesc);
             dbItem.setEndTime(newEndDate.atTime(23, 59, 59));
-
-            // Nếu Seller đã chọn ảnh mới → cập nhật đường dẫn
             if (newImageFile != null) {
                 dbItem.setImageUrl(newImageFile.getAbsolutePath());
             }
+            locator.getAuctionRepo().update(dbItem);
 
-            auctionRepo.update(dbItem);
-
-            // ── Cập nhật local AuctionCardModel record ───────────────
-            // AuctionCardModel là record (immutable) → tạo record mới với giá trị đã sửa.
-            // Đây là pattern đúng khi dùng record: không thể mutate, phải tạo lại.
             this.item = new AuctionCardModel(
-                    item.id(),
-                    newTitle,
-                    item.category(),
-                    item.categoryEmoji(),
-                    item.currentBid(),
-                    item.startingPrice(),
-                    newDesc,
-                    item.bidCount(),
-                    item.isLive(),
+                    item.id(), newTitle, item.category(), item.categoryEmoji(),
+                    item.currentBid(), item.startingPrice(), newDesc,
+                    item.bidCount(), item.isLive(),
                     newEndDate.atTime(23, 59, 59),
                     item.imagePlaceholderEmoji(),
                     newImageFile != null ? newImageFile.getAbsolutePath() : item.imageUrl(),
                     item.sellerId()
             );
 
-            // Cập nhật lại phần hiển thị (title, ảnh) mà không đóng màn
             lblTitle.setText(newTitle);
             refreshImageDisplay(this.item.imageUrl(), this.item.imagePlaceholderEmoji());
-
-            // Thông báo Home reload để dữ liệu đồng bộ
             if (onDataChanged != null) onDataChanged.run();
-
-            // Thoát chế độ edit
             handleCancelEdit();
-
             AlertHelper.showInfo("Đã lưu!", "Thông tin sản phẩm đã được cập nhật.");
 
         } catch (Exception e) {
@@ -433,7 +370,6 @@ public class SellerItemDetailController {
         }
     }
 
-    /** Seller bấm vào ô upload ảnh trong form edit → mở FileChooser */
     @FXML
     private void handleEditImageUpload() {
         FileChooser chooser = new FileChooser();
@@ -445,8 +381,6 @@ public class SellerItemDetailController {
             newImageFile = file;
             editImageHint.setText("✓  " + file.getName());
             editImageHint.setStyle("-fx-text-fill: #c9a84c;");
-
-            // Preview ảnh nhỏ trong ô upload
             try {
                 Image img = new Image(file.toURI().toString(), 200, 100, true, true, false);
                 if (!img.isError()) {
@@ -460,13 +394,11 @@ public class SellerItemDetailController {
                     return;
                 }
             } catch (Exception ignored) {}
-            // Fallback nếu preview lỗi
             editImageBox.getChildren().clear();
             editImageBox.getChildren().add(editImageHint);
         }
     }
 
-    /** Reset ô upload ảnh về trạng thái mặc định */
     private void resetEditImageBox() {
         editImageBox.getChildren().clear();
         Label icon = new Label("📷");
@@ -479,40 +411,53 @@ public class SellerItemDetailController {
         editImageBox.getChildren().add(box);
     }
 
-    // ── Delete ───────────────────────────────────────────────────
+    // ── Delete (qua socket) ───────────────────────────────────────
 
     /**
-     * Seller bấm "Xóa" → xác nhận rồi xóa khỏi DB.
+     * Hủy phiên đấu giá qua socket (CANCEL_AUCTION).
      *
-     * Tại sao cần xác nhận 2 lần?
-     * → Xóa là hành động không thể hoàn tác. Hỏi lại giúp tránh click nhầm.
-     *   Đây là UX pattern chuẩn cho destructive actions.
+     * Lưu ý: "Xóa" ở đây thực ra là hủy phiên (cancel), không phải xóa khỏi DB.
+     * Điều này phù hợp hơn với business logic — lịch sử đấu giá cần được giữ lại.
      */
     @FXML
     private void handleDelete() {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("UBid");
-        confirm.setHeaderText("Xóa sản phẩm?");
+        confirm.setHeaderText("Hủy phiên đấu giá?");
         confirm.setContentText(
-                "Bạn chắc chắn muốn xóa \"" + item.title() + "\"?\n" +
+                "Bạn chắc chắn muốn hủy \"" + item.title() + "\"?\n" +
                         "Hành động này không thể hoàn tác."
         );
-        ButtonType yes = new ButtonType("Xóa", ButtonBar.ButtonData.OK_DONE);
-        ButtonType no  = new ButtonType("Hủy", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType yes = new ButtonType("Hủy phiên", ButtonBar.ButtonData.OK_DONE);
+        ButtonType no  = new ButtonType("Giữ lại",   ButtonBar.ButtonData.CANCEL_CLOSE);
         confirm.getButtonTypes().setAll(yes, no);
 
         confirm.showAndWait().ifPresent(result -> {
-            if (result == yes) {
-                try {
-                    auctionRepo.deleteById(Integer.parseInt(item.id()));
-                    // Báo Home reload trước khi đóng màn này
-                    if (onDataChanged != null) onDataChanged.run();
-                    // Đóng màn hình seller detail
-                    handleBack();
-                } catch (Exception e) {
-                    AlertHelper.showError("Lỗi", "Không thể xóa: " + e.getMessage());
-                }
+            if (result != yes) return;
+
+            if (!ServerConnection.isConnected()) {
+                AlertHelper.showError("Lỗi kết nối",
+                        "Không thể kết nối đến server. Vui lòng thử lại.");
+                return;
             }
+
+            // Chạy trên background thread
+            Thread t = new Thread(() -> {
+                try {
+                    // Seller hủy: truyền cả sellerId để server kiểm tra quyền
+                    ServerConnection.cancelAuction(Integer.parseInt(item.id()), item.sellerId());
+                    Platform.runLater(() -> {
+                        if (onDataChanged != null) onDataChanged.run();
+                        handleBack();
+                    });
+                } catch (Exception e) {
+                    LOG.log(Level.WARNING, "Không thể hủy phiên #" + item.id(), e);
+                    Platform.runLater(() ->
+                            AlertHelper.showError("Lỗi", "Không thể hủy phiên: " + e.getMessage()));
+                }
+            }, "seller-cancel-auction-thread");
+            t.setDaemon(true);
+            t.start();
         });
     }
 
@@ -539,64 +484,53 @@ public class SellerItemDetailController {
             });
 
             if (seconds <= 0) {
-                // ── Phiên vừa kết thúc ────────────────────────────────────────
-                // Bước 1: close DB trên timer thread (trước khi FX thread update UI)
-                // Quan trọng: không đặt trong Platform.runLater() vì cần commit xong
-                // trước khi onDataChanged gọi loadFromDb() ở HomeController
-                try { auctionRepo.closeExpiredAuctions(); } catch (Exception ignored) {}
-
-                // Bước 2: cập nhật item record (immutable record → tạo mới)
+                // Server tự xử lý đóng phiên qua AuctionScheduler
+                // Client chỉ cần cập nhật UI
                 this.item = new AuctionCardModel(
                         item.id(), item.title(), item.category(), item.categoryEmoji(),
                         item.currentBid(), item.startingPrice(), item.description(),
                         item.bidCount(),
-                        false,           // isLive = false — phiên đã kết thúc
+                        false,       // isLive = false
                         item.endTime(), item.imagePlaceholderEmoji(),
                         item.imageUrl(), item.sellerId()
                 );
 
-                // Bước 3: cập nhật UI và thông báo Home reload
                 Platform.runLater(() -> {
-                    // Đổi badge "● Đang đấu giá" → "✓ Đã kết thúc"
                     lblStatusBadge.setText("✓ Đã kết thúc");
                     lblStatusBadge.getStyleClass().removeAll("seller-badge-live");
-                    if (!lblStatusBadge.getStyleClass().contains("seller-badge-ended"))
-                        lblStatusBadge.getStyleClass().add("seller-badge-ended");
-
-                    // Ẩn nút Chỉnh sửa/Xóa (không cho sửa phiên đã kết thúc)
-                    refreshActionButtons();
-
-                    // Báo HomeController reload để card ngoài trang chủ cũng cập nhật
+                    lblStatusBadge.getStyleClass().add("seller-badge-ended");
+                    setButtonsVisible(false, false);
+                    if (lblEditWarning != null) {
+                        lblEditWarning.setText("⏰  Phiên đấu giá đã kết thúc.");
+                        lblEditWarning.setVisible(true);
+                        lblEditWarning.setManaged(true);
+                    }
                     if (onDataChanged != null) onDataChanged.run();
                 });
 
-                timerScheduler.shutdown();
+                timerScheduler.shutdownNow();
             }
         }, 0, 1, TimeUnit.SECONDS);
     }
 
-    // ── FXML handler ─────────────────────────────────────────────
+    // ── Back ─────────────────────────────────────────────────────
 
     @FXML
     private void handleBack() {
-        if (timerScheduler != null && !timerScheduler.isShutdown())
+        if (timerScheduler != null && !timerScheduler.isShutdown()) {
             timerScheduler.shutdownNow();
+        }
         if (thisStage != null) thisStage.close();
     }
 
     // ── Helpers ──────────────────────────────────────────────────
 
-    private static void setVisible(javafx.scene.Node node, boolean v) {
-        if (node == null) return;
-        node.setVisible(v);
-        node.setManaged(v);
+    private String formatPrice(double amount) {
+        return String.format("%,.0f đ", amount);
     }
 
-    private String formatPrice(double price) {
-        if (price >= 1_000_000_000)
-            return String.format("%.2f tỷ đ", price / 1_000_000_000);
-        if (price >= 1_000_000)
-            return String.format("%.1f triệu đ", price / 1_000_000);
-        return String.format("%,.0f đ", price).replace(',', '.');
+    private static void setVisible(javafx.scene.Node node, boolean visible) {
+        node.setVisible(visible);
+        node.setManaged(visible);
     }
 }

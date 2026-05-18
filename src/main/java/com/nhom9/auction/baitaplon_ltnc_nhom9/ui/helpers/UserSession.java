@@ -1,36 +1,32 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers;
 
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.UserDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
 
 /**
  * Singleton giữ trạng thái phiên đăng nhập hiện tại.
  * Truy cập từ bất kỳ Controller nào mà không cần dependency injection.
  *
- * <h3>Tại sao dùng Eager Initialization?</h3>
- * <pre>
- *   // Lazy (cũ — có vấn đề tiềm ẩn):
- *   if (instance == null) instance = new UserSession();
- *
- *   // Eager (mới — JVM đảm bảo thread-safe):
- *   private static final UserSession INSTANCE = new UserSession();
- * </pre>
- *
- * <p>UserSession rất nhẹ (chỉ chứa 1 field User), nên eager init không lãng phí
- * tài nguyên và loại bỏ hoàn toàn nguy cơ race condition.
+ * <h3>Bước 8 — Xoá login local:</h3>
+ * <ul>
+ *   <li>Bỏ field {@code currentUser} (User domain object).</li>
+ *   <li>Bỏ method {@code login(User)} — không còn login local.</li>
+ *   <li>Bỏ import {@code User} — client không còn phụ thuộc domain model.</li>
+ *   <li>Chỉ còn {@link #loginWithDTO(UserDTO)} — luôn đi qua socket.</li>
+ * </ul>
  *
  * <h3>Nguyên tắc sử dụng:</h3>
  * <ul>
- *   <li>Chỉ tầng UI (Controller, Coordinator) được đọc/ghi UserSession</li>
- *   <li>Service layer KHÔNG được import hoặc dùng UserSession</li>
+ *   <li>Chỉ tầng UI (Controller, Coordinator) được đọc/ghi UserSession.</li>
+ *   <li>Service layer KHÔNG được import hoặc dùng UserSession.</li>
  * </ul>
  */
 public class UserSession {
 
-    // ── Eager initialization — an toàn, không cần synchronized ───────────────
     private static final UserSession INSTANCE = new UserSession();
 
-    private User currentUser;
+    /** UserDTO nhận từ server sau khi login thành công qua socket. */
+    private UserDTO currentUserDTO;
 
     private UserSession() {}
 
@@ -41,40 +37,65 @@ public class UserSession {
     // ─── Login / Logout ───────────────────────────────────────────────────────
 
     /**
-     * Ghi user vào session sau khi đăng nhập thành công.
-     * Gọi bởi: LoginController (sau khi AuthService xác thực OK).
+     * Login qua socket — server trả về UserDTO sau khi xác thực.
+     * Đây là cách login duy nhất trong kiến trúc client-server.
      */
-    public void login(User user) {
-        this.currentUser = user;
+    public void loginWithDTO(UserDTO dto) {
+        this.currentUserDTO = dto;
     }
 
     /**
      * Xoá session khi đăng xuất.
-     * Gọi bởi: HomeLoginCoordinator.performLogout().
      */
     public void logout() {
-        this.currentUser = null;
+        this.currentUserDTO = null;
     }
 
-    // ─── State ────────────────────────────────────────────────────────────────
+    // ─── State queries ────────────────────────────────────────────────────────
 
-    public boolean isLoggedIn() { return currentUser != null; }
+    public boolean isLoggedIn() {
+        return currentUserDTO != null;
+    }
 
-    public User getCurrentUser() { return currentUser; }
+    /**
+     * Trả về UserDTO của user hiện tại.
+     * Null nếu chưa đăng nhập.
+     */
+    public UserDTO getCurrentUserDTO() {
+        return currentUserDTO;
+    }
 
     public int getCurrentUserId() {
         requireLogin();
-        return currentUser.getId();
+        return currentUserDTO.getId();
     }
 
     public String getCurrentUsername() {
         requireLogin();
-        return currentUser.getUsername();
+        return currentUserDTO.getUsername();
     }
 
-    public boolean isBuyer()  { return isLoggedIn() && currentUser.getRole() == UserRole.BUYER;  }
-    public boolean isSeller() { return isLoggedIn() && currentUser.getRole() == UserRole.SELLER; }
-    public boolean isAdmin()  { return isLoggedIn() && currentUser.getRole() == UserRole.ADMIN;  }
+    public String getCurrentFullName() {
+        requireLogin();
+        return currentUserDTO.getFullName();
+    }
+
+    public UserRole getCurrentRole() {
+        requireLogin();
+        return currentUserDTO.getRole();
+    }
+
+    public boolean isBuyer() {
+        return isLoggedIn() && getCurrentRole() == UserRole.BUYER;
+    }
+
+    public boolean isSeller() {
+        return isLoggedIn() && getCurrentRole() == UserRole.SELLER;
+    }
+
+    public boolean isAdmin() {
+        return isLoggedIn() && getCurrentRole() == UserRole.ADMIN;
+    }
 
     // ─── Guard ────────────────────────────────────────────────────────────────
 

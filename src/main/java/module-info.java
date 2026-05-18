@@ -9,7 +9,7 @@ module com.nhom9.auction.baitaplon_ltnc_nhom9 {
     requires jbcrypt;
 
     // Database drivers
-    requires org.xerial.sqlitejdbc;  // SQLite JDBC – vẫn giữ để có thể fallback
+    requires org.xerial.sqlitejdbc;
 
     // Connection pool
     requires com.zaxxer.hikari;
@@ -29,4 +29,7 @@ module com.nhom9.auction.baitaplon_ltnc_nhom9 {
     exports com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers;
     exports com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator;
 
+    // Package mới: socket client và protocol
+    exports com.nhom9.auction.baitaplon_ltnc_nhom9.client;
+    exports com.nhom9.auction.baitaplon_ltnc_nhom9.server.protocol;
 }

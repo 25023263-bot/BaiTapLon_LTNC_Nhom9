@@ -1,7 +1,6 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.presenter;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Notification;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification.NotificationService;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.UserSession;
 
@@ -20,7 +19,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-/** Chuông thông báo và panel danh sách. */
+/**
+ * Chuông thông báo và panel danh sách.
+ *
+ * <h3>Bước 8 — Xoá getCurrentUser():</h3>
+ * Thay tất cả {@code getCurrentUser().getId()} bằng {@code getCurrentUserId()}.
+ * Không còn phụ thuộc vào {@code User} domain object phía client.
+ */
 public final class HomeNotificationPresenter {
 
     private final NotificationService notifService;
@@ -43,18 +48,18 @@ public final class HomeNotificationPresenter {
             StackPane notifOverlay,
             Runnable showLoginRequired,
             Consumer<Integer> onOpenPanel) {
-        this.lblBellBadge = lblBellBadge;
-        this.notifList = notifList;
-        this.notifOverlay = notifOverlay;
+        this.lblBellBadge      = lblBellBadge;
+        this.notifList         = notifList;
+        this.notifOverlay      = notifOverlay;
         this.showLoginRequired = showLoginRequired;
-        this.onOpenPanel = onOpenPanel;
+        this.onOpenPanel       = onOpenPanel;
     }
 
     public void start() {
         notifService.addUiListener(event -> Platform.runLater(() -> {
-            User user = UserSession.getInstance().getCurrentUser();
-            if (user == null) return;
-            refreshBadge(notifService.unreadCountFresh(user.getId()));
+            if (!UserSession.getInstance().isLoggedIn()) return;
+            int userId = UserSession.getInstance().getCurrentUserId();
+            refreshBadge(notifService.unreadCountFresh(userId));
         }));
 
         badgePoller = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -63,23 +68,23 @@ public final class HomeNotificationPresenter {
             return t;
         });
         badgePoller.scheduleAtFixedRate(() -> {
-            User user = UserSession.getInstance().getCurrentUser();
-            if (user == null) return;
-            int count = notifService.unreadCount(user.getId());
+            if (!UserSession.getInstance().isLoggedIn()) return;
+            int userId = UserSession.getInstance().getCurrentUserId();
+            int count  = notifService.unreadCount(userId);
             Platform.runLater(() -> refreshBadge(count));
         }, 5, 30, TimeUnit.SECONDS);
     }
 
     public void openPanel() {
-        User user = UserSession.getInstance().getCurrentUser();
-        if (user == null) {
+        if (!UserSession.getInstance().isLoggedIn()) {
             showLoginRequired.run();
             return;
         }
-        notifService.markAllRead(user.getId());
+        int userId = UserSession.getInstance().getCurrentUserId();
+        notifService.markAllRead(userId);
         refreshBadge(0);
-        render(user.getId());
-        onOpenPanel.accept(user.getId());
+        render(userId);
+        onOpenPanel.accept(userId);
     }
 
     public void closePanel() {
@@ -92,11 +97,11 @@ public final class HomeNotificationPresenter {
     }
 
     public void markAllRead() {
-        User user = UserSession.getInstance().getCurrentUser();
-        if (user == null) return;
-        notifService.clearAll(user.getId());
+        if (!UserSession.getInstance().isLoggedIn()) return;
+        int userId = UserSession.getInstance().getCurrentUserId();
+        notifService.clearAll(userId);
         refreshBadge(0);
-        render(user.getId());
+        render(userId);
     }
 
     public void shutdown() {

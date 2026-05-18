@@ -1,11 +1,11 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.presenter;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.factory.ProductCardFactory;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.mapper.AuctionCardMapper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.AuctionCardModel;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.network.ServerConnection;
 
 import javafx.application.Platform;
 import javafx.scene.control.Button;
@@ -31,13 +31,19 @@ import java.util.logging.Logger;
 
 /**
  * Trang chủ: tải thẻ đấu giá, lọc/tìm kiếm, đồng hồ đếm ngược, kết quả đã kết thúc.
+ *
+ * <h3>Thay đổi so với phiên bản cũ:</h3>
+ * <ul>
+ *   <li>Bỏ dependency vào {@code ServiceLocator} và {@code BidRepository}.</li>
+ *   <li>Dữ liệu lấy qua {@link ServerConnection#getAuctions()} (socket).</li>
+ *   <li>Mapper vẫn giữ để chuyển đổi {@code AuctionItem → AuctionCardModel}.</li>
+ *   <li>{@code closeExpiredAuctions()} — server tự xử lý qua AuctionScheduler,
+ *       client chỉ cần gọi {@code refreshAll()} để load lại dữ liệu mới.</li>
+ * </ul>
  */
 public final class HomeCatalogPresenter {
 
     private static final Logger LOG = Logger.getLogger(HomeCatalogPresenter.class.getName());
-
-    private final BidRepository bidRepo;
-    private final AuctionCardMapper cardMapper;
 
     private HomeCatalogView view;
     private ProductCardFactory cardFactory;
@@ -50,12 +56,7 @@ public final class HomeCatalogPresenter {
     private String activeCategory;
     private ScheduledExecutorService timerScheduler;
 
-    public HomeCatalogPresenter(
-            BidRepository bidRepo,
-            AuctionCardMapper cardMapper) {
-        this.bidRepo = bidRepo;
-        this.cardMapper = cardMapper;
-    }
+    // ── Bind ─────────────────────────────────────────────────────────────────
 
     public void bind(HomeCatalogView view, Consumer<String> onPlaceBid, Runnable onResultsReload) {
         this.view = view;
@@ -63,6 +64,8 @@ public final class HomeCatalogPresenter {
         this.cardFactory = new ProductCardFactory(onPlaceBid, timerLabels);
         activeChipButton = view.chipAll();
     }
+
+    // ── Timer ────────────────────────────────────────────────────────────────
 
     public void startTimers() {
         timerScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -106,43 +109,110 @@ public final class HomeCatalogPresenter {
                 }
             }
 
+            // Khi có phiên hết hạn → server tự xử lý qua AuctionScheduler.
+            // Client chỉ cần reload lại danh sách để thấy trạng thái mới.
             if (needsRefresh) {
-                try {
-                    ServiceLocator.getInstance().getAuctionHouse().closeExpiredAuctions();
-                } catch (Exception e) {
-                    LOG.warning("closeExpiredAuctions lỗi: " + e.getMessage());
-                }
                 Platform.runLater(this::refreshAll);
             }
         }, 0, 1, TimeUnit.SECONDS);
     }
 
+    // ── Data loading ─────────────────────────────────────────────────────────
+
+    /**
+     * Tải lại toàn bộ dữ liệu từ server, chạy trên background thread.
+     * Kết quả được cập nhật lên UI qua Platform.runLater().
+     */
     public void refreshAll() {
         timerLabels.clear();
-        loadHotAuctions();
-        loadAllAuctions();
+        loadDataFromServer(this::renderAll);
         if (onResultsReload != null) onResultsReload.run();
     }
 
-    public void loadHotAuctions() {
-        view.hotCardsContainer().getChildren().clear();
+    /**
+     * Gọi server lấy danh sách phiên đấu giá, sau đó gọi callback với dữ liệu.
+     * Chạy trên background thread để không block UI.
+     */
+    private void loadDataFromServer(Consumer<List<AuctionItem>> onLoaded) {
+        Thread t = new Thread(() -> {
+            try {
+                List<AuctionItem> items;
+                if (ServerConnection.isConnected()) {
+                    items = ServerConnection.getAuctions();
+                } else {
+                    LOG.warning("Server không kết nối — danh sách phiên đấu giá trống.");
+                    items = List.of();
+                }
+                final List<AuctionItem> result = items;
+                Platform.runLater(() -> onLoaded.accept(result));
+            } catch (Exception e) {
+                LOG.warning("Lỗi tải danh sách phiên đấu giá: " + e.getMessage());
+                Platform.runLater(() -> onLoaded.accept(List.of()));
+            }
+        }, "ubid-catalog-loader");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /**
+     * Render tất cả dữ liệu lên UI sau khi đã load từ server.
+     * Phải gọi trên JavaFX Application Thread.
+     */
+    private void renderAll(List<AuctionItem> allItems) {
         synchronized (displayedItems) { displayedItems.clear(); }
-        List<AuctionCardModel> items = cardMapper.loadByStatus(AuctionStatus.ACTIVE);
-        items = items.stream()
+
+        List<AuctionItem> activeItems = allItems.stream()
+                .filter(i -> i.getStatus() == AuctionStatus.ACTIVE)
+                .toList();
+
+        renderHotAuctions(activeItems);
+        renderAllAuctions(activeItems);
+    }
+
+    // ── Hot auctions ─────────────────────────────────────────────────────────
+
+    public void loadHotAuctions() {
+        loadDataFromServer(items -> {
+            List<AuctionItem> active = items.stream()
+                    .filter(i -> i.getStatus() == AuctionStatus.ACTIVE)
+                    .toList();
+            renderHotAuctions(active);
+        });
+    }
+
+    private void renderHotAuctions(List<AuctionItem> activeItems) {
+        view.hotCardsContainer().getChildren().clear();
+
+        List<AuctionCardModel> cards = activeItems.stream()
+                .map(i -> AuctionCardMapper.toCardSimple(i))
                 .sorted((a, b) -> Integer.compare(b.bidCount(), a.bidCount()))
                 .limit(3)
                 .toList();
-        synchronized (displayedItems) { displayedItems.addAll(items); }
-        for (AuctionCardModel item : items) {
-            VBox card = cardFactory.buildHotCard(item);
-            HBox.setHgrow(card, Priority.ALWAYS);
-            view.hotCardsContainer().getChildren().add(card);
+
+        synchronized (displayedItems) { displayedItems.addAll(cards); }
+
+        for (AuctionCardModel card : cards) {
+            VBox cardNode = cardFactory.buildHotCard(card);
+            HBox.setHgrow(cardNode, Priority.ALWAYS);
+            view.hotCardsContainer().getChildren().add(cardNode);
         }
     }
 
+    // ── All auctions ──────────────────────────────────────────────────────────
+
     public void loadAllAuctions() {
+        loadDataFromServer(items -> {
+            List<AuctionItem> active = items.stream()
+                    .filter(i -> i.getStatus() == AuctionStatus.ACTIVE)
+                    .toList();
+            renderAllAuctions(active);
+        });
+    }
+
+    private void renderAllAuctions(List<AuctionItem> activeItems) {
         view.allProductsGrid().getChildren().clear();
         view.allProductsGrid().getColumnConstraints().clear();
+
         int columns = 3;
         for (int i = 0; i < columns; i++) {
             ColumnConstraints cc = new ColumnConstraints();
@@ -150,57 +220,84 @@ public final class HomeCatalogPresenter {
             cc.setHgrow(Priority.ALWAYS);
             view.allProductsGrid().getColumnConstraints().add(cc);
         }
-        List<AuctionCardModel> items = cardMapper.loadByStatus(AuctionStatus.ACTIVE);
+
+        List<AuctionCardModel> cards = activeItems.stream()
+                .map(AuctionCardMapper::toCardSimple)
+                .toList();
+
         synchronized (displayedItems) {
-            for (AuctionCardModel item : items) {
-                boolean exists = displayedItems.stream().anyMatch(c -> c.id().equals(item.id()));
-                if (!exists) displayedItems.add(item);
+            for (AuctionCardModel card : cards) {
+                boolean exists = displayedItems.stream().anyMatch(c -> c.id().equals(card.id()));
+                if (!exists) displayedItems.add(card);
             }
         }
-        for (int i = 0; i < items.size(); i++) {
-            VBox card = cardFactory.buildSmallCard(items.get(i));
-            view.allProductsGrid().add(card, i % columns, i / columns);
+
+        for (int i = 0; i < cards.size(); i++) {
+            VBox cardNode = cardFactory.buildSmallCard(cards.get(i));
+            view.allProductsGrid().add(cardNode, i % columns, i / columns);
         }
+
         if (view.resultCountLabel() != null) {
-            view.resultCountLabel().setText(items.size() + " kết quả");
+            view.resultCountLabel().setText(cards.size() + " kết quả");
         }
     }
 
+    // ── Result auctions ──────────────────────────────────────────────────────
+
+    /**
+     * Load kết quả phiên đã kết thúc từ server.
+     * Vì server trả về List<AuctionItem> (không kèm leadingBid),
+     * ta hiển thị giá cuối cùng (currentPrice) thay vì query thêm.
+     */
     public void loadResultAuctions(VBox resultsList, Label resultsSubtitle) {
         resultsList.getChildren().clear();
-        List<AuctionCardModel> closed = cardMapper.loadByStatus(AuctionStatus.CLOSED);
-        List<AuctionCardModel> expired = cardMapper.loadByStatus(AuctionStatus.EXPIRED);
-        List<AuctionCardModel> all = new ArrayList<>();
-        all.addAll(closed);
-        all.addAll(expired);
-        all.sort((a, b) -> {
-            if (a.endTime() == null) return 1;
-            if (b.endTime() == null) return -1;
-            return b.endTime().compareTo(a.endTime());
-        });
 
-        if (all.isEmpty()) {
-            Label empty = new Label("Chưa có phiên đấu giá nào kết thúc.");
-            empty.setStyle("-fx-text-fill: #666; -fx-font-size: 14px; -fx-padding: 32;");
-            resultsList.getChildren().add(empty);
-        } else {
-            for (AuctionCardModel item : all) {
-                String winnerName = null;
-                double finalAmount = item.currentBid();
-                try {
-                    var leadingBid = bidRepo.findLeadingBid(Integer.parseInt(item.id()));
-                    if (leadingBid.isPresent()) {
-                        winnerName = leadingBid.get().getBuyerUsername();
-                        finalAmount = leadingBid.get().getAmount().doubleValue();
+        Thread t = new Thread(() -> {
+            try {
+                List<AuctionItem> all = ServerConnection.isConnected()
+                        ? ServerConnection.getAuctions()
+                        : List.of();
+
+                List<AuctionCardModel> closed = all.stream()
+                        .filter(i -> i.getStatus() == AuctionStatus.CLOSED
+                                || i.getStatus() == AuctionStatus.EXPIRED)
+                        .map(AuctionCardMapper::toCardSimple)
+                        .sorted((a, b) -> {
+                            if (a.endTime() == null) return 1;
+                            if (b.endTime() == null) return -1;
+                            return b.endTime().compareTo(a.endTime());
+                        })
+                        .toList();
+
+                Platform.runLater(() -> {
+                    if (closed.isEmpty()) {
+                        Label empty = new Label("Chưa có phiên đấu giá nào kết thúc.");
+                        empty.setStyle("-fx-text-fill: #666; -fx-font-size: 14px; -fx-padding: 32;");
+                        resultsList.getChildren().add(empty);
+                    } else {
+                        for (AuctionCardModel item : closed) {
+                            // Không có leadingBid qua socket đơn giản → hiển thị currentPrice
+                            HBox card = cardFactory.buildResultCard(item, null, item.currentBid());
+                            resultsList.getChildren().add(card);
+                        }
                     }
-                } catch (Exception ignored) {
-                }
-                HBox card = cardFactory.buildResultCard(item, winnerName, finalAmount);
-                resultsList.getChildren().add(card);
+                    resultsSubtitle.setText(closed.size() + " phiên đấu giá đã kết thúc");
+                });
+            } catch (Exception e) {
+                LOG.warning("Lỗi load kết quả phiên đấu giá: " + e.getMessage());
+                Platform.runLater(() -> {
+                    Label err = new Label("Không thể tải kết quả. Vui lòng thử lại.");
+                    err.setStyle("-fx-text-fill: #e74c3c; -fx-padding: 20;");
+                    resultsList.getChildren().add(err);
+                    resultsSubtitle.setText("—");
+                });
             }
-        }
-        resultsSubtitle.setText(all.size() + " phiên đấu giá đã kết thúc");
+        }, "ubid-results-loader");
+        t.setDaemon(true);
+        t.start();
     }
+
+    // ── Filter / Search ──────────────────────────────────────────────────────
 
     public void showAllCategories() {
         setActiveChip(view.chipAll());
@@ -247,11 +344,11 @@ public final class HomeCatalogPresenter {
         }
     }
 
+    // ── Private helpers ───────────────────────────────────────────────────────
+
     private List<AuctionCardModel> baseForCategory() {
         if (activeCategory == null || activeCategory.isEmpty()) {
-            synchronized (displayedItems) {
-                return List.copyOf(displayedItems);
-            }
+            synchronized (displayedItems) { return List.copyOf(displayedItems); }
         }
         final String cat = activeCategory;
         synchronized (displayedItems) {

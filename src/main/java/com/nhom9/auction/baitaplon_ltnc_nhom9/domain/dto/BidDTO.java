@@ -1,17 +1,16 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-/**
- * DTO for bid history on the UI.
- */
-public class BidDTO {
+public class BidDTO implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private int id;
     private int auctionId;
-    /** Title from {@code auctions} (joined for display). */
     private String auctionTitle;
     private int buyerId;
     private String buyerUsername;
@@ -56,15 +55,15 @@ public class BidDTO {
     public void setId(int id)                       { this.id = id; }
 
     public int getAuctionId()                       { return auctionId; }
-    public void setAuctionId(int auctionId)       { this.auctionId = auctionId; }
+    public void setAuctionId(int auctionId)         { this.auctionId = auctionId; }
 
-    public String getAuctionTitle()                { return auctionTitle; }
-    public void setAuctionTitle(String title)      { this.auctionTitle = title; }
+    public String getAuctionTitle()                 { return auctionTitle; }
+    public void setAuctionTitle(String title)       { this.auctionTitle = title; }
 
     public int getBuyerId()                         { return buyerId; }
     public void setBuyerId(int buyerId)             { this.buyerId = buyerId; }
 
-    public String getBuyerUsername()              { return buyerUsername; }
+    public String getBuyerUsername()                { return buyerUsername; }
     public void setBuyerUsername(String name)       { this.buyerUsername = name; }
 
     public BigDecimal getAmount()                   { return amount; }

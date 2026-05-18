@@ -2,6 +2,7 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.io.Serializable;
 
 /**
  * Thông báo gửi đến một user cụ thể.
@@ -13,7 +14,9 @@ import java.time.format.DateTimeFormatter;
  *
  * Persistent: lưu vào bảng notifications — không mất khi restart.
  */
-public class Notification {
+public class Notification implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     // ─── Loại thông báo ──────────────────────────────────────────────────────
     public enum Type {
