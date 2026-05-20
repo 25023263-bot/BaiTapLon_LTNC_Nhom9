@@ -5,7 +5,6 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.PhysicalItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DbUtil;
-import javafx.beans.value.ObservableBooleanValue;
 
 import java.math.BigDecimal;
 import java.sql.*;
@@ -16,13 +15,16 @@ import java.util.Optional;
 
 /**
  * JDBC repository cho auction listings.
- * Bảng: auctions + physical_items (table-per-subclass).
+ * Bảng: auctions (table duy nhất — physical_items đã được xoá vì UI
+ * hiện tại không thu thập các trường physical-only như condition,
+ * weight, shipping...).
  *
  * ─── THAY ĐỔI SO VỚI PHIÊN BẢN CŨ ──────────────────────────────────────
- * 1. Connection được đóng đúng cách (try-with-resources).
- * 2. INSERT OR REPLACE → check-then-insert/update (hoạt động trên MySQL).
- * 3. datetime('now','localtime') → DbUtil.nowSql() (hoạt động trên cả hai).
- * 4. toStr/fromStr → DbUtil.toDbString/fromDbString.
+ * 1. Bỏ hoàn toàn physical_items: insertTypeExtension, loadPhysicalExtension.
+ * 2. Connection được đóng đúng cách (try-with-resources).
+ * 3. INSERT OR REPLACE → check-then-insert/update (hoạt động trên MySQL).
+ * 4. datetime('now','localtime') → DbUtil.nowSql().
+ * 5. toStr/fromStr → DbUtil.toDbString/fromDbString.
  * ──────────────────────────────────────────────────────────────────────────
  */
 public class AuctionRepository {
@@ -38,7 +40,6 @@ public class AuctionRepository {
             conn.setAutoCommit(false);
             try {
                 insertAuction(conn, item);
-                insertTypeExtension(conn, item);
                 conn.commit();
             } catch (SQLException e) {
                 conn.rollback();
@@ -68,56 +69,16 @@ public class AuctionRepository {
             ps.setDouble(7,  item.getStartingPrice().doubleValue());
             ps.setDouble(8,  item.getMinBidIncrement().doubleValue());
             ps.setDouble(9,  item.getCurrentPrice().doubleValue());
-            setNullableInt   (ps, 10, item.getLeadingBidderId() == 0 ? null : item.getLeadingBidderId());
+            setNullableInt(ps, 10, item.getLeadingBidderId() == 0 ? null : item.getLeadingBidderId());
             ps.setString(11, item.getStatus().name());
             ps.setString(12, DbUtil.toDbString(item.getStartTime()));
             ps.setString(13, DbUtil.toDbString(item.getEndTime()));
-            ps.setString(14, DbUtil.toDbString(item.getCreatedAt() != null ? item.getCreatedAt() : LocalDateTime.now()));
+            ps.setString(14, DbUtil.toDbString(
+                    item.getCreatedAt() != null ? item.getCreatedAt() : LocalDateTime.now()));
             ps.executeUpdate();
 
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) item.setId(rs.getInt(1));
-            }
-        }
-    }
-
-    /**
-     * INSERT / UPDATE bảng phụ physical_items.
-     */
-    private void insertTypeExtension(Connection conn, AuctionItem item) throws SQLException {
-        if (item instanceof PhysicalItem p) {
-            if (DbUtil.rowExists(conn, "physical_items", "auction_id", p.getId())) {
-                String sql = """
-                        UPDATE physical_items SET condition_text=?, weight_grams=?, dimensions=?,
-                          location=?, shipping_cost=?, allow_pickup=?
-                        WHERE auction_id=?
-                        """;
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setString(1, p.getCondition());
-                    ps.setDouble(2, p.getWeightGrams());
-                    ps.setString(3, p.getDimensions());
-                    ps.setString(4, p.getLocation());
-                    ps.setDouble(5, p.getShippingCost() != null ? p.getShippingCost().doubleValue() : 0);
-                    ps.setInt   (6, p.isAllowPickup() ? 1 : 0);
-                    ps.setInt   (7, p.getId());
-                    ps.executeUpdate();
-                }
-            } else {
-                String sql = """
-                        INSERT INTO physical_items
-                          (auction_id, condition_text, weight_grams, dimensions, location, shipping_cost, allow_pickup)
-                        VALUES (?,?,?,?,?,?,?)
-                        """;
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setInt   (1, p.getId());
-                    ps.setString(2, p.getCondition());
-                    ps.setDouble(3, p.getWeightGrams());
-                    ps.setString(4, p.getDimensions());
-                    ps.setString(5, p.getLocation());
-                    ps.setDouble(6, p.getShippingCost() != null ? p.getShippingCost().doubleValue() : 0);
-                    ps.setInt   (7, p.isAllowPickup() ? 1 : 0);
-                    ps.executeUpdate();
-                }
             }
         }
     }
@@ -130,7 +91,7 @@ public class AuctionRepository {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return Optional.of(mapWithExtension(conn, rs));
+                if (rs.next()) return Optional.of(mapRow(rs));
             }
         }
         return Optional.empty();
@@ -142,7 +103,7 @@ public class AuctionRepository {
         try (Connection conn = db();
              Statement st = conn.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) list.add(mapWithExtension(conn, rs));
+            while (rs.next()) list.add(mapRow(rs));
         }
         return list;
     }
@@ -154,7 +115,7 @@ public class AuctionRepository {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, sellerId);
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(mapWithExtension(conn, rs));
+                while (rs.next()) list.add(mapRow(rs));
             }
         }
         return list;
@@ -167,19 +128,18 @@ public class AuctionRepository {
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, status.name());
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(mapWithExtension(conn, rs));
+                while (rs.next()) list.add(mapRow(rs));
             }
         }
         return list;
     }
 
     /**
-     * ACTIVE auctions đã quá end_time – dùng trong scheduler.
+     * ACTIVE auctions đã quá end_time — dùng trong scheduler.
      *
      * DbUtil.nowSql() trả về:
      *   → SQLite: datetime('now','localtime')
      *   → MySQL:  NOW()
-     * → Câu SQL hoạt động đúng trên cả hai.
      */
     public List<AuctionItem> findExpiredActive() throws SQLException {
         List<AuctionItem> list = new ArrayList<>();
@@ -187,13 +147,13 @@ public class AuctionRepository {
         try (Connection conn = db();
              Statement st = conn.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) list.add(mapWithExtension(conn, rs));
+            while (rs.next()) list.add(mapRow(rs));
         }
         return list;
     }
 
     /**
-     * PENDING auctions đến giờ bắt đầu – dùng trong scheduler.
+     * PENDING auctions đến giờ bắt đầu — dùng trong scheduler.
      */
     public List<AuctionItem> findDueToStart() throws SQLException {
         List<AuctionItem> list = new ArrayList<>();
@@ -201,7 +161,7 @@ public class AuctionRepository {
         try (Connection conn = db();
              Statement st = conn.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
-            while (rs.next()) list.add(mapWithExtension(conn, rs));
+            while (rs.next()) list.add(mapRow(rs));
         }
         return list;
     }
@@ -209,44 +169,32 @@ public class AuctionRepository {
     // ─── Update ───────────────────────────────────────────────────────────────
 
     public void update(AuctionItem item) throws SQLException {
-        try (Connection conn = db()) {
-            conn.setAutoCommit(false);
-            try {
-                String sql = """
-                        UPDATE auctions SET
-                          title=?, description=?, category=?, image_url=?,
-                          min_bid_increment=?, current_price=?,
-                          leading_bidder_id=?, status=?, start_time=?, end_time=?
-                        WHERE id=?
-                        """;
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setString(1,  item.getTitle());
-                    ps.setString(2,  item.getDescription());
-                    ps.setString(3,  item.getCategory());
-                    ps.setString(4,  item.getImageUrl());
-                    ps.setDouble(5,  item.getMinBidIncrement().doubleValue());
-                    ps.setDouble(6,  item.getCurrentPrice().doubleValue());
-                    setNullableInt   (ps, 7, item.getLeadingBidderId() == 0 ? null : item.getLeadingBidderId());
-                    ps.setString(8,  item.getStatus().name());
-                    ps.setString(9,  DbUtil.toDbString(item.getStartTime()));
-                    ps.setString(10, DbUtil.toDbString(item.getEndTime()));
-                    ps.setInt   (11, item.getId());
-                    ps.executeUpdate();
-                }
-                insertTypeExtension(conn, item);
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            } finally {
-                conn.setAutoCommit(true);
-            }
+        String sql = """
+                UPDATE auctions SET
+                  title=?, description=?, category=?, image_url=?,
+                  min_bid_increment=?, current_price=?,
+                  leading_bidder_id=?, status=?, start_time=?, end_time=?
+                WHERE id=?
+                """;
+        try (Connection conn = db();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1,  item.getTitle());
+            ps.setString(2,  item.getDescription());
+            ps.setString(3,  item.getCategory());
+            ps.setString(4,  item.getImageUrl());
+            ps.setDouble(5,  item.getMinBidIncrement().doubleValue());
+            ps.setDouble(6,  item.getCurrentPrice().doubleValue());
+            setNullableInt(ps, 7, item.getLeadingBidderId() == 0 ? null : item.getLeadingBidderId());
+            ps.setString(8,  item.getStatus().name());
+            ps.setString(9,  DbUtil.toDbString(item.getStartTime()));
+            ps.setString(10, DbUtil.toDbString(item.getEndTime()));
+            ps.setInt   (11, item.getId());
+            ps.executeUpdate();
         }
     }
 
     /**
      * Tự động đóng các phiên ACTIVE đã quá end_time → CLOSED.
-     * Gọi khi app khởi động và mỗi khi timer phát hiện có phiên hết hạn.
      */
     public void closeExpiredAuctions() throws SQLException {
         String sql = "UPDATE auctions SET status='CLOSED' WHERE status='ACTIVE' AND end_time <= " + DbUtil.nowSql();
@@ -279,10 +227,6 @@ public class AuctionRepository {
 
     /**
      * Cập nhật chỉ cột end_time — dùng riêng cho anti-snipe extension.
-     * Nhẹ hơn update(item) vì không cần load/ghi toàn bộ record.
-     *
-     * @param auctionId  ID phiên đấu giá cần gia hạn
-     * @param newEndTime thời điểm kết thúc mới
      */
     public void updateEndTime(int auctionId, LocalDateTime newEndTime) throws SQLException {
         String sql = "UPDATE auctions SET end_time=? WHERE id=?";
@@ -307,16 +251,8 @@ public class AuctionRepository {
 
     // ─── Mapping ──────────────────────────────────────────────────────────────
 
-    /** Map từ ResultSet + load bảng phụ, dùng chung connection. */
-    private AuctionItem mapWithExtension(Connection conn, ResultSet rs) throws SQLException {
-        int id = rs.getInt("id");
-        PhysicalItem p = new PhysicalItem();
-        applyBaseFields(p, rs);
-        loadPhysicalExtension(conn, p, id);
-        return p;
-    }
-
-    private void applyBaseFields(AuctionItem item, ResultSet rs) throws SQLException {
+    private AuctionItem mapRow(ResultSet rs) throws SQLException {
+        PhysicalItem item = new PhysicalItem();
         item.setId(rs.getInt("id"));
         item.setSellerId(rs.getInt("seller_id"));
         item.setTitle(rs.getString("title"));
@@ -332,41 +268,13 @@ public class AuctionRepository {
         item.setStartTime(DbUtil.fromDbString(rs.getString("start_time")));
         item.setEndTime(DbUtil.fromDbString(rs.getString("end_time")));
         item.setCreatedAt(DbUtil.fromDbString(rs.getString("created_at")));
-    }
-
-    private void loadPhysicalExtension(Connection conn, PhysicalItem p, int auctionId) throws SQLException {
-        String sql = "SELECT * FROM physical_items WHERE auction_id=?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, auctionId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    p.setCondition(rs.getString("condition_text"));
-                    p.setWeightGrams(rs.getDouble("weight_grams"));
-                    p.setDimensions(rs.getString("dimensions"));
-                    p.setLocation(rs.getString("location"));
-                    p.setShippingCost(BigDecimal.valueOf(rs.getDouble("shipping_cost")));
-                    p.setAllowPickup(rs.getInt("allow_pickup") == 1);
-                }
-            }
-        }
+        return item;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    private void setNullableDouble(PreparedStatement ps, int idx, BigDecimal val) throws SQLException {
-        if (val == null) ps.setNull(idx, Types.DOUBLE);
-        else ps.setDouble(idx, val.doubleValue());
-    }
-
     private void setNullableInt(PreparedStatement ps, int idx, Integer val) throws SQLException {
         if (val == null) ps.setNull(idx, Types.INTEGER);
         else ps.setInt(idx, val);
-    }
-
-    private void setParam(PreparedStatement ps, int idx, Object val) throws SQLException {
-        if (val instanceof String s) ps.setString(idx, s);
-        else if (val instanceof Integer i) ps.setInt(idx, i);
-        else if (val instanceof Double d) ps.setDouble(idx, d);
-        else ps.setObject(idx, val);
     }
 }

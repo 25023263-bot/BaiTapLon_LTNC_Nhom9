@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.io.Serializable;
 
-    // ... giữ nguyên toàn bộ phần còn lại
 /**
  * A single bid placed by a buyer on an auction listing.
  */
@@ -45,27 +44,18 @@ public class Bid implements Serializable {
         this.autoBidLimit   = autoBidLimit;
     }
 
-    public boolean canAutoBidUp(BigDecimal newAmount) {
-        return autoBid && autoBidLimit != null && autoBidLimit.compareTo(newAmount) >= 0;
-    }
-
-    public BigDecimal calculateAutoBidAmount(BigDecimal increment, BigDecimal rivalBid) {
-        if (!autoBid || autoBidLimit == null) return null;
-        BigDecimal needed = rivalBid.add(increment);
-        if (autoBidLimit.compareTo(needed) < 0) return null;
-        return needed.min(autoBidLimit);
-    }
+    // ─── Getters / Setters ───────────────────────────────────────────────────
 
     public int getId()                              { return id; }
     public void setId(int id)                       { this.id = id; }
 
     public int getAuctionId()                       { return auctionId; }
-    public void setAuctionId(int auctionId)       { this.auctionId = auctionId; }
+    public void setAuctionId(int auctionId)         { this.auctionId = auctionId; }
 
     public int getBuyerId()                         { return buyerId; }
     public void setBuyerId(int buyerId)             { this.buyerId = buyerId; }
 
-    public String getBuyerUsername()               { return buyerUsername; }
+    public String getBuyerUsername()                { return buyerUsername; }
     public void setBuyerUsername(String name)       { this.buyerUsername = name; }
 
     public BigDecimal getAmount()                   { return amount; }
@@ -75,7 +65,7 @@ public class Bid implements Serializable {
     public void setBidTime(LocalDateTime bidTime)   { this.bidTime = bidTime; }
 
     public boolean isAutoBid()                      { return autoBid; }
-    public void setAutoBid(boolean autoBid)          { this.autoBid = autoBid; }
+    public void setAutoBid(boolean autoBid)         { this.autoBid = autoBid; }
 
     public BigDecimal getAutoBidLimit()             { return autoBidLimit; }
     public void setAutoBidLimit(BigDecimal limit)   { this.autoBidLimit = limit; }

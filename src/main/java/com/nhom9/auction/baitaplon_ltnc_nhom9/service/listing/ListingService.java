@@ -30,12 +30,6 @@ public final class ListingService {
         item.setMinBidIncrement(new BigDecimal("1000"));
         item.setStartTime(LocalDateTime.now());
         item.setEndTime(req.endTime());
-        item.setCondition("GOOD");
-        item.setWeightGrams(0);
-        item.setDimensions("");
-        item.setLocation("Việt Nam");
-        item.setShippingCost(BigDecimal.ZERO);
-        item.setAllowPickup(false);
 
         return (PhysicalItem) auctionHouse.listItem(item);
     }

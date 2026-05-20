@@ -8,8 +8,11 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * Data Transfer Object cho AuctionItem (cả Physical và Digital).
- * Kết hợp các trường của cả hai loại – null nếu không áp dụng.
+ * Data Transfer Object cho AuctionItem — dùng để truyền dữ liệu qua socket.
+ *
+ * Các trường physical-only (condition, weightGrams, dimensions, location,
+ * shippingCost, allowPickup) đã được xoá vì UI không hiển thị những
+ * thông tin này và server không map chúng vào DTO.
  */
 public class ItemDTO implements Serializable {
 
@@ -17,14 +20,14 @@ public class ItemDTO implements Serializable {
 
     private int id;
     private int sellerId;
-    private String sellerUsername;    // join từ users
-    private String sellerRating;      // hiển thị "4.5 ⭐ (12)"
+    private String sellerUsername;
+    private String sellerRating;
 
     private String title;
     private String description;
     private String category;
     private String imageUrl;
-    private String itemType;          // PHYSICAL | DIGITAL
+    private String itemType;
 
     private BigDecimal startingPrice;
     private BigDecimal minBidIncrement;
@@ -37,19 +40,10 @@ public class ItemDTO implements Serializable {
     private LocalDateTime endTime;
     private LocalDateTime createdAt;
 
-    // Số lần bid
     private int totalBids;
 
-    // Danh sách lịch sử bid — chỉ populate trong GET_AUCTION_DETAIL, null trong GET_AUCTIONS
+    /** Chỉ populate trong GET_AUCTION_DETAIL, null trong GET_AUCTIONS */
     private List<BidDTO> bids;
-
-    // ─── Physical-only ───────────────────────────────────────────────────────
-    private String condition;
-    private double weightGrams;
-    private String dimensions;
-    private String location;
-    private BigDecimal shippingCost;
-    private boolean allowPickup;
 
     // ─── Constructor ────────────────────────────────────────────────────────
 
@@ -57,9 +51,8 @@ public class ItemDTO implements Serializable {
 
     // ─── Utility ─────────────────────────────────────────────────────────────
 
-    public boolean isPhysical()    { return "PHYSICAL".equalsIgnoreCase(itemType); }
-    public boolean isActive()      { return status == AuctionStatus.ACTIVE; }
-    public boolean hasBids()       { return totalBids > 0; }
+    public boolean isActive()  { return status == AuctionStatus.ACTIVE; }
+    public boolean hasBids()   { return totalBids > 0; }
 
     /**
      * Giá bid tối thiểu tiếp theo.
@@ -70,7 +63,7 @@ public class ItemDTO implements Serializable {
     }
 
     /**
-     * Số giây còn lại (tính toán client-side để tránh truyền server time).
+     * Số giây còn lại (tính client-side).
      */
     public long getRemainingSeconds() {
         if (endTime == null) return 0;
@@ -140,27 +133,9 @@ public class ItemDTO implements Serializable {
     public List<BidDTO> getBids()                               { return bids; }
     public void setBids(List<BidDTO> bids)                      { this.bids = bids; }
 
-    public String getCondition()                                { return condition; }
-    public void setCondition(String condition)                  { this.condition = condition; }
-
-    public double getWeightGrams()                              { return weightGrams; }
-    public void setWeightGrams(double weightGrams)              { this.weightGrams = weightGrams; }
-
-    public String getDimensions()                               { return dimensions; }
-    public void setDimensions(String dimensions)                { this.dimensions = dimensions; }
-
-    public String getLocation()                                 { return location; }
-    public void setLocation(String location)                    { this.location = location; }
-
-    public BigDecimal getShippingCost()                         { return shippingCost; }
-    public void setShippingCost(BigDecimal shippingCost)        { this.shippingCost = shippingCost; }
-
-    public boolean isAllowPickup()                              { return allowPickup; }
-    public void setAllowPickup(boolean allowPickup)             { this.allowPickup = allowPickup; }
-
     @Override
     public String toString() {
-        return String.format("ItemDTO{id=%d, title='%s', type=PHYSICAL, price=%s, status=%s}",
+        return String.format("ItemDTO{id=%d, title='%s', price=%s, status=%s}",
                 id, title, currentPrice, status);
     }
 }
