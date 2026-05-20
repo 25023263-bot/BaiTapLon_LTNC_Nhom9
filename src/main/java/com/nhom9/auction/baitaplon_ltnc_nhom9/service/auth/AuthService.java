@@ -120,32 +120,6 @@ public class AuthService implements Authenticatable {
         }
     }
 
-    // ─── Change Password ──────────────────────────────────────────────────────
-
-    @Override
-    public void changePassword(int userId, String oldRaw, String newRaw)
-            throws AuthenticationException {
-        try {
-            User user = userRepo.findById(userId)
-                    .orElseThrow(() -> new AuthenticationException("Không tìm thấy tài khoản."));
-
-            if (!PasswordHasher.verify(oldRaw, user.getPasswordHash()))
-                throw new AuthenticationException(AuthenticationException.Reason.INVALID_CREDENTIALS);
-
-            if (!PasswordHasher.isStrong(newRaw))
-                throw new AuthenticationException(
-                        "Mật khẩu mới phải có ít nhất 8 ký tự, bao gồm chữ hoa, thường và số.");
-
-            String newHash = PasswordHasher.hash(newRaw);
-            userRepo.updatePassword(userId, newHash);
-            LOG.info("Đổi mật khẩu thành công cho user #" + userId);
-
-        } catch (AuthenticationException e) {
-            throw e;
-        } catch (SQLException e) {
-            throw new AuthenticationException("Lỗi hệ thống khi đổi mật khẩu.");
-        }
-    }
 
     // ─── Validation ───────────────────────────────────────────────────────────
 

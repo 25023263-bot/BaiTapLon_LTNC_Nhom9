@@ -600,12 +600,7 @@ public class AuctionHouse implements Auctionable {
         if (item instanceof PhysicalItem p)
             totalCost = p.getTotalCostForBuyer();
 
-        // ── FIX: Tách payment khỏi notification ──────────────────────────────
-        //
-        // Vấn đề cũ: processPayment() ném Exception → notifyClosed() không được
-        // gọi → người thắng, người thua, seller đều không nhận được thông báo.
-        //
-        // Giải pháp: wrap processPayment() trong try-catch riêng.
+        // wrap processPayment() trong try-catch riêng.
         //   - Nếu payment OK  → log bình thường, tiếp tục notify
         //   - Nếu payment fail → log warning, vẫn gọi notifyClosed() để
         //     tất cả các bên được thông báo phiên đã đóng
@@ -704,28 +699,53 @@ public class AuctionHouse implements Auctionable {
      * Trừ tiền buyer, cộng tiền seller, lưu transaction.
      */
     private void processPayment(AuctionItem item, int buyerId, BigDecimal totalCost) throws Exception {
-        Buyer  buyer  = loadBuyer(buyerId);
-        Seller seller = loadSeller(item.getSellerId());
+        // Load winner trực tiếp từ DB để biết role thực sự (Buyer hay Seller).
+        // KHÔNG dùng loadBuyer() vì nó trả về Seller.asBuyer() — một proxy tách rời,
+        // khiến updateWalletBalance() UPDATE sai bảng (buyers thay vì sellers) và
+        // 0 row bị affected → tiền không bị trừ mà không có exception nào.
+        User winner = userRepo.findById(buyerId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy winner #" + buyerId));
 
-        // Trừ ví buyer
-        buyer.deduct(totalCost);
-        userRepo.updateWalletBalance(buyerId, buyer.getWalletBalance());
+        // ── Trừ tiền winner — phân biệt theo role ────────────────────────────
+        if (winner instanceof Buyer buyer) {
+            // Winner là Buyer thông thường → kiểm tra và trừ wallet_balance
+            if (!buyer.hasSufficientBalance(totalCost))
+                throw new InsufficientBalanceException(buyer.getWalletBalance(), totalCost);
+            buyer.deduct(totalCost);
+            userRepo.updateWalletBalance(buyerId, buyer.getWalletBalance());
 
-        // Tạo transaction
+        } else if (winner instanceof Seller winnerSeller) {
+            // Winner là Seller (đặt bid ở phiên của người khác) → trừ earnings_balance.
+            // Lỗi cũ: loadBuyer() tạo proxy Buyer từ Seller, sau đó updateWalletBalance()
+            // UPDATE bảng buyers WHERE user_id = sellerId → 0 row affected → tiền không trừ.
+            BigDecimal earnings = winnerSeller.getEarningsBalance() != null
+                    ? winnerSeller.getEarningsBalance() : BigDecimal.ZERO;
+            if (earnings.compareTo(totalCost) < 0)
+                throw new InsufficientBalanceException(earnings, totalCost);
+            winnerSeller.setEarningsBalance(earnings.subtract(totalCost));
+            userRepo.updateEarningsBalance(buyerId, winnerSeller.getEarningsBalance());
+
+        } else {
+            throw new IllegalStateException("Winner #" + buyerId + " có role không hợp lệ (Admin không được đặt bid).");
+        }
+
+        // ── Tạo transaction ───────────────────────────────────────────────────
         Transaction tx = new Transaction(
                 item.getId(), buyerId, item.getSellerId(),
                 item.getCurrentPrice(), "WALLET");
         txRepo.save(tx);
 
-        // Cộng tiền seller (toàn bộ giá thắng đấu giá)
+        // ── Cộng tiền seller của phiên ────────────────────────────────────────
+        // Lưu ý: sellerId của phiên khác với buyerId (đã được validateBidder() đảm bảo).
+        Seller seller = loadSeller(item.getSellerId());
         seller.receivePayment(item.getCurrentPrice());
         userRepo.updateEarningsBalance(item.getSellerId(), seller.getEarningsBalance());
 
-        // Đánh dấu transaction hoàn thành
+        // ── Đánh dấu transaction hoàn thành ──────────────────────────────────
         tx.markCompleted();
         txRepo.updateStatus(tx.getId(), tx.getPaymentStatus(), tx.getCompletedAt());
 
-        LOG.info(String.format("Thanh toán: buyer #%d trả %,.0f đ, seller #%d nhận %,.0f đ",
+        LOG.info(String.format("Thanh toán: winner #%d trả %,.0f đ, seller #%d nhận %,.0f đ",
                 buyerId, totalCost, item.getSellerId(), item.getCurrentPrice()));
     }
 

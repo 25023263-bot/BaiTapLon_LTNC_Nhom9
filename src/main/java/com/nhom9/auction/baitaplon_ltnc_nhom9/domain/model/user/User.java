@@ -62,17 +62,6 @@ public abstract class User implements Serializable {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void updateProfile(String fullName, String phone) {
-        if (fullName != null && !fullName.isBlank()) this.fullName = fullName.trim();
-        if (phone    != null && !phone.isBlank())    this.phone    = phone.trim();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    public void changePassword(String newPasswordHash) {
-        this.passwordHash = newPasswordHash;
-        this.updatedAt    = LocalDateTime.now();
-    }
-
     // ─── Getters / Setters ───────────────────────────────────────────────────
 
     public int getId()                    { return id; }

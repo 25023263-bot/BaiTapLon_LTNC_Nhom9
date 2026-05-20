@@ -35,9 +35,4 @@ public interface Authenticatable {
                   String fullName, String phone, String role)
             throws DuplicateUserException, Exception;
 
-    /**
-     * Đổi mật khẩu sau khi xác thực mật khẩu cũ.
-     */
-    void changePassword(int userId, String oldRaw, String newRaw)
-            throws AuthenticationException;
 }

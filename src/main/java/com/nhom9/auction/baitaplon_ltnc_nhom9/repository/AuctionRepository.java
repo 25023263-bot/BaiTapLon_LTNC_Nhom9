@@ -6,6 +6,7 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.DigitalItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.PhysicalItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DbUtil;
+import javafx.beans.value.ObservableBooleanValue;
 
 import java.math.BigDecimal;
 import java.sql.*;

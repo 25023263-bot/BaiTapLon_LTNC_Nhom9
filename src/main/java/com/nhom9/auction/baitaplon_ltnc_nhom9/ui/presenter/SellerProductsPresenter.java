@@ -3,6 +3,7 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.presenter;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.UserDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.ItemDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.listing.ListingRequest;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
@@ -151,9 +152,8 @@ public final class SellerProductsPresenter {
         view.myProductsList().getChildren().add(loading);
 
         Thread t = new Thread(() -> {
-            List<AuctionItem> items;
+            List<ItemDTO> items;
             try {
-                // Lọc theo sellerId phía client tạm thời
                 items = ServerConnection.getAuctions().stream()
                         .filter(i -> i.getSellerId() == sellerId)
                         .toList();
@@ -162,14 +162,15 @@ public final class SellerProductsPresenter {
                 items = List.of();
             }
 
-            final List<AuctionItem> finalItems = items;
+            final List<ItemDTO> finalItems = items;
             Platform.runLater(() -> {
                 view.myProductsList().getChildren().clear();
                 if (finalItems.isEmpty()) {
                     showMyProductsEmptyState();
                 } else {
-                    for (AuctionItem dbItem : finalItems) {
-                        view.myProductsList().getChildren().add(buildMyProductCard(dbItem));
+                    for (ItemDTO dto : finalItems) {
+                        view.myProductsList().getChildren().add(
+                                buildMyProductCard(AuctionCardMapper.toCardFromDTO(dto)));
                     }
                 }
             });
@@ -372,6 +373,57 @@ public final class SellerProductsPresenter {
         hint.setAlignment(Pos.CENTER);
         emptyState.getChildren().addAll(icon, title, hint);
         view.myProductsList().getChildren().add(emptyState);
+    }
+
+    /**
+     * Overload nhận AuctionCardModel — dùng khi dữ liệu đến từ ItemDTO (socket).
+     * Tái sử dụng buildMyProductCard(AuctionItem) không còn cần thiết.
+     */
+    private VBox buildMyProductCard(AuctionCardModel card) {
+        VBox cardBox = new VBox(10);
+        cardBox.getStyleClass().add("my-product-card");
+
+        HBox row = new HBox(16);
+        row.setAlignment(Pos.CENTER_LEFT);
+
+        String emoji = card.categoryEmoji();
+        javafx.scene.Node imgNode = ProductImageHelper.buildNode(card.imageUrl(), emoji, 60, 60);
+        if (imgNode instanceof Label lbl) {
+            lbl.getStyleClass().add("my-product-card-img");
+        } else if (imgNode instanceof ImageView iv) {
+            iv.setFitWidth(60);
+            iv.setFitHeight(60);
+        }
+
+        VBox info = new VBox(4);
+        HBox.setHgrow(info, Priority.ALWAYS);
+        Label titleLabel = new Label(card.title());
+        titleLabel.getStyleClass().add("my-product-card-title");
+        titleLabel.setWrapText(true);
+        Label categoryLabel = new Label(emoji + "  " + card.category());
+        categoryLabel.setStyle("-fx-text-fill: #888; -fx-font-size: 12px;");
+        Label priceLabel = new Label("Giá khởi: "
+                + CurrencyFormatHelper.formatPrice(card.startingPrice()));
+        priceLabel.setStyle("-fx-text-fill: #c9a84c; -fx-font-size: 13px; -fx-font-weight: bold;");
+        info.getChildren().addAll(titleLabel, categoryLabel, priceLabel);
+
+        AuctionStatus status = card.isLive() ? AuctionStatus.ACTIVE : AuctionStatus.CLOSED;
+        Label statusBadge = new Label(AuctionCardMapper.statusDisplay(status));
+        statusBadge.getStyleClass().add(
+                card.isLive() ? "my-product-badge-live" : "my-product-badge-ended");
+
+        row.getChildren().addAll(imgNode, info, statusBadge);
+        cardBox.getChildren().add(row);
+
+        cardBox.setOnMouseClicked(e -> {
+            host.ensureCoordinators().run();
+            host.openSellerItemDetail().accept(card, () -> {
+                host.refreshCatalog().run();
+                loadMyProducts();
+            });
+        });
+        cardBox.setStyle(cardBox.getStyle() + "; -fx-cursor: hand;");
+        return cardBox;
     }
 
     private VBox buildMyProductCard(AuctionItem item) {

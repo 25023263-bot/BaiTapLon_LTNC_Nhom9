@@ -1,6 +1,7 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.coordinator;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.HelloApplication;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.BidDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.ItemDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
@@ -100,7 +101,7 @@ public final class ItemDetailCoordinator {
                                 ? fresh.getCurrentPrice().doubleValue()
                                 : item.currentBid();
                         Platform.runLater(() ->
-                                ctrl.refreshAfterBid(newPrice, currentCount, List.of()));
+                                ctrl.refreshAfterBid(newPrice, currentCount, toBids(fresh.getBids())));
                     }
                 } catch (Exception e) {
                     LOG.log(Level.WARNING, "Polling lỗi: " + e.getMessage());
@@ -139,7 +140,7 @@ public final class ItemDetailCoordinator {
                 double price = dto.getCurrentPrice() != null
                         ? dto.getCurrentPrice().doubleValue() : item.currentBid();
                 Platform.runLater(() -> {
-                    ctrl.refreshAfterBid(price, dto.getTotalBids(), List.of());
+                    ctrl.refreshAfterBid(price, dto.getTotalBids(), toBids(dto.getBids()));
                     if (dto.getEndTime() != null) {
                         ctrl.refreshEndTime(dto.getEndTime());
                     }
@@ -284,7 +285,7 @@ public final class ItemDetailCoordinator {
                     double newPrice = fresh.getCurrentPrice() != null
                             ? fresh.getCurrentPrice().doubleValue()
                             : saved.getAmount().doubleValue();
-                    detailCtrl.refreshAfterBid(newPrice, fresh.getTotalBids(), List.of());
+                    detailCtrl.refreshAfterBid(newPrice, fresh.getTotalBids(), toBids(fresh.getBids()));
                     if (fresh.getEndTime() != null) {
                         detailCtrl.refreshEndTime(fresh.getEndTime());
                     }
@@ -302,5 +303,21 @@ public final class ItemDetailCoordinator {
         }, "ubid-place-bid-thread");
         t.setDaemon(true);
         t.start();
+    }
+
+    /**
+     * Chuyển List&lt;BidDTO&gt; từ server sang List&lt;Bid&gt; mà ItemDetailController cần.
+     * Trả về list rỗng nếu bids null (server cũ chưa gửi field này).
+     */
+    private List<Bid> toBids(List<BidDTO> dtos) {
+        if (dtos == null) return List.of();
+        return dtos.stream().map(d -> {
+            Bid b = new Bid(d.getAuctionId(), d.getBuyerId(), d.getAmount());
+            b.setId(d.getId());
+            b.setBuyerUsername(d.getBuyerUsername());
+            b.setBidTime(d.getBidTime());
+            b.setAutoBid(d.isAutoBid());
+            return b;
+        }).toList();
     }
 }

@@ -168,8 +168,10 @@ public final class ProfilePresenter {
 
         Thread t = new Thread(() -> {
             try {
-                ServerConnection.depositWallet(userId, amount);
-                Platform.runLater(() -> applyDepositSuccess(amount));
+                // FIX: depositWallet giờ trả về UserDTO chứa số dư mới từ server.
+                // Dùng số dư đó để cập nhật session — chính xác 100%, không tự tính.
+                UserDTO updated = ServerConnection.depositWallet(userId, amount);
+                Platform.runLater(() -> applyDepositSuccess(amount, updated));
             } catch (Exception e) {
                 LOG.log(Level.WARNING, "Nạp ví thất bại", e);
                 Platform.runLater(() -> showDepositError(
@@ -180,13 +182,21 @@ public final class ProfilePresenter {
         t.start();
     }
 
-    private void applyDepositSuccess(BigDecimal amount) {
-        // Cập nhật số dư trong UserSession (không cần reload toàn bộ profile)
+    private void applyDepositSuccess(BigDecimal amount, UserDTO updated) {
+        // Cập nhật số dư trong UserSession bằng giá trị THỰC từ server.
+        // Không tự cộng thủ công → không bao giờ bị lệch dù nạp nhiều lần liên tiếp.
         UserDTO dto = resolveDTO();
-        if (dto != null && dto.getWalletBalance() != null) {
-            dto.setWalletBalance(dto.getWalletBalance().add(amount));
+        if (dto != null && updated != null) {
+            if (updated.getWalletBalance() != null)
+                dto.setWalletBalance(updated.getWalletBalance());
+            if (updated.getEarningsBalance() != null)
+                dto.setEarningsBalance(updated.getEarningsBalance());
         }
 
+        // Cập nhật label ví ngay lập tức.
+        if (dto != null) refreshWallet(dto);
+
+        // Hiện thông báo thành công.
         view.depositStatusIcon().setText("✅");
         view.depositStatusText().setText("Nạp tiền thành công!\n+"
                 + CurrencyFormatHelper.formatVnd(amount) + " đã được cộng vào tài khoản.");
@@ -194,13 +204,13 @@ public final class ProfilePresenter {
         view.depositAmountField().setDisable(false);
         view.btnConfirmDeposit().setText("Đóng");
         view.btnConfirmDeposit().setDisable(false);
+
+        final UserDTO finalDto = dto;
         view.btnConfirmDeposit().setOnAction(e -> {
             closeDeposit();
-            if (dto != null) refreshWallet(dto);
+            if (finalDto != null) refreshWallet(finalDto);
             view.btnConfirmDeposit().setOnAction(ev -> confirmDeposit());
         });
-
-        if (dto != null) refreshWallet(dto);
     }
 
     private void showDepositError(String message) {

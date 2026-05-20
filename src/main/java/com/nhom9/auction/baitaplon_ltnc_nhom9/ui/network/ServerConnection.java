@@ -93,15 +93,15 @@ public class ServerConnection {
     // ── Auction ───────────────────────────────────────────────────────────────
 
     /**
-     * Lấy toàn bộ danh sách phiên đấu giá.
+     * Lấy toàn bộ danh sách phiên đấu giá dưới dạng ItemDTO (có bidCount thực).
      *
-     * @return List&lt;AuctionItem&gt; (có thể rỗng, không null)
+     * @return List&lt;ItemDTO&gt; (có thể rỗng, không null)
      */
     @SuppressWarnings("unchecked")
-    public static List<AuctionItem> getAuctions() throws Exception {
+    public static List<ItemDTO> getAuctions() throws Exception {
         Response res = send(Request.Type.GET_AUCTIONS, null);
         requireOk(res);
-        return (List<AuctionItem>) res.getData();
+        return (List<ItemDTO>) res.getData();
     }
 
     /**
@@ -323,13 +323,15 @@ public class ServerConnection {
      * @param userId ID người dùng
      * @param amount Số tiền nạp (phải > 0)
      */
-    public static void depositWallet(int userId, BigDecimal amount) throws Exception {
+    public static UserDTO depositWallet(int userId, BigDecimal amount) throws Exception {
         UserDTO dto = new UserDTO();
         dto.setId(userId);
         dto.setPhone(amount.toPlainString()); // phone = amount (convention)
 
         Response res = send(Request.Type.DEPOSIT_WALLET, dto);
         requireOk(res);
+        // FIX: Server giờ trả về UserDTO chứa số dư mới — client dùng luôn, không tự tính.
+        return (UserDTO) res.getData();
     }
 
     // ── Internal helpers ──────────────────────────────────────────────────────

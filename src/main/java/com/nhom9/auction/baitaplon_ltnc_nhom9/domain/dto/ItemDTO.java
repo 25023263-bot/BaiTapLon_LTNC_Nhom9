@@ -5,6 +5,7 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * Data Transfer Object cho AuctionItem (cả Physical và Digital).
@@ -39,6 +40,9 @@ public class ItemDTO implements Serializable {
 
     // Số lần bid
     private int totalBids;
+
+    // Danh sách lịch sử bid — chỉ populate trong GET_AUCTION_DETAIL, null trong GET_AUCTIONS
+    private List<BidDTO> bids;
 
     // ─── Physical-only ───────────────────────────────────────────────────────
     private String condition;
@@ -146,6 +150,9 @@ public class ItemDTO implements Serializable {
 
     public int getTotalBids()                                   { return totalBids; }
     public void setTotalBids(int totalBids)                     { this.totalBids = totalBids; }
+
+    public List<BidDTO> getBids()                               { return bids; }
+    public void setBids(List<BidDTO> bids)                      { this.bids = bids; }
 
     public String getCondition()                                { return condition; }
     public void setCondition(String condition)                  { this.condition = condition; }

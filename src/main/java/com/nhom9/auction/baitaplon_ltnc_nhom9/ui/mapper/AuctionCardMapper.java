@@ -1,5 +1,6 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.mapper;
 
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.ItemDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.AuctionRepository;
@@ -152,6 +153,39 @@ public final class AuctionCardMapper {
     }
 
     /** Bỏ emoji đầu chuỗi danh mục từ ComboBox (vd. "⌚ Đồng hồ" → "Đồng hồ"). */
+    /**
+     * Chuyển ItemDTO (từ server qua socket) sang AuctionCardModel.
+     * Dùng totalBids từ DTO thay vì hardcode 0 như toCardSimple(AuctionItem).
+     *
+     * <p>Đây là method nên dùng sau khi server đổi GET_AUCTIONS trả ItemDTO.
+     */
+    public static AuctionCardModel toCardFromDTO(ItemDTO dto) {
+        String emoji = categoryEmoji(dto.getCategory());
+        boolean isLive = dto.getStatus() == AuctionStatus.ACTIVE;
+        double startingPrice = dto.getStartingPrice() != null
+                ? dto.getStartingPrice().doubleValue() : 0;
+        double currentPrice = dto.getCurrentPrice() != null
+                ? dto.getCurrentPrice().doubleValue() : startingPrice;
+        String imageUrl = dto.getImageUrl() != null ? dto.getImageUrl() : "";
+        String description = dto.getDescription() != null ? dto.getDescription() : "";
+
+        return new AuctionCardModel(
+                String.valueOf(dto.getId()),
+                dto.getTitle(),
+                dto.getCategory(),
+                emoji,
+                currentPrice,
+                startingPrice,
+                description,
+                dto.getTotalBids(),   // bidCount thực từ DB — không phải hardcode 0
+                isLive,
+                dto.getEndTime(),
+                emoji,
+                imageUrl,
+                dto.getSellerId()
+        );
+    }
+
     public static String stripCategoryPrefix(String category) {
         if (category == null || category.isBlank()) return "";
         int space = category.indexOf(' ');

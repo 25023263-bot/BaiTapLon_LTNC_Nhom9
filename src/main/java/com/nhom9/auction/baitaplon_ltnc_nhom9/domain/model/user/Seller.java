@@ -49,18 +49,6 @@ public class Seller extends User {
         updatedAt = LocalDateTime.now();
     }
 
-    /**
-     * Rút tiền từ tài khoản (withdraw).
-     */
-    public void withdraw(BigDecimal amount) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0)
-            throw new IllegalArgumentException("Số tiền rút phải lớn hơn 0.");
-        if (earningsBalance.compareTo(amount) < 0)
-            throw new IllegalStateException("Số dư không đủ để rút: " + amount);
-        earningsBalance = earningsBalance.subtract(amount);
-        updatedAt       = LocalDateTime.now();
-    }
-
     @Override
     public String getRoleDescription() {
         return "Người bán – có thể đăng vật phẩm, quản lý phiên đấu giá.";

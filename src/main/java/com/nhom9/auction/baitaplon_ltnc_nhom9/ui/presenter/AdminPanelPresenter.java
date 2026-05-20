@@ -2,12 +2,13 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.presenter;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.ItemDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.CurrencyFormatHelper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.UserSession;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.network.ServerConnection;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.mapper.AuctionCardMapper;
 
 import javafx.application.Platform;
 import javafx.geometry.Pos;
@@ -51,7 +52,7 @@ public final class AdminPanelPresenter {
 
     private AdminPanelView view;
     private List<User> adminAllUsers = new ArrayList<>();
-    private List<AuctionItem> adminAllItems = new ArrayList<>();
+    private List<ItemDTO> adminAllItems = new ArrayList<>();
 
     // ── Bind ─────────────────────────────────────────────────────────────────
 
@@ -146,7 +147,7 @@ public final class AdminPanelPresenter {
     public void loadAuctions() {
         Thread t = new Thread(() -> {
             try {
-                List<AuctionItem> items = ServerConnection.getAuctions();
+                List<ItemDTO> items = ServerConnection.getAuctions();
                 Platform.runLater(() -> {
                     adminAllItems = new ArrayList<>(items);
                     searchAuctions();
@@ -264,13 +265,13 @@ public final class AdminPanelPresenter {
         }
     }
 
-    private void renderAuctionRows(List<AuctionItem> items) {
+    private void renderAuctionRows(List<ItemDTO> items) {
         view.adminAuctionsList().getChildren().clear();
         boolean empty = items.isEmpty();
         setVisible(view.adminAuctionsEmpty(), empty);
         if (empty) return;
 
-        for (AuctionItem item : items) {
+        for (ItemDTO item : items) {
             HBox row = new HBox(0);
             row.getStyleClass().add("admin-row");
             row.setAlignment(Pos.CENTER_LEFT);
@@ -294,7 +295,7 @@ public final class AdminPanelPresenter {
             priceLabel.getStyleClass().add("admin-td");
             priceLabel.setMinWidth(120); priceLabel.setMaxWidth(120);
 
-            Label statusLabel = new Label(item.getStatus().getDisplayName());
+            Label statusLabel = new Label(AuctionCardMapper.statusDisplay(item.getStatus()));
             statusLabel.getStyleClass().add(switch (item.getStatus()) {
                 case ACTIVE -> "admin-badge-active";
                 case PENDING -> "admin-badge-pending";
@@ -313,8 +314,7 @@ public final class AdminPanelPresenter {
             if (item.getStatus() == AuctionStatus.ACTIVE) {
                 Button closeBtn = new Button("⛔ Đóng ngay");
                 closeBtn.getStyleClass().add("admin-btn-close");
-                final AuctionItem snapshot = item;
-                closeBtn.setOnAction(e -> forceCloseAuction(snapshot));
+                closeBtn.setOnAction(e -> forceCloseAuction(item));
                 actionBox.getChildren().add(closeBtn);
             } else {
                 Label noAction = new Label("—");
@@ -369,7 +369,7 @@ public final class AdminPanelPresenter {
      * Admin đóng phiên đấu giá ngay lập tức.
      * Dùng {@link ServerConnection#cancelAuction(int)} qua socket.
      */
-    private void forceCloseAuction(AuctionItem item) {
+    private void forceCloseAuction(ItemDTO item) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Xác nhận đóng phiên");
         confirm.setHeaderText(null);

@@ -132,6 +132,14 @@ public class ClientHandler implements Runnable {
         result.setFullName(user.getFullName());
         result.setActive(user.isActive());
 
+        // Quan trọng: gửi kèm số dư ví để client hiển thị ngay sau đăng nhập
+        // Không set walletBalance → client nhận null → refreshWallet() hiện 0đ mãi
+        if (user instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer buyer) {
+            result.setWalletBalance(buyer.getWalletBalance());
+        } else if (user instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller seller) {
+            result.setEarningsBalance(seller.getEarningsBalance());
+        }
+
         LOG.info("Login thành công: " + user.getUsername());
         return Response.ok(result);
     }
@@ -148,13 +156,20 @@ public class ClientHandler implements Runnable {
     }
 
     private Response handleGetAuctions() throws Exception {
-        var auctions = locator.getAuctionRepo().findAll();
-        return Response.ok(auctions);
+        List<AuctionItem> auctions = locator.getAuctionRepo().findAll();
+        // Chuyển sang ItemDTO (có bidCount thực từ DB) thay vì trả AuctionItem thô.
+        // Client dùng AuctionCardMapper.toCardSimple(AuctionItem) → hardcode bidCount=0.
+        // Với ItemDTO.totalBids, client dùng toCardFromDTO() → bidCount đúng.
+        List<ItemDTO> dtos = auctions.stream()
+                .map(this::mapToItemDTO)
+                .toList();
+        return Response.ok(dtos);
     }
 
     /**
      * Trả về ItemDTO chứa đầy đủ thông tin một phiên đấu giá,
-     * bao gồm số lượt bid và username của người dẫn đầu.
+     * bao gồm số lượt bid, username người dẫn đầu, và danh sách lịch sử bid.
+     * Danh sách bids dùng để hiển thị lịch sử đấu giá và biểu đồ giá.
      */
     private Response handleGetAuctionDetail(Request req) throws Exception {
         Integer auctionId = (Integer) req.getPayload();
@@ -166,18 +181,35 @@ public class ClientHandler implements Runnable {
 
         AuctionItem item = itemOpt.get();
 
-        // Map AuctionItem → ItemDTO để không truyền thẳng domain object
+        // Map AuctionItem → ItemDTO (bidCount đã được đọc từ DB bên trong)
         ItemDTO dto = mapToItemDTO(item);
 
-        // Bổ sung thông tin bid (không có sẵn trong AuctionItem)
-        int totalBids = locator.getBidRepo().countByAuctionId(auctionId);
-        dto.setTotalBids(totalBids);
-
+        // Bổ sung username người dẫn đầu
         var leadingBid = locator.getBidRepo().findLeadingBid(auctionId);
         leadingBid.ifPresent(bid -> {
             dto.setLeadingBidderId(bid.getBuyerId());
             dto.setLeadingBidderUsername(bid.getBuyerUsername());
         });
+
+        // Lấy toàn bộ lịch sử bid — dùng cho bid history list và price chart
+        List<com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid> bids =
+                locator.getBidRepo().findByAuctionId(auctionId);
+
+        List<com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.BidDTO> bidDTOs = bids.stream()
+                .map(b -> {
+                    com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.BidDTO bdto =
+                            new com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.BidDTO(
+                                    b.getId(), b.getAuctionId(), item.getTitle(),
+                                    b.getBuyerId(), b.getBuyerUsername(),
+                                    b.getAmount(), b.getBidTime(), b.isAutoBid()
+                            );
+                    // Đánh dấu bid nào đang dẫn đầu
+                    leadingBid.ifPresent(lead -> bdto.setLeading(b.getId() == lead.getId()));
+                    return bdto;
+                })
+                .toList();
+
+        dto.setBids(bidDTOs);
 
         return Response.ok(dto);
     }
@@ -298,9 +330,20 @@ public class ClientHandler implements Runnable {
         if (userOpt.isEmpty()) {
             return Response.error("Không tìm thấy người dùng #" + dto.getId());
         }
-        locator.getWalletDepositService().deposit(userOpt.get(), amount);
+        var user = userOpt.get();
+        locator.getWalletDepositService().deposit(user, amount);
         LOG.info("Nạp ví thành công: userId=" + dto.getId() + ", amount=" + amount);
-        return Response.ok("Nạp " + amount.toPlainString() + " đ thành công.");
+
+        // FIX: Trả về UserDTO chứa số dư MỚI sau khi nạp, thay vì chỉ trả chuỗi.
+        // Client dùng số dư này để cập nhật UI ngay lập tức — không cần tự tính toán.
+        UserDTO result = new UserDTO();
+        result.setId(user.getId());
+        if (user instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer buyer) {
+            result.setWalletBalance(buyer.getWalletBalance());
+        } else if (user instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller seller) {
+            result.setEarningsBalance(seller.getEarningsBalance());
+        }
+        return Response.ok(result);
     }
 
     /**
@@ -440,7 +483,10 @@ public class ClientHandler implements Runnable {
 
     /**
      * Chuyển AuctionItem domain object sang ItemDTO để gửi qua socket.
-     * Tách riêng để dễ mở rộng sau này (thêm trường, xử lý null...).
+     *
+     * <p>bidCount được đọc trực tiếp từ bảng bids (COUNT) thay vì lấy từ
+     * AuctionItem domain object — vì AuctionItem không tự cập nhật counter này
+     * sau mỗi bid. Nếu gọi item.getBidCount() sẽ luôn trả 0.
      */
     private ItemDTO mapToItemDTO(AuctionItem item) {
         ItemDTO dto = new ItemDTO();
@@ -451,7 +497,7 @@ public class ClientHandler implements Runnable {
         dto.setCategory(item.getCategory());
         dto.setImageUrl(item.getImageUrl());
         dto.setItemType(item.getClass().getSimpleName()
-                .replace("Item", "").toUpperCase()); // PhysicalItem → PHYSICAL
+                .replace("Item", "").toUpperCase());
         dto.setStartingPrice(item.getStartingPrice());
         dto.setMinBidIncrement(item.getMinBidIncrement());
         dto.setBuyNowPrice(item.getBuyNowPrice());
@@ -460,6 +506,15 @@ public class ClientHandler implements Runnable {
         dto.setStartTime(item.getStartTime());
         dto.setEndTime(item.getEndTime());
         dto.setCreatedAt(item.getCreatedAt());
+
+        // Đọc bidCount thực từ DB — item domain object không tự track counter này
+        try {
+            dto.setTotalBids(locator.getBidRepo().countByAuctionId(item.getId()));
+        } catch (Exception e) {
+            LOG.warning("Không đọc được bidCount cho item #" + item.getId() + ": " + e.getMessage());
+            dto.setTotalBids(0);
+        }
+
         return dto;
     }
 }

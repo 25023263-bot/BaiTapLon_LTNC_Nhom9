@@ -1,7 +1,7 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.presenter;
 
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.ItemDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.factory.ProductCardFactory;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.mapper.AuctionCardMapper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.AuctionCardModel;
@@ -32,14 +32,8 @@ import java.util.logging.Logger;
 /**
  * Trang chủ: tải thẻ đấu giá, lọc/tìm kiếm, đồng hồ đếm ngược, kết quả đã kết thúc.
  *
- * <h3>Thay đổi so với phiên bản cũ:</h3>
- * <ul>
- *   <li>Bỏ dependency vào {@code ServiceLocator} và {@code BidRepository}.</li>
- *   <li>Dữ liệu lấy qua {@link ServerConnection#getAuctions()} (socket).</li>
- *   <li>Mapper vẫn giữ để chuyển đổi {@code AuctionItem → AuctionCardModel}.</li>
- *   <li>{@code closeExpiredAuctions()} — server tự xử lý qua AuctionScheduler,
- *       client chỉ cần gọi {@code refreshAll()} để load lại dữ liệu mới.</li>
- * </ul>
+ * <p>Dùng {@link ItemDTO} thay vì {@code AuctionItem} để có bidCount thực từ DB.
+ * Server GET_AUCTIONS giờ trả {@code List<ItemDTO>} thay vì {@code List<AuctionItem>}.
  */
 public final class HomeCatalogPresenter {
 
@@ -109,8 +103,6 @@ public final class HomeCatalogPresenter {
                 }
             }
 
-            // Khi có phiên hết hạn → server tự xử lý qua AuctionScheduler.
-            // Client chỉ cần reload lại danh sách để thấy trạng thái mới.
             if (needsRefresh) {
                 Platform.runLater(this::refreshAll);
             }
@@ -119,10 +111,6 @@ public final class HomeCatalogPresenter {
 
     // ── Data loading ─────────────────────────────────────────────────────────
 
-    /**
-     * Tải lại toàn bộ dữ liệu từ server, chạy trên background thread.
-     * Kết quả được cập nhật lên UI qua Platform.runLater().
-     */
     public void refreshAll() {
         timerLabels.clear();
         loadDataFromServer(this::renderAll);
@@ -130,20 +118,19 @@ public final class HomeCatalogPresenter {
     }
 
     /**
-     * Gọi server lấy danh sách phiên đấu giá, sau đó gọi callback với dữ liệu.
-     * Chạy trên background thread để không block UI.
+     * Gọi server lấy List&lt;ItemDTO&gt; (có bidCount thực), chạy background thread.
      */
-    private void loadDataFromServer(Consumer<List<AuctionItem>> onLoaded) {
+    private void loadDataFromServer(Consumer<List<ItemDTO>> onLoaded) {
         Thread t = new Thread(() -> {
             try {
-                List<AuctionItem> items;
+                List<ItemDTO> items;
                 if (ServerConnection.isConnected()) {
                     items = ServerConnection.getAuctions();
                 } else {
                     LOG.warning("Server không kết nối — danh sách phiên đấu giá trống.");
                     items = List.of();
                 }
-                final List<AuctionItem> result = items;
+                final List<ItemDTO> result = items;
                 Platform.runLater(() -> onLoaded.accept(result));
             } catch (Exception e) {
                 LOG.warning("Lỗi tải danh sách phiên đấu giá: " + e.getMessage());
@@ -154,14 +141,10 @@ public final class HomeCatalogPresenter {
         t.start();
     }
 
-    /**
-     * Render tất cả dữ liệu lên UI sau khi đã load từ server.
-     * Phải gọi trên JavaFX Application Thread.
-     */
-    private void renderAll(List<AuctionItem> allItems) {
+    private void renderAll(List<ItemDTO> allItems) {
         synchronized (displayedItems) { displayedItems.clear(); }
 
-        List<AuctionItem> activeItems = allItems.stream()
+        List<ItemDTO> activeItems = allItems.stream()
                 .filter(i -> i.getStatus() == AuctionStatus.ACTIVE)
                 .toList();
 
@@ -173,18 +156,18 @@ public final class HomeCatalogPresenter {
 
     public void loadHotAuctions() {
         loadDataFromServer(items -> {
-            List<AuctionItem> active = items.stream()
+            List<ItemDTO> active = items.stream()
                     .filter(i -> i.getStatus() == AuctionStatus.ACTIVE)
                     .toList();
             renderHotAuctions(active);
         });
     }
 
-    private void renderHotAuctions(List<AuctionItem> activeItems) {
+    private void renderHotAuctions(List<ItemDTO> activeItems) {
         view.hotCardsContainer().getChildren().clear();
 
         List<AuctionCardModel> cards = activeItems.stream()
-                .map(i -> AuctionCardMapper.toCardSimple(i))
+                .map(AuctionCardMapper::toCardFromDTO)
                 .sorted((a, b) -> Integer.compare(b.bidCount(), a.bidCount()))
                 .limit(3)
                 .toList();
@@ -202,14 +185,14 @@ public final class HomeCatalogPresenter {
 
     public void loadAllAuctions() {
         loadDataFromServer(items -> {
-            List<AuctionItem> active = items.stream()
+            List<ItemDTO> active = items.stream()
                     .filter(i -> i.getStatus() == AuctionStatus.ACTIVE)
                     .toList();
             renderAllAuctions(active);
         });
     }
 
-    private void renderAllAuctions(List<AuctionItem> activeItems) {
+    private void renderAllAuctions(List<ItemDTO> activeItems) {
         view.allProductsGrid().getChildren().clear();
         view.allProductsGrid().getColumnConstraints().clear();
 
@@ -222,7 +205,7 @@ public final class HomeCatalogPresenter {
         }
 
         List<AuctionCardModel> cards = activeItems.stream()
-                .map(AuctionCardMapper::toCardSimple)
+                .map(AuctionCardMapper::toCardFromDTO)
                 .toList();
 
         synchronized (displayedItems) {
@@ -244,24 +227,19 @@ public final class HomeCatalogPresenter {
 
     // ── Result auctions ──────────────────────────────────────────────────────
 
-    /**
-     * Load kết quả phiên đã kết thúc từ server.
-     * Vì server trả về List<AuctionItem> (không kèm leadingBid),
-     * ta hiển thị giá cuối cùng (currentPrice) thay vì query thêm.
-     */
     public void loadResultAuctions(VBox resultsList, Label resultsSubtitle) {
         resultsList.getChildren().clear();
 
         Thread t = new Thread(() -> {
             try {
-                List<AuctionItem> all = ServerConnection.isConnected()
+                List<ItemDTO> all = ServerConnection.isConnected()
                         ? ServerConnection.getAuctions()
                         : List.of();
 
                 List<AuctionCardModel> closed = all.stream()
                         .filter(i -> i.getStatus() == AuctionStatus.CLOSED
                                 || i.getStatus() == AuctionStatus.EXPIRED)
-                        .map(AuctionCardMapper::toCardSimple)
+                        .map(AuctionCardMapper::toCardFromDTO)
                         .sorted((a, b) -> {
                             if (a.endTime() == null) return 1;
                             if (b.endTime() == null) return -1;
@@ -276,7 +254,6 @@ public final class HomeCatalogPresenter {
                         resultsList.getChildren().add(empty);
                     } else {
                         for (AuctionCardModel item : closed) {
-                            // Không có leadingBid qua socket đơn giản → hiển thị currentPrice
                             HBox card = cardFactory.buildResultCard(item, null, item.currentBid());
                             resultsList.getChildren().add(card);
                         }

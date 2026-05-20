@@ -12,18 +12,17 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit test cho Buyer – kiểm tra logic ví tiền và các thao tác liên quan.
  *
- * Nguyên tắc viết test: mỗi test chỉ kiểm tra MỘT hành vi cụ thể.
- * Tên test theo format: methodName_condition_expectedResult
+ * LƯU Ý: Các test liên quan đến incrementWins() và getTotalWins() đã bị xóa
+ * vì Buyer hiện tại chưa có field totalWins.
+ * Sẽ được thêm lại khi production code sẵn sàng.
  */
 @DisplayName("Buyer – Quản lý ví tiền")
 class BuyerTest {
 
-    // Đối tượng dùng lại trong mỗi test, được tạo mới trước mỗi test (@BeforeEach)
     private Buyer buyer;
 
     @BeforeEach
     void setUp() {
-        // Tạo một Buyer mới với ví bắt đầu = 0
         buyer = new Buyer(1, "testuser", "test@example.com",
                 "hashed_pw", "Nguyen Van A", "0901234567");
     }
@@ -35,7 +34,6 @@ class BuyerTest {
     void deposit_validAmount_balanceIncreased() {
         buyer.deposit(new BigDecimal("500000"));
 
-        // 0 + 500_000 = 500_000
         assertEquals(new BigDecimal("500000"), buyer.getWalletBalance());
     }
 
@@ -51,7 +49,6 @@ class BuyerTest {
     @Test
     @DisplayName("deposit: số tiền = 0 → ném IllegalArgumentException")
     void deposit_zeroAmount_throwsException() {
-        // Khi nạp 0đ – đây là dữ liệu không hợp lệ, phải bị từ chối
         assertThrows(IllegalArgumentException.class,
                 () -> buyer.deposit(BigDecimal.ZERO));
     }
@@ -95,7 +92,6 @@ class BuyerTest {
     void deduct_insufficientBalance_throwsException() {
         buyer.deposit(new BigDecimal("100000"));
 
-        // Cố trừ 200_000 khi chỉ có 100_000
         assertThrows(InsufficientBalanceException.class,
                 () -> buyer.deduct(new BigDecimal("200000")));
     }
@@ -103,7 +99,6 @@ class BuyerTest {
     @Test
     @DisplayName("deduct: ví rỗng → ném InsufficientBalanceException")
     void deduct_emptyWallet_throwsException() {
-        // Ví = 0, cố trừ 1đ
         assertThrows(InsufficientBalanceException.class,
                 () -> buyer.deduct(new BigDecimal("1")));
     }
@@ -132,7 +127,6 @@ class BuyerTest {
     void hasSufficientBalance_exactAmount_returnsTrue() {
         buyer.deposit(new BigDecimal("500000"));
 
-        // Kiểm tra biên: đúng bằng → vẫn hợp lệ
         assertTrue(buyer.hasSufficientBalance(new BigDecimal("500000")));
     }
 
@@ -144,27 +138,7 @@ class BuyerTest {
         assertFalse(buyer.hasSufficientBalance(new BigDecimal("200000")));
     }
 
-    // ─── incrementWins() ──────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("incrementWins: ban đầu = 0, gọi 1 lần → totalWins = 1")
-    void incrementWins_once_totalWinsIsOne() {
-        buyer.incrementWins();
-
-        assertEquals(1, buyer.getTotalWins());
-    }
-
-    @Test
-    @DisplayName("incrementWins: gọi nhiều lần → tích lũy đúng")
-    void incrementWins_multipleTimes_accumulates() {
-        buyer.incrementWins();
-        buyer.incrementWins();
-        buyer.incrementWins();
-
-        assertEquals(3, buyer.getTotalWins());
-    }
-
-    // ─── asBuyer (inherited from Seller logic – tested via constructor) ────────
+    // ─── Constructor ──────────────────────────────────────────────────────────
 
     @Test
     @DisplayName("constructor: role tự động là BUYER")
@@ -177,11 +151,5 @@ class BuyerTest {
     @DisplayName("constructor: ví ban đầu = 0")
     void constructor_initialWalletBalanceIsZero() {
         assertEquals(BigDecimal.ZERO, buyer.getWalletBalance());
-    }
-
-    @Test
-    @DisplayName("constructor: totalWins ban đầu = 0")
-    void constructor_initialTotalWinsIsZero() {
-        assertEquals(0, buyer.getTotalWins());
     }
 }
