@@ -1,7 +1,6 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Transaction;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.PhysicalItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer;
@@ -11,7 +10,6 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.exception.BidTooLowException;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.exception.InsufficientBalanceException;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.AuctionRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.TransactionRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.UserRepository;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +22,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -38,7 +35,7 @@ import static org.mockito.Mockito.*;
  * Unit test cho AuctionHouse — lõi nghiệp vụ đấu giá.
  *
  * <h3>Tại sao dùng Mockito?</h3>
- * <p>AuctionHouse phụ thuộc vào 4 Repository (auctionRepo, bidRepo, userRepo, txRepo).
+ * <p>AuctionHouse phụ thuộc vào 3 Repository (auctionRepo, bidRepo, userRepo).
  * Nếu test thật sự gọi DB, mỗi test sẽ cần setup/teardown dữ liệu, chạy chậm,
  * và có thể fail vì lý do không liên quan (DB offline, data dirty...).</p>
  *
@@ -62,7 +59,6 @@ class AuctionHouseTest {
     @Mock private AuctionRepository     auctionRepo;
     @Mock private BidRepository         bidRepo;
     @Mock private UserRepository        userRepo;
-    @Mock private TransactionRepository txRepo;
 
     // Class đang được test (System Under Test)
     private AuctionHouse auctionHouse;
@@ -80,7 +76,7 @@ class AuctionHouseTest {
     @BeforeEach
     void setUp() {
         // Khởi tạo AuctionHouse với các mock — KHÔNG có DB thật
-        auctionHouse = new AuctionHouse(auctionRepo, bidRepo, userRepo, txRepo);
+        auctionHouse = new AuctionHouse(auctionRepo, bidRepo, userRepo);
     }
 
     // =========================================================================
@@ -95,7 +91,6 @@ class AuctionHouseTest {
         PhysicalItem item = new PhysicalItem(
                 ITEM_ID, SELLER_ID, "Laptop Test", "Mô tả test",
                 "Electronics", STARTING_PRICE, INCREMENT,
-                new BigDecimal("10000000"), // buyNowPrice = 10 triệu
                 LocalDateTime.now().minusHours(1),  // startTime = 1 giờ trước
                 LocalDateTime.now().plusHours(1),   // endTime = 1 giờ sau (còn hạn)
                 "LIKE_NEW", 1500, "30x20x5 cm", "HCM",
@@ -153,7 +148,7 @@ class AuctionHouseTest {
             // ASSERT — Kiểm tra kết quả
             assertNotNull(result, "Bid trả về không được null");
             assertEquals(bidAmount, result.getAmount(), "Amount phải khớp");
-            assertEquals(ITEM_ID,  result.getAuctionId(),  "AuctionId phải khớp");
+            assertEquals(ITEM_ID,  result.getItemId(),  "ItemId phải khớp");
             assertEquals(BUYER_ID, result.getBuyerId(), "BuyerId phải khớp");
 
             // Kiểm tra side effects: bidRepo.save() phải được gọi đúng 1 lần
@@ -293,8 +288,8 @@ class AuctionHouseTest {
             // ASSERT — status phải là CLOSED
             verify(auctionRepo).updateStatus(ITEM_ID, AuctionStatus.CLOSED);
 
-            // Transaction phải được tạo
-            verify(txRepo).save(any(Transaction.class));
+            // Transaction history đã bị bỏ — chỉ kiểm tra wallet được cập nhật
+            verify(userRepo).updateWalletBalance(eq(BUYER_ID), any());
 
             // Observer phải được notify với winner = BUYER_ID
             verify(observer).onAuctionClosed(eq(item), eq(BUYER_ID));
@@ -319,7 +314,6 @@ class AuctionHouseTest {
             verify(auctionRepo).updateStatus(ITEM_ID, AuctionStatus.EXPIRED);
 
             // Không có winner → không có transaction
-            verify(txRepo, never()).save(any());
 
             // Observer được notify với winnerId = null
             verify(observer).onAuctionClosed(eq(item), isNull());
@@ -337,7 +331,6 @@ class AuctionHouseTest {
 
             // Không có gì thay đổi trong DB
             verify(auctionRepo, never()).updateStatus(anyInt(), any());
-            verify(txRepo, never()).save(any());
         }
     }
 
@@ -405,7 +398,7 @@ class AuctionHouseTest {
         void listItem_startTimeNow_setsActiveStatus() throws Exception {
             PhysicalItem item = new PhysicalItem(
                     0, SELLER_ID, "Điện thoại Samsung", "Mô tả",
-                    "Electronics", STARTING_PRICE, INCREMENT, null,
+                    "Electronics", STARTING_PRICE, INCREMENT,
                     LocalDateTime.now().minusSeconds(30),  // startTime = vừa rồi
                     LocalDateTime.now().plusHours(2),       // endTime = 2 giờ sau
                     "NEW", 200, "15x8x1 cm", "Hanoi",
@@ -424,7 +417,7 @@ class AuctionHouseTest {
         void listItem_futureStartTime_setsPendingStatus() throws Exception {
             PhysicalItem item = new PhysicalItem(
                     0, SELLER_ID, "Đồng hồ Rolex", "Mô tả",
-                    "Fashion", STARTING_PRICE, INCREMENT, null,
+                    "Fashion", STARTING_PRICE, INCREMENT,
                     LocalDateTime.now().plusHours(2),  // startTime = 2 giờ sau
                     LocalDateTime.now().plusHours(4),  // endTime = 4 giờ sau
                     "LIKE_NEW", 150, "10x10x5 cm", "HCM",
@@ -439,7 +432,7 @@ class AuctionHouseTest {
 
         @Test
         @DisplayName("Item không hợp lệ (thiếu title) → IllegalArgumentException")
-        void listItem_invalidItem_throwsIllegalArgumentException() throws SQLException {
+        void listItem_invalidItem_throwsIllegalArgumentException() {
             PhysicalItem item = new PhysicalItem();
             item.setSellerId(SELLER_ID);
             item.setStartTime(LocalDateTime.now());
@@ -582,7 +575,7 @@ class AuctionHouseTest {
         verify(bidRepo).save(bidCaptor.capture());
         Bid savedBid = bidCaptor.getValue();
 
-        assertEquals(ITEM_ID,   savedBid.getAuctionId(),  "AuctionId phải đúng");
+        assertEquals(ITEM_ID,   savedBid.getItemId(),  "ItemId phải đúng");
         assertEquals(BUYER_ID,  savedBid.getBuyerId(), "BuyerId phải đúng");
         assertEquals(bidAmount, savedBid.getAmount(),  "Amount phải đúng");
         assertFalse(savedBid.isAutoBid(), "Bid thủ công không được đánh dấu auto-bid");

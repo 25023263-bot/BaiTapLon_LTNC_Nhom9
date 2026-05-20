@@ -32,12 +32,12 @@ public class PhysicalItem extends AuctionItem {
 
     public PhysicalItem(int id, int sellerId, String title, String description,
                         String category, BigDecimal startingPrice,
-                        BigDecimal minBidIncrement, BigDecimal buyNowPrice,
+                        BigDecimal minBidIncrement,
                         LocalDateTime startTime, LocalDateTime endTime,
                         String condition, double weightGrams, String dimensions,
                         String location, BigDecimal shippingCost, boolean allowPickup) {
         super(id, sellerId, title, description, category,
-                startingPrice, minBidIncrement, buyNowPrice, startTime, endTime);
+                startingPrice, minBidIncrement, startTime, endTime);
         this.condition    = condition;
         this.weightGrams  = weightGrams;
         this.dimensions   = dimensions;

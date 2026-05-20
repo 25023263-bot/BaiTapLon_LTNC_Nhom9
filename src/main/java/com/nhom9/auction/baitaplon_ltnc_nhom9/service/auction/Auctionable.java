@@ -27,12 +27,6 @@ public interface Auctionable {
             throws AuctionClosedException, BidTooLowException, InsufficientBalanceException, Exception;
 
     /**
-     * Mua ngay theo giá Buy-Now.
-     */
-    void buyNow(int itemId, int buyerId)
-            throws AuctionClosedException, InsufficientBalanceException, Exception;
-
-    /**
      * Kết thúc phiên đấu giá (gọi khi hết giờ).
      */
     void closeAuction(int itemId) throws Exception;

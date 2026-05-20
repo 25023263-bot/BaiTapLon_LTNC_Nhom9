@@ -22,7 +22,7 @@ class PhysicalItemTest {
         return new PhysicalItem(
                 1, 10,
                 "Test Physical Item", "Mô tả", "Category",
-                startingPrice, new BigDecimal("10000"), null,
+                startingPrice, new BigDecimal("10000"),
                 START, END,
                 "NEW", 500.0, "20x10x5 cm", "HN", shippingCost, false
         );
@@ -100,7 +100,7 @@ class PhysicalItemTest {
     void isValidItem_emptyCondition_returnsFalse() {
         PhysicalItem item = new PhysicalItem(
                 2, 10, "Valid Title", "desc", "cat",
-                new BigDecimal("100000"), new BigDecimal("10000"), null,
+                new BigDecimal("100000"), new BigDecimal("10000"),
                 START, END,
                 "",  // condition rỗng
                 500.0, null, "HN", BigDecimal.ZERO, false
@@ -115,7 +115,7 @@ class PhysicalItemTest {
     void isValidItem_allFieldsValid_returnsTrue() {
         PhysicalItem item = new PhysicalItem(
                 3, 10, "Laptop Used", "Like new", "Electronics",
-                new BigDecimal("5000000"), new BigDecimal("100000"), null,
+                new BigDecimal("5000000"), new BigDecimal("100000"),
                 START, END,
                 "LIKE_NEW", 1500.0, "35x25x3 cm", "HCM",
                 new BigDecimal("50000"), true

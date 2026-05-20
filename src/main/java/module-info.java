@@ -64,7 +64,6 @@ module com.nhom9.auction.baitaplon_ltnc_nhom9 {
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.service.auth;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification;
-    opens com.nhom9.auction.baitaplon_ltnc_nhom9.service.payment;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.service.wallet;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.service.listing;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.exception;

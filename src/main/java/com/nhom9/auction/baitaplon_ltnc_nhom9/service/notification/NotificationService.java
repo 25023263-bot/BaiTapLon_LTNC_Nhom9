@@ -5,7 +5,6 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Notification;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.NotificationRepository;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.WatchlistRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionObserver;
 
 import java.time.LocalDateTime;
@@ -39,7 +38,6 @@ public class NotificationService implements AuctionObserver {
     // ─── Dependencies ────────────────────────────────────────────────────────
     private final NotificationRepository notifRepo;
     private final BidRepository          bidRepo;
-    private final WatchlistRepository    watchlistRepo;
 
     /** UI callbacks — controller đăng ký để nhận push real-time (same JVM). */
     private final List<Consumer<NotificationEvent>> uiListeners = new ArrayList<>();
@@ -52,10 +50,8 @@ public class NotificationService implements AuctionObserver {
 
     // ─── Constructor ─────────────────────────────────────────────────────────
 
-    public NotificationService(WatchlistRepository watchlistRepo,
-                               BidRepository bidRepo,
+    public NotificationService(BidRepository bidRepo,
                                NotificationRepository notifRepo) {
-        this.watchlistRepo = watchlistRepo;
         this.bidRepo       = bidRepo;
         this.notifRepo     = notifRepo;
     }

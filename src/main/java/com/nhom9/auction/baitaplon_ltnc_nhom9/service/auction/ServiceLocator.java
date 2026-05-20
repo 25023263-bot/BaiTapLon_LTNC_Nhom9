@@ -5,7 +5,6 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auth.AuthService;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification.NotificationService;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.listing.ListingService;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.service.payment.WalletPayment;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.wallet.WalletDepositService;
 
 /**
@@ -40,15 +39,12 @@ public class ServiceLocator {
     private final UserRepository        userRepo;
     private final AuctionRepository     auctionRepo;
     private final BidRepository         bidRepo;
-    private final WatchlistRepository   watchlistRepo;
-    private final TransactionRepository txRepo;
 
     // ── Services ──────────────────────────────────────────────────────────────
     private final AuthService           authService;
     private final AuctionHouse          auctionHouse;
     private final AuctionScheduler      auctionScheduler;
     private final NotificationService   notificationService;
-    private final WalletPayment         walletPayment;
     private final ListingService        listingService;
     private final WalletDepositService  walletDepositService;
 
@@ -62,25 +58,26 @@ public class ServiceLocator {
         userRepo      = new UserRepository();
         auctionRepo   = new AuctionRepository();
         bidRepo       = new BidRepository();
-        watchlistRepo = new WatchlistRepository();
-        txRepo        = new TransactionRepository();
 
         // 3. Services
         authService  = new AuthService(userRepo);
-        auctionHouse = new AuctionHouse(auctionRepo, bidRepo, userRepo, txRepo);
+        auctionHouse = new AuctionHouse(auctionRepo, bidRepo, userRepo);
 
         NotificationRepository notifRepo = new NotificationRepository();
         try { notifRepo.deleteOlderThan(30); }
         catch (Exception e) { /* không critical, bỏ qua */ }
 
-        notificationService = new NotificationService(watchlistRepo, bidRepo, notifRepo);
-        auctionScheduler    = new AuctionScheduler(auctionRepo, auctionHouse);
-        walletPayment       = new WalletPayment(userRepo);
-        listingService      = new ListingService(auctionHouse);
+        notificationService  = new NotificationService(bidRepo, notifRepo);
+        auctionScheduler     = new AuctionScheduler(auctionRepo, auctionHouse);
+        listingService       = new ListingService(auctionHouse);
         walletDepositService = new WalletDepositService(userRepo);
 
         // 4. Kết nối Observer: AuctionHouse → NotificationService
         auctionHouse.addObserver(notificationService);
+
+        // 5. Khởi động scheduler — TỰ ĐỘNG đóng phiên hết giờ và kích hoạt phiên PENDING
+        // BUG FIX: trước đây scheduler được tạo nhưng không bao giờ start()!
+        auctionScheduler.start();
     }
 
     public static ServiceLocator getInstance() {
@@ -92,14 +89,11 @@ public class ServiceLocator {
     public UserRepository        getUserRepo()            { return userRepo; }
     public AuctionRepository     getAuctionRepo()         { return auctionRepo; }
     public BidRepository         getBidRepo()             { return bidRepo; }
-    public WatchlistRepository   getWatchlistRepo()       { return watchlistRepo; }
-    public TransactionRepository getTxRepo()              { return txRepo; }
 
     public AuthService           getAuthService()         { return authService; }
     public AuctionHouse          getAuctionHouse()        { return auctionHouse; }
     public AuctionScheduler      getAuctionScheduler()    { return auctionScheduler; }
     public NotificationService   getNotificationService() { return notificationService; }
-    public WalletPayment         getWalletPayment()       { return walletPayment; }
     public ListingService        getListingService()      { return listingService; }
     public WalletDepositService  getWalletDepositService(){ return walletDepositService; }
 

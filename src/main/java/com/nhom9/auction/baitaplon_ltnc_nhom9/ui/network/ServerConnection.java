@@ -156,24 +156,6 @@ public class ServerConnection {
     }
 
     /**
-     * Mua ngay (Buy Now) — đặt bid bằng buyNowPrice và đóng phiên ngay lập tức.
-     *
-     * @param auctionId ID phiên đấu giá
-     * @param buyerId   ID người mua
-     * @return Bid vừa được lưu
-     */
-    public static Bid buyNow(int auctionId, int buyerId) throws Exception {
-        BidDTO dto = new BidDTO();
-        dto.setAuctionId(auctionId);
-        dto.setBuyerId(buyerId);
-        // amount không cần — server lấy buyNowPrice từ DB
-
-        Response res = send(Request.Type.BUY_NOW, dto);
-        requireOk(res);
-        return (Bid) res.getData();
-    }
-
-    /**
      * Hủy phiên đấu giá.
      *
      * @param auctionId ID phiên đấu giá cần hủy

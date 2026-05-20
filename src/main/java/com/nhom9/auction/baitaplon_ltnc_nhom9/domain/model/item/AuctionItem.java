@@ -9,8 +9,8 @@ import java.util.Objects;
 import java.io.Serializable;
 
 /**
- * Aggregate root for a seller listing ({@code auctions} row + physical/digital detail).
- * Subtypes: {@link PhysicalItem}, {@link DigitalItem}.
+ * Aggregate root for a seller listing ({@code auctions} row + physical detail).
+ * Concrete subtype: {@link PhysicalItem}.
  */
 public abstract class AuctionItem implements Serializable {
 
@@ -29,9 +29,6 @@ public abstract class AuctionItem implements Serializable {
     /** Giá bid tối thiểu mỗi lần tăng */
     protected BigDecimal minBidIncrement;
 
-    /** Giá mua ngay (Buy-Now), null = không có */
-    protected BigDecimal buyNowPrice;
-
     /** Giá bid cao nhất hiện tại */
     protected BigDecimal currentPrice;
 
@@ -49,7 +46,7 @@ public abstract class AuctionItem implements Serializable {
 
     protected AuctionItem(int id, int sellerId, String title, String description,
                           String category, BigDecimal startingPrice,
-                          BigDecimal minBidIncrement, BigDecimal buyNowPrice,
+                          BigDecimal minBidIncrement,
                           LocalDateTime startTime, LocalDateTime endTime) {
         this.id               = id;
         this.sellerId         = sellerId;
@@ -58,7 +55,6 @@ public abstract class AuctionItem implements Serializable {
         this.category         = category;
         this.startingPrice    = startingPrice;
         this.minBidIncrement  = minBidIncrement != null ? minBidIncrement : BigDecimal.ONE;
-        this.buyNowPrice      = buyNowPrice;
         this.currentPrice     = startingPrice;
         this.leadingBidderId  = 0;
         this.status           = AuctionStatus.PENDING;
@@ -120,13 +116,6 @@ public abstract class AuctionItem implements Serializable {
     }
 
     /**
-     * Có giá mua ngay không.
-     */
-    public boolean hasBuyNow() {
-        return buyNowPrice != null && buyNowPrice.compareTo(BigDecimal.ZERO) > 0;
-    }
-
-    /**
      * Phiên đấu giá đang active không.
      */
     public boolean isActive() {
@@ -158,9 +147,6 @@ public abstract class AuctionItem implements Serializable {
 
     public BigDecimal getMinBidIncrement()          { return minBidIncrement; }
     public void setMinBidIncrement(BigDecimal inc)  { this.minBidIncrement = inc; }
-
-    public BigDecimal getBuyNowPrice()              { return buyNowPrice; }
-    public void setBuyNowPrice(BigDecimal p)        { this.buyNowPrice = p; }
 
     public BigDecimal getCurrentPrice()             { return currentPrice; }
     public void setCurrentPrice(BigDecimal p)       { this.currentPrice = p; }

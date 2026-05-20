@@ -2,10 +2,8 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.config.AppConfig;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Transaction;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.PhysicalItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.exception.AuctionClosedException;
@@ -40,16 +38,14 @@ public class AuctionHouse implements Auctionable {
     private final AuctionRepository     auctionRepo;
     private final BidRepository         bidRepo;
     private final UserRepository        userRepo;
-    private final TransactionRepository txRepo;
 
     private final List<AuctionObserver> observers = new ArrayList<>();
 
     public AuctionHouse(AuctionRepository auctionRepo, BidRepository bidRepo,
-                        UserRepository userRepo, TransactionRepository txRepo) {
+                        UserRepository userRepo) {
         this.auctionRepo = auctionRepo;
         this.bidRepo  = bidRepo;
         this.userRepo = userRepo;
-        this.txRepo   = txRepo;
     }
 
     // ─── Observer Registration ────────────────────────────────────────────────
@@ -538,37 +534,6 @@ public class AuctionHouse implements Auctionable {
 
     // ─── Buy Now ──────────────────────────────────────────────────────────────
 
-    @Override
-    public synchronized void buyNow(int itemId, int buyerId)
-            throws AuctionClosedException, InsufficientBalanceException, Exception {
-
-        AuctionItem item = loadActiveItem(itemId);
-
-        if (!item.hasBuyNow())
-            throw new IllegalStateException("Vật phẩm #" + itemId + " không có giá mua ngay.");
-
-        BigDecimal totalCost = item.getBuyNowPrice();
-        if (item instanceof PhysicalItem p)
-            totalCost = p.getTotalCostForBuyer(); // bao gồm phí ship
-
-        Buyer buyer = loadBuyer(buyerId);
-        if (!buyer.hasSufficientBalance(totalCost))
-            throw new InsufficientBalanceException(buyer.getWalletBalance(), totalCost);
-
-        // Cập nhật trạng thái item
-        item.setCurrentPrice(item.getBuyNowPrice());
-        item.setLeadingBidderId(buyerId);
-        item.setStatus(AuctionStatus.CLOSED);
-        auctionRepo.update(item);
-
-        // Tạo transaction và thanh toán
-        processPayment(item, buyerId, totalCost);
-
-        LOG.info(String.format("Buy-Now: item #%d, buyer #%d, price=%,.0f",
-                itemId, buyerId, totalCost));
-        notifyClosed(item, buyerId);
-    }
-
     // ─── Close Auction ────────────────────────────────────────────────────────
 
     @Override
@@ -595,17 +560,9 @@ public class AuctionHouse implements Auctionable {
         item.setStatus(AuctionStatus.CLOSED);
         auctionRepo.updateStatus(itemId, AuctionStatus.CLOSED);
 
-        // Tính tổng tiền buyer phải trả
-        BigDecimal totalCost = item.getCurrentPrice();
-        if (item instanceof PhysicalItem p)
-            totalCost = p.getTotalCostForBuyer();
-
-        // wrap processPayment() trong try-catch riêng.
-        //   - Nếu payment OK  → log bình thường, tiếp tục notify
-        //   - Nếu payment fail → log warning, vẫn gọi notifyClosed() để
-        //     tất cả các bên được thông báo phiên đã đóng
+        // Xử lý thanh toán (trừ tiền buyer, cộng tiền seller)
         try {
-            processPayment(item, winnerId, totalCost);
+            processPayment(item, winnerId, item.getCurrentPrice());
             LOG.info(String.format("Phiên kết thúc: item #%d, winner #%d, price=%,.0f",
                     itemId, winnerId, item.getCurrentPrice()));
         } catch (Exception paymentEx) {
@@ -615,7 +572,6 @@ public class AuctionHouse implements Auctionable {
                     itemId, winnerId, item.getCurrentPrice(), paymentEx.getMessage()));
         }
 
-        // Notification luôn được gửi, bất kể payment thành công hay thất bại
         notifyClosed(item, winnerId);
     }
 
@@ -696,28 +652,22 @@ public class AuctionHouse implements Auctionable {
     // ─── Internal Payment ─────────────────────────────────────────────────────
 
     /**
-     * Trừ tiền buyer, cộng tiền seller, lưu transaction.
+     * Trừ tiền buyer, cộng tiền seller.
+     * Transaction history đã bị bỏ — chỉ cập nhật wallet balance.
      */
     private void processPayment(AuctionItem item, int buyerId, BigDecimal totalCost) throws Exception {
         // Load winner trực tiếp từ DB để biết role thực sự (Buyer hay Seller).
-        // KHÔNG dùng loadBuyer() vì nó trả về Seller.asBuyer() — một proxy tách rời,
-        // khiến updateWalletBalance() UPDATE sai bảng (buyers thay vì sellers) và
-        // 0 row bị affected → tiền không bị trừ mà không có exception nào.
         User winner = userRepo.findById(buyerId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy winner #" + buyerId));
 
         // ── Trừ tiền winner — phân biệt theo role ────────────────────────────
         if (winner instanceof Buyer buyer) {
-            // Winner là Buyer thông thường → kiểm tra và trừ wallet_balance
             if (!buyer.hasSufficientBalance(totalCost))
                 throw new InsufficientBalanceException(buyer.getWalletBalance(), totalCost);
             buyer.deduct(totalCost);
             userRepo.updateWalletBalance(buyerId, buyer.getWalletBalance());
 
         } else if (winner instanceof Seller winnerSeller) {
-            // Winner là Seller (đặt bid ở phiên của người khác) → trừ earnings_balance.
-            // Lỗi cũ: loadBuyer() tạo proxy Buyer từ Seller, sau đó updateWalletBalance()
-            // UPDATE bảng buyers WHERE user_id = sellerId → 0 row affected → tiền không trừ.
             BigDecimal earnings = winnerSeller.getEarningsBalance() != null
                     ? winnerSeller.getEarningsBalance() : BigDecimal.ZERO;
             if (earnings.compareTo(totalCost) < 0)
@@ -726,24 +676,13 @@ public class AuctionHouse implements Auctionable {
             userRepo.updateEarningsBalance(buyerId, winnerSeller.getEarningsBalance());
 
         } else {
-            throw new IllegalStateException("Winner #" + buyerId + " có role không hợp lệ (Admin không được đặt bid).");
+            throw new IllegalStateException("Winner #" + buyerId + " có role không hợp lệ.");
         }
 
-        // ── Tạo transaction ───────────────────────────────────────────────────
-        Transaction tx = new Transaction(
-                item.getId(), buyerId, item.getSellerId(),
-                item.getCurrentPrice(), "WALLET");
-        txRepo.save(tx);
-
-        // ── Cộng tiền seller của phiên ────────────────────────────────────────
-        // Lưu ý: sellerId của phiên khác với buyerId (đã được validateBidder() đảm bảo).
+        // ── Cộng tiền seller ──────────────────────────────────────────────────
         Seller seller = loadSeller(item.getSellerId());
         seller.receivePayment(item.getCurrentPrice());
         userRepo.updateEarningsBalance(item.getSellerId(), seller.getEarningsBalance());
-
-        // ── Đánh dấu transaction hoàn thành ──────────────────────────────────
-        tx.markCompleted();
-        txRepo.updateStatus(tx.getId(), tx.getPaymentStatus(), tx.getCompletedAt());
 
         LOG.info(String.format("Thanh toán: winner #%d trả %,.0f đ, seller #%d nhận %,.0f đ",
                 buyerId, totalCost, item.getSellerId(), item.getCurrentPrice()));

@@ -36,7 +36,7 @@ class AuctionItemTest {
         activeItem = new PhysicalItem(
                 1, 10,
                 "Laptop Gaming Test", "Mô tả test", "Electronics",
-                new BigDecimal("100000"), new BigDecimal("10000"), null,
+                new BigDecimal("100000"), new BigDecimal("10000"),
                 START, END,
                 "NEW", 2000.0, "30x20x5 cm", "HCM", BigDecimal.ZERO, false
         );
@@ -46,7 +46,7 @@ class AuctionItemTest {
         pendingItem = new PhysicalItem(
                 2, 10,
                 "Item Pending", "Mô tả", "Category",
-                new BigDecimal("50000"), new BigDecimal("5000"), null,
+                new BigDecimal("50000"), new BigDecimal("5000"),
                 NOW.plusHours(1), NOW.plusHours(3),
                 "GOOD", 500.0, null, "HN", BigDecimal.ZERO, false
         );
@@ -181,36 +181,13 @@ class AuctionItemTest {
     void getRemainingSeconds_expired_returnsZero() {
         PhysicalItem expiredItem = new PhysicalItem(
                 3, 10, "Expired Item", "desc", "cat",
-                new BigDecimal("100000"), new BigDecimal("10000"), null,
+                new BigDecimal("100000"), new BigDecimal("10000"),
                 START, PAST_END,
                 "NEW", 100.0, null, "HN", BigDecimal.ZERO, false
         );
 
         // getRemainingSeconds() phải trả 0, KHÔNG trả số âm
         assertEquals(0L, expiredItem.getRemainingSeconds());
-    }
-
-    // ─── hasBuyNow() ─────────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("hasBuyNow: buyNowPrice = null → false")
-    void hasBuyNow_noBuyNow_returnsFalse() {
-        // activeItem được tạo với buyNowPrice = null
-        assertFalse(activeItem.hasBuyNow());
-    }
-
-    @Test
-    @DisplayName("hasBuyNow: buyNowPrice > 0 → true")
-    void hasBuyNow_withBuyNowPrice_returnsTrue() {
-        PhysicalItem itemWithBuyNow = new PhysicalItem(
-                4, 10, "Item BuyNow", "desc", "cat",
-                new BigDecimal("100000"), new BigDecimal("10000"),
-                new BigDecimal("500000"),  // buyNowPrice = 500K
-                START, END,
-                "NEW", 100.0, null, "HN", BigDecimal.ZERO, false
-        );
-
-        assertTrue(itemWithBuyNow.hasBuyNow());
     }
 
     // ─── getItemType() ────────────────────────────────────────────────────────
@@ -234,7 +211,7 @@ class AuctionItemTest {
     void isValidItem_emptyTitle_returnsFalse() {
         PhysicalItem noTitle = new PhysicalItem(
                 5, 10, "", "desc", "cat",
-                new BigDecimal("100000"), new BigDecimal("10000"), null,
+                new BigDecimal("100000"), new BigDecimal("10000"),
                 START, END,
                 "NEW", 100.0, null, "HN", BigDecimal.ZERO, false
         );
@@ -247,7 +224,7 @@ class AuctionItemTest {
     void isValidItem_zeroStartingPrice_returnsFalse() {
         PhysicalItem freeItem = new PhysicalItem(
                 6, 10, "Free Item", "desc", "cat",
-                BigDecimal.ZERO, new BigDecimal("10000"), null,
+                BigDecimal.ZERO, new BigDecimal("10000"),
                 START, END,
                 "NEW", 100.0, null, "HN", BigDecimal.ZERO, false
         );
@@ -260,7 +237,7 @@ class AuctionItemTest {
     void isValidItem_endBeforeStart_returnsFalse() {
         PhysicalItem badTime = new PhysicalItem(
                 7, 10, "Bad Time Item", "desc", "cat",
-                new BigDecimal("100000"), new BigDecimal("10000"), null,
+                new BigDecimal("100000"), new BigDecimal("10000"),
                 END, START,  // đảo ngược: end < start
                 "NEW", 100.0, null, "HN", BigDecimal.ZERO, false
         );

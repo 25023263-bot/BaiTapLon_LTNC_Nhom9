@@ -28,7 +28,6 @@ public final class ListingService {
         item.setStartingPrice(req.startingPrice());
         item.setCurrentPrice(req.startingPrice());
         item.setMinBidIncrement(new BigDecimal("1000"));
-        item.setBuyNowPrice(null);
         item.setStartTime(LocalDateTime.now());
         item.setEndTime(req.endTime());
         item.setCondition("GOOD");

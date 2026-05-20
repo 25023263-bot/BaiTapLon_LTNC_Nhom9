@@ -25,7 +25,7 @@ import java.util.logging.Logger;
  *
  * Đã implement đầy đủ 10 loại request:
  *   LOGIN, REGISTER, GET_AUCTIONS, GET_AUCTION_DETAIL,
- *   PLACE_BID, PLACE_AUTO_BID, BUY_NOW,
+ *   PLACE_BID, PLACE_AUTO_BID,
  *   CANCEL_AUCTION, DEPOSIT_WALLET, LOGOUT
  */
 public class ClientHandler implements Runnable {
@@ -97,7 +97,6 @@ public class ClientHandler implements Runnable {
                 case GET_AUCTION_DETAIL -> handleGetAuctionDetail(req);
                 case PLACE_BID          -> handlePlaceBid(req);
                 case PLACE_AUTO_BID     -> handlePlaceAutoBid(req);
-                case BUY_NOW            -> handleBuyNow(req);
                 case CANCEL_AUCTION     -> handleCancelAuction(req);
                 case DEPOSIT_WALLET     -> handleDepositWallet(req);
                 case LOGOUT             -> handleLogout();
@@ -231,38 +230,6 @@ public class ClientHandler implements Runnable {
                 dto.getBuyerId(),
                 dto.getAmount()
         );
-        return Response.ok(bid);
-    }
-
-    /**
-     * Buy Now: đặt bid bằng chính buyNowPrice để kết thúc phiên ngay lập tức.
-     * Payload: BidDTO với amount = buyNowPrice.
-     */
-    private Response handleBuyNow(Request req) throws Exception {
-        BidDTO dto = (BidDTO) req.getPayload();
-
-        var itemOpt = locator.getAuctionRepo().findById(dto.getAuctionId());
-        if (itemOpt.isEmpty()) {
-            return Response.error("Không tìm thấy phiên đấu giá #" + dto.getAuctionId());
-        }
-        AuctionItem item = itemOpt.get();
-
-        if (item.getStatus() != AuctionStatus.ACTIVE) {
-            return Response.error("Phiên đấu giá đã kết thúc.");
-        }
-        if (item.getBuyNowPrice() == null || item.getBuyNowPrice().compareTo(BigDecimal.ZERO) <= 0) {
-            return Response.error("Sản phẩm này không hỗ trợ Mua ngay.");
-        }
-
-        // Đặt bid bằng buyNowPrice → AuctionHouse sẽ xử lý đóng phiên
-        Bid bid = locator.getAuctionHouse().placeBid(
-                dto.getAuctionId(),
-                dto.getBuyerId(),
-                item.getBuyNowPrice()
-        );
-        // Đóng phiên ngay sau khi Buy Now thành công
-        locator.getAuctionHouse().closeAuction(dto.getAuctionId());
-
         return Response.ok(bid);
     }
 
@@ -496,11 +463,9 @@ public class ClientHandler implements Runnable {
         dto.setDescription(item.getDescription());
         dto.setCategory(item.getCategory());
         dto.setImageUrl(item.getImageUrl());
-        dto.setItemType(item.getClass().getSimpleName()
-                .replace("Item", "").toUpperCase());
+        dto.setItemType("PHYSICAL");
         dto.setStartingPrice(item.getStartingPrice());
         dto.setMinBidIncrement(item.getMinBidIncrement());
-        dto.setBuyNowPrice(item.getBuyNowPrice());
         dto.setCurrentPrice(item.getCurrentPrice());
         dto.setStatus(item.getStatus());
         dto.setStartTime(item.getStartTime());

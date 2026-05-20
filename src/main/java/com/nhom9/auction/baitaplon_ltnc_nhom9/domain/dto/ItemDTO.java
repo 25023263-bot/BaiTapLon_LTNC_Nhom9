@@ -28,7 +28,6 @@ public class ItemDTO implements Serializable {
 
     private BigDecimal startingPrice;
     private BigDecimal minBidIncrement;
-    private BigDecimal buyNowPrice;
     private BigDecimal currentPrice;
     private int leadingBidderId;
     private String leadingBidderUsername;
@@ -52,14 +51,6 @@ public class ItemDTO implements Serializable {
     private BigDecimal shippingCost;
     private boolean allowPickup;
 
-    // ─── Digital-only ────────────────────────────────────────────────────────
-    private String digitalType;
-    private String platform;
-    private Double fileSizeMB;
-    private LocalDateTime expiryDate;
-    private boolean replacementGuarantee;
-    // deliveryContent KHÔNG bao gồm ở đây vì bảo mật
-
     // ─── Constructor ────────────────────────────────────────────────────────
 
     public ItemDTO() {}
@@ -67,9 +58,7 @@ public class ItemDTO implements Serializable {
     // ─── Utility ─────────────────────────────────────────────────────────────
 
     public boolean isPhysical()    { return "PHYSICAL".equalsIgnoreCase(itemType); }
-    public boolean isDigital()     { return "DIGITAL".equalsIgnoreCase(itemType); }
     public boolean isActive()      { return status == AuctionStatus.ACTIVE; }
-    public boolean hasBuyNow()     { return buyNowPrice != null && buyNowPrice.compareTo(BigDecimal.ZERO) > 0; }
     public boolean hasBids()       { return totalBids > 0; }
 
     /**
@@ -124,9 +113,6 @@ public class ItemDTO implements Serializable {
     public BigDecimal getMinBidIncrement()                      { return minBidIncrement; }
     public void setMinBidIncrement(BigDecimal minBidIncrement)  { this.minBidIncrement = minBidIncrement; }
 
-    public BigDecimal getBuyNowPrice()                          { return buyNowPrice; }
-    public void setBuyNowPrice(BigDecimal buyNowPrice)          { this.buyNowPrice = buyNowPrice; }
-
     public BigDecimal getCurrentPrice()                         { return currentPrice; }
     public void setCurrentPrice(BigDecimal currentPrice)        { this.currentPrice = currentPrice; }
 
@@ -172,24 +158,9 @@ public class ItemDTO implements Serializable {
     public boolean isAllowPickup()                              { return allowPickup; }
     public void setAllowPickup(boolean allowPickup)             { this.allowPickup = allowPickup; }
 
-    public String getDigitalType()                              { return digitalType; }
-    public void setDigitalType(String digitalType)              { this.digitalType = digitalType; }
-
-    public String getPlatform()                                 { return platform; }
-    public void setPlatform(String platform)                    { this.platform = platform; }
-
-    public Double getFileSizeMB()                               { return fileSizeMB; }
-    public void setFileSizeMB(Double fileSizeMB)                { this.fileSizeMB = fileSizeMB; }
-
-    public LocalDateTime getExpiryDate()                        { return expiryDate; }
-    public void setExpiryDate(LocalDateTime expiryDate)         { this.expiryDate = expiryDate; }
-
-    public boolean isReplacementGuarantee()                     { return replacementGuarantee; }
-    public void setReplacementGuarantee(boolean rg)             { this.replacementGuarantee = rg; }
-
     @Override
     public String toString() {
-        return String.format("ItemDTO{id=%d, title='%s', type=%s, price=%s, status=%s}",
-                id, title, itemType, currentPrice, status);
+        return String.format("ItemDTO{id=%d, title='%s', type=PHYSICAL, price=%s, status=%s}",
+                id, title, currentPrice, status);
     }
 }

@@ -18,7 +18,6 @@ public class Request implements Serializable {
         GET_AUCTION_DETAIL,
         PLACE_BID,
         PLACE_AUTO_BID,
-        BUY_NOW,
         CANCEL_AUCTION,
         DEPOSIT_WALLET,
         LOGOUT,

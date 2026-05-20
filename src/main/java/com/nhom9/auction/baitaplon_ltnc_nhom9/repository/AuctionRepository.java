@@ -2,7 +2,6 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.repository;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.DigitalItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.PhysicalItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DatabaseConnection;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.DbUtil;
@@ -17,7 +16,7 @@ import java.util.Optional;
 
 /**
  * JDBC repository cho auction listings.
- * Bảng: auctions + physical_items / digital_items (table-per-subclass).
+ * Bảng: auctions + physical_items (table-per-subclass).
  *
  * ─── THAY ĐỔI SO VỚI PHIÊN BẢN CŨ ──────────────────────────────────────
  * 1. Connection được đóng đúng cách (try-with-resources).
@@ -55,9 +54,9 @@ public class AuctionRepository {
         String sql = """
                 INSERT INTO auctions
                   (seller_id, title, description, category, image_url, item_type,
-                   starting_price, min_bid_increment, buy_now_price, current_price,
+                   starting_price, min_bid_increment, current_price,
                    leading_bidder_id, status, start_time, end_time, created_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """;
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt   (1,  item.getSellerId());
@@ -68,13 +67,12 @@ public class AuctionRepository {
             ps.setString(6,  item.getItemType());
             ps.setDouble(7,  item.getStartingPrice().doubleValue());
             ps.setDouble(8,  item.getMinBidIncrement().doubleValue());
-            setNullableDouble(ps, 9,  item.getBuyNowPrice());
-            ps.setDouble(10, item.getCurrentPrice().doubleValue());
-            setNullableInt   (ps, 11, item.getLeadingBidderId() == 0 ? null : item.getLeadingBidderId());
-            ps.setString(12, item.getStatus().name());
-            ps.setString(13, DbUtil.toDbString(item.getStartTime()));
-            ps.setString(14, DbUtil.toDbString(item.getEndTime()));
-            ps.setString(15, DbUtil.toDbString(item.getCreatedAt() != null ? item.getCreatedAt() : LocalDateTime.now()));
+            ps.setDouble(9,  item.getCurrentPrice().doubleValue());
+            setNullableInt   (ps, 10, item.getLeadingBidderId() == 0 ? null : item.getLeadingBidderId());
+            ps.setString(11, item.getStatus().name());
+            ps.setString(12, DbUtil.toDbString(item.getStartTime()));
+            ps.setString(13, DbUtil.toDbString(item.getEndTime()));
+            ps.setString(14, DbUtil.toDbString(item.getCreatedAt() != null ? item.getCreatedAt() : LocalDateTime.now()));
             ps.executeUpdate();
 
             try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -84,8 +82,7 @@ public class AuctionRepository {
     }
 
     /**
-     * INSERT bảng phụ (physical_items / digital_items).
-     * Thay INSERT OR REPLACE bằng check-then-insert/update.
+     * INSERT / UPDATE bảng phụ physical_items.
      */
     private void insertTypeExtension(Connection conn, AuctionItem item) throws SQLException {
         if (item instanceof PhysicalItem p) {
@@ -119,41 +116,6 @@ public class AuctionRepository {
                     ps.setString(5, p.getLocation());
                     ps.setDouble(6, p.getShippingCost() != null ? p.getShippingCost().doubleValue() : 0);
                     ps.setInt   (7, p.isAllowPickup() ? 1 : 0);
-                    ps.executeUpdate();
-                }
-            }
-
-        } else if (item instanceof DigitalItem d) {
-            if (DbUtil.rowExists(conn, "digital_items", "auction_id", d.getId())) {
-                String sql = """
-                        UPDATE digital_items SET digital_type=?, platform=?, file_size_mb=?,
-                          expiry_date=?, delivery_content=?, replacement_guarantee=?
-                        WHERE auction_id=?
-                        """;
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setString(1, d.getDigitalType());
-                    ps.setString(2, d.getPlatform());
-                    setNullableDouble(ps, 3, d.getFileSizeMB() != null ? BigDecimal.valueOf(d.getFileSizeMB()) : null);
-                    ps.setString(4, DbUtil.toDbString(d.getExpiryDate()));
-                    ps.setString(5, d.getDeliveryContent());
-                    ps.setInt   (6, d.isReplacementGuarantee() ? 1 : 0);
-                    ps.setInt   (7, d.getId());
-                    ps.executeUpdate();
-                }
-            } else {
-                String sql = """
-                        INSERT INTO digital_items
-                          (auction_id, digital_type, platform, file_size_mb, expiry_date, delivery_content, replacement_guarantee)
-                        VALUES (?,?,?,?,?,?,?)
-                        """;
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setInt   (1, d.getId());
-                    ps.setString(2, d.getDigitalType());
-                    ps.setString(3, d.getPlatform());
-                    setNullableDouble(ps, 4, d.getFileSizeMB() != null ? BigDecimal.valueOf(d.getFileSizeMB()) : null);
-                    ps.setString(5, DbUtil.toDbString(d.getExpiryDate()));
-                    ps.setString(6, d.getDeliveryContent());
-                    ps.setInt   (7, d.isReplacementGuarantee() ? 1 : 0);
                     ps.executeUpdate();
                 }
             }
@@ -253,7 +215,7 @@ public class AuctionRepository {
                 String sql = """
                         UPDATE auctions SET
                           title=?, description=?, category=?, image_url=?,
-                          min_bid_increment=?, buy_now_price=?, current_price=?,
+                          min_bid_increment=?, current_price=?,
                           leading_bidder_id=?, status=?, start_time=?, end_time=?
                         WHERE id=?
                         """;
@@ -263,13 +225,12 @@ public class AuctionRepository {
                     ps.setString(3,  item.getCategory());
                     ps.setString(4,  item.getImageUrl());
                     ps.setDouble(5,  item.getMinBidIncrement().doubleValue());
-                    setNullableDouble(ps, 6, item.getBuyNowPrice());
-                    ps.setDouble(7,  item.getCurrentPrice().doubleValue());
-                    setNullableInt   (ps, 8, item.getLeadingBidderId() == 0 ? null : item.getLeadingBidderId());
-                    ps.setString(9,  item.getStatus().name());
-                    ps.setString(10, DbUtil.toDbString(item.getStartTime()));
-                    ps.setString(11, DbUtil.toDbString(item.getEndTime()));
-                    ps.setInt   (12, item.getId());
+                    ps.setDouble(6,  item.getCurrentPrice().doubleValue());
+                    setNullableInt   (ps, 7, item.getLeadingBidderId() == 0 ? null : item.getLeadingBidderId());
+                    ps.setString(8,  item.getStatus().name());
+                    ps.setString(9,  DbUtil.toDbString(item.getStartTime()));
+                    ps.setString(10, DbUtil.toDbString(item.getEndTime()));
+                    ps.setInt   (11, item.getId());
                     ps.executeUpdate();
                 }
                 insertTypeExtension(conn, item);
@@ -348,20 +309,11 @@ public class AuctionRepository {
 
     /** Map từ ResultSet + load bảng phụ, dùng chung connection. */
     private AuctionItem mapWithExtension(Connection conn, ResultSet rs) throws SQLException {
-        String type = rs.getString("item_type");
         int id = rs.getInt("id");
-
-        if ("PHYSICAL".equals(type)) {
-            PhysicalItem p = new PhysicalItem();
-            applyBaseFields(p, rs);
-            loadPhysicalExtension(conn, p, id);
-            return p;
-        } else {
-            DigitalItem d = new DigitalItem();
-            applyBaseFields(d, rs);
-            loadDigitalExtension(conn, d, id);
-            return d;
-        }
+        PhysicalItem p = new PhysicalItem();
+        applyBaseFields(p, rs);
+        loadPhysicalExtension(conn, p, id);
+        return p;
     }
 
     private void applyBaseFields(AuctionItem item, ResultSet rs) throws SQLException {
@@ -373,8 +325,6 @@ public class AuctionRepository {
         item.setImageUrl(rs.getString("image_url"));
         item.setStartingPrice(BigDecimal.valueOf(rs.getDouble("starting_price")));
         item.setMinBidIncrement(BigDecimal.valueOf(rs.getDouble("min_bid_increment")));
-        double bnp = rs.getDouble("buy_now_price");
-        item.setBuyNowPrice(rs.wasNull() ? null : BigDecimal.valueOf(bnp));
         item.setCurrentPrice(BigDecimal.valueOf(rs.getDouble("current_price")));
         int lbId = rs.getInt("leading_bidder_id");
         item.setLeadingBidderId(rs.wasNull() ? 0 : lbId);
@@ -396,24 +346,6 @@ public class AuctionRepository {
                     p.setLocation(rs.getString("location"));
                     p.setShippingCost(BigDecimal.valueOf(rs.getDouble("shipping_cost")));
                     p.setAllowPickup(rs.getInt("allow_pickup") == 1);
-                }
-            }
-        }
-    }
-
-    private void loadDigitalExtension(Connection conn, DigitalItem d, int auctionId) throws SQLException {
-        String sql = "SELECT * FROM digital_items WHERE auction_id=?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, auctionId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    d.setDigitalType(rs.getString("digital_type"));
-                    d.setPlatform(rs.getString("platform"));
-                    double fsz = rs.getDouble("file_size_mb");
-                    d.setFileSizeMB(rs.wasNull() ? null : fsz);
-                    d.setExpiryDate(DbUtil.fromDbString(rs.getString("expiry_date")));
-                    d.setDeliveryContent(rs.getString("delivery_content"));
-                    d.setReplacementGuarantee(rs.getInt("replacement_guarantee") == 1);
                 }
             }
         }

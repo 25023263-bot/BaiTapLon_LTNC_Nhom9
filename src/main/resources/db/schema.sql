@@ -69,7 +69,6 @@ CREATE TABLE IF NOT EXISTS auctions (
                                         item_type         TEXT    NOT NULL CHECK (item_type IN ('PHYSICAL', 'DIGITAL')),
                                         starting_price    REAL    NOT NULL,
                                         min_bid_increment REAL    NOT NULL DEFAULT 1000.0,
-                                        buy_now_price     REAL,
                                         current_price     REAL    NOT NULL,
                                         leading_bidder_id INTEGER,
                                         status            TEXT    NOT NULL DEFAULT 'PENDING'
@@ -101,19 +100,6 @@ CREATE TABLE IF NOT EXISTS physical_items (
                                               CHECK (shipping_cost >= 0)
 );
 
--- ─── digital_items ───────────────────────────────────────────────────────────
--- Ánh xạ: DigitalItem.java
-CREATE TABLE IF NOT EXISTS digital_items (
-                                             auction_id             INTEGER PRIMARY KEY,
-                                             digital_type           TEXT    NOT NULL,
-                                             platform               TEXT,
-                                             file_size_mb           REAL,
-                                             expiry_date            TEXT,
-                                             delivery_content       TEXT    NOT NULL,
-                                             replacement_guarantee  INTEGER NOT NULL DEFAULT 0,
-
-                                             FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE
-);
 
 -- ─── bids ────────────────────────────────────────────────────────────────────
 -- Ánh xạ: Bid.java
@@ -131,39 +117,7 @@ CREATE TABLE IF NOT EXISTS bids (
                                     CHECK (amount > 0)
 );
 
--- ─── watchlist ───────────────────────────────────────────────────────────────
--- Ánh xạ: WatchlistRepository.java (không có domain model riêng)
-CREATE TABLE IF NOT EXISTS watchlist (
-                                         id         INTEGER PRIMARY KEY,
-                                         buyer_id   INTEGER NOT NULL,
-                                         auction_id INTEGER NOT NULL,
-                                         added_at   TEXT    NOT NULL DEFAULT (datetime('now')),
 
-                                         UNIQUE (buyer_id, auction_id),
-                                         FOREIGN KEY (buyer_id)   REFERENCES users(id)    ON DELETE CASCADE,
-                                         FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE
-);
-
--- ─── transactions ────────────────────────────────────────────────────────────
--- Ánh xạ: Transaction.java
--- Các cột đã xoá so với phiên bản cũ (chưa có trong model):
---   shipping_fee, platform_fee, total_paid, seller_receives, external_ref
-CREATE TABLE IF NOT EXISTS transactions (
-                                            id             INTEGER PRIMARY KEY,
-                                            auction_id     INTEGER NOT NULL,
-                                            buyer_id       INTEGER NOT NULL,
-                                            seller_id      INTEGER NOT NULL,
-                                            amount         REAL    NOT NULL,
-                                            payment_method TEXT    NOT NULL DEFAULT 'WALLET',
-                                            payment_status TEXT    NOT NULL DEFAULT 'PENDING'
-                                                CHECK (payment_status IN ('PENDING', 'COMPLETED', 'FAILED', 'REFUNDED')),
-                                            created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
-                                            completed_at   TEXT,
-
-                                            FOREIGN KEY (auction_id) REFERENCES auctions(id),
-                                            FOREIGN KEY (buyer_id)   REFERENCES users(id),
-                                            FOREIGN KEY (seller_id)  REFERENCES users(id)
-);
 
 -- ─── notifications ───────────────────────────────────────────────────────────
 -- Ánh xạ: Notification.java
@@ -191,12 +145,7 @@ CREATE INDEX IF NOT EXISTS idx_auctions_category ON auctions(category);
 CREATE INDEX IF NOT EXISTS idx_bids_auction      ON bids(auction_id);
 CREATE INDEX IF NOT EXISTS idx_bids_buyer        ON bids(buyer_id);
 
-CREATE INDEX IF NOT EXISTS idx_watchlist_buyer   ON watchlist(buyer_id);
-CREATE INDEX IF NOT EXISTS idx_watchlist_auction ON watchlist(auction_id);
 
-CREATE INDEX IF NOT EXISTS idx_transactions_buyer   ON transactions(buyer_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_seller  ON transactions(seller_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_auction ON transactions(auction_id);
 
 CREATE INDEX IF NOT EXISTS idx_notif_user        ON notifications(user_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_notif_auction     ON notifications(auction_id);
