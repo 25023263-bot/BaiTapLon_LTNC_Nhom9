@@ -508,11 +508,26 @@ public final class SellerProductsPresenter {
             showError(view.listProductPriceError()); valid = false;
         }
 
-        if (view.listProductEndDate().getValue() == null
-                || !view.listProductEndDate().getValue().isAfter(java.time.LocalDate.now())) {
-            view.listProductDateError().setText("Ngày kết thúc phải sau hôm nay.");
-            showError(view.listProductDateError()); valid = false;
-        } else hideError(view.listProductDateError());
+        java.time.LocalDate endDate    = view.listProductEndDate().getValue();
+        String endHourStr   = view.listProductEndHour().getValue();
+        String endMinuteStr = view.listProductEndMinute().getValue();
+
+        if (endDate == null || endHourStr == null || endMinuteStr == null) {
+            view.listProductDateError().setText("Vui lòng chọn ngày và giờ kết thúc.");
+            showError(view.listProductDateError());
+            valid = false;
+        } else {
+            int h = Integer.parseInt(endHourStr);
+            int m = Integer.parseInt(endMinuteStr);
+            LocalDateTime endDateTime = endDate.atTime(h, m, 0);
+            if (!endDateTime.isAfter(LocalDateTime.now())) {
+                view.listProductDateError().setText("Thời gian kết thúc phải sau thời điểm hiện tại.");
+                showError(view.listProductDateError());
+                valid = false;
+            } else {
+                hideError(view.listProductDateError());
+            }
+        }
 
         return valid;
     }
