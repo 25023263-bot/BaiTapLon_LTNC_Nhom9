@@ -101,13 +101,23 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>5.11.0</version>
+            <version>5.14.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.11.0</version>
+            <version>5.14.2</version>
+            <scope>test</scope>
+        </dependency>
+        <!--
+            byte-buddy-agent: Mockito dùng thư viện này để subclass các class cụ thể
+            (mock concrete classes). Trên Java 21+, cần khai báo tường minh.
+        -->
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy-agent</artifactId>
+            <version>1.15.10</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -118,7 +128,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <argLine> --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.repository=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service.auth=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service.payment=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service.wallet=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service.listing=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.exception=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.common=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.config=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.math=ALL-UNNAMED --add-opens java.base/java.time=ALL-UNNAMED </argLine>
+                    <argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/1.15.10/byte-buddy-agent-1.15.10.jar --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.lang.invoke=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED --add-opens java.base/java.math=ALL-UNNAMED --add-opens java.base/java.time=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.repository=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service.auth=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service.notification=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service.wallet=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.service.listing=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.exception=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.common=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto=ALL-UNNAMED --add-opens com.nhom9.auction.baitaplon_ltnc_nhom9/com.nhom9.auction.baitaplon_ltnc_nhom9.config=ALL-UNNAMED</argLine>
                 </configuration>
             </plugin>
             <plugin>

@@ -13,24 +13,22 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit test cho AuctionItem (dùng PhysicalItem vì AuctionItem là abstract).
  *
- * Lý do test PhysicalItem thay vì AuctionItem:
- * AuctionItem là abstract class → không thể khởi tạo trực tiếp.
- * PhysicalItem kế thừa toàn bộ logic của AuctionItem.
- * Các test isValidBid, updateCurrentBid... đang test phần của AuctionItem.
+ * Lý do dùng PhysicalItem: AuctionItem là abstract class, không thể new trực tiếp.
+ * PhysicalItem kế thừa toàn bộ business logic từ AuctionItem.
  */
 @DisplayName("AuctionItem – Logic nghiệp vụ đấu giá")
 class AuctionItemTest {
 
     private PhysicalItem activeItem;
-    private PhysicalItem pendingItem;
 
-    private static final LocalDateTime NOW      = LocalDateTime.now();
-    private static final LocalDateTime START    = NOW.minusHours(1);
-    private static final LocalDateTime END      = NOW.plusHours(2);
-    private static final LocalDateTime PAST_END = NOW.minusMinutes(5);
+    private static final LocalDateTime START    = LocalDateTime.now().minusHours(1);
+    private static final LocalDateTime END      = LocalDateTime.now().plusHours(2);
+    private static final LocalDateTime PAST_END = LocalDateTime.now().minusMinutes(5);
 
     @BeforeEach
     void setUp() {
+        // PhysicalItem constructor: (id, sellerId, title, description, category,
+        //                            startingPrice, minBidIncrement, startTime, endTime)
         activeItem = new PhysicalItem(
                 1, 10,
                 "Laptop Gaming Test", "Mô tả test", "Electronics",
@@ -38,49 +36,43 @@ class AuctionItemTest {
                 START, END
         );
         activeItem.setStatus(AuctionStatus.ACTIVE);
-
-        pendingItem = new PhysicalItem(
-                2, 10,
-                "Item Pending", "Mô tả", "Category",
-                new BigDecimal("50000"), new BigDecimal("5000"),
-                NOW.plusHours(1), NOW.plusHours(3)
-        );
     }
 
     // ─── isValidBid() ─────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("isValidBid: bid đúng bằng currentPrice + increment → hợp lệ (biên)")
+    @DisplayName("isValidBid: đúng bằng currentPrice + increment → hợp lệ (giá trị biên)")
     void isValidBid_exactMinimum_returnsTrue() {
+        // 100.000 + 10.000 = 110.000 → hợp lệ
         assertTrue(activeItem.isValidBid(new BigDecimal("110000")));
     }
 
     @Test
-    @DisplayName("isValidBid: bid cao hơn mức tối thiểu → hợp lệ")
+    @DisplayName("isValidBid: cao hơn minimum → hợp lệ")
     void isValidBid_aboveMinimum_returnsTrue() {
         assertTrue(activeItem.isValidBid(new BigDecimal("200000")));
     }
 
     @Test
-    @DisplayName("isValidBid: bid thấp hơn mức tối thiểu 1đ → không hợp lệ (biên)")
+    @DisplayName("isValidBid: dưới minimum 1đ → không hợp lệ (giá trị biên)")
     void isValidBid_justBelowMinimum_returnsFalse() {
         assertFalse(activeItem.isValidBid(new BigDecimal("109999")));
     }
 
     @Test
-    @DisplayName("isValidBid: bid bằng currentPrice (không tăng increment) → không hợp lệ")
+    @DisplayName("isValidBid: đúng bằng currentPrice (không tăng) → không hợp lệ")
     void isValidBid_sameAsCurrentPrice_returnsFalse() {
         assertFalse(activeItem.isValidBid(new BigDecimal("100000")));
     }
 
     @Test
-    @DisplayName("isValidBid: bid = 0 → không hợp lệ")
+    @DisplayName("isValidBid: 0 → không hợp lệ")
     void isValidBid_zero_returnsFalse() {
         assertFalse(activeItem.isValidBid(BigDecimal.ZERO));
     }
 
     @Test
-    @DisplayName("isValidBid: null → không hợp lệ (không ném exception)")
+    @DisplayName("isValidBid: null → false (không ném NullPointerException)")
     void isValidBid_null_returnsFalse() {
         assertFalse(activeItem.isValidBid(null));
     }
@@ -89,17 +81,19 @@ class AuctionItemTest {
 
     @Test
     @DisplayName("updateCurrentBid: giá và bidderId được cập nhật đúng")
-    void updateCurrentBid_validBid_priceAndBidderUpdated() {
+    void updateCurrentBid_updatesCorrectly() {
         activeItem.updateCurrentBid(new BigDecimal("150000"), 42);
+
         assertEquals(new BigDecimal("150000"), activeItem.getCurrentPrice());
         assertEquals(42, activeItem.getLeadingBidderId());
     }
 
     @Test
-    @DisplayName("updateCurrentBid: gọi liên tiếp → giá trị cuối cùng được giữ lại")
-    void updateCurrentBid_calledTwice_latestValueKept() {
+    @DisplayName("updateCurrentBid: gọi nhiều lần → giữ giá trị cuối cùng")
+    void updateCurrentBid_calledTwice_latestValueWins() {
         activeItem.updateCurrentBid(new BigDecimal("150000"), 42);
         activeItem.updateCurrentBid(new BigDecimal("200000"), 99);
+
         assertEquals(new BigDecimal("200000"), activeItem.getCurrentPrice());
         assertEquals(99, activeItem.getLeadingBidderId());
     }
@@ -107,13 +101,13 @@ class AuctionItemTest {
     // ─── getNextMinimumBid() ──────────────────────────────────────────────────
 
     @Test
-    @DisplayName("getNextMinimumBid: lần đầu = currentPrice + increment")
-    void getNextMinimumBid_initialState_returnsStartingPluIncrement() {
+    @DisplayName("getNextMinimumBid: ban đầu = startingPrice + increment")
+    void getNextMinimumBid_initialState_correctValue() {
         assertEquals(new BigDecimal("110000"), activeItem.getNextMinimumBid());
     }
 
     @Test
-    @DisplayName("getNextMinimumBid: sau khi có bid mới → tính lại từ currentPrice mới")
+    @DisplayName("getNextMinimumBid: sau bid mới → tính lại từ currentPrice mới")
     void getNextMinimumBid_afterBidUpdate_recalculated() {
         activeItem.updateCurrentBid(new BigDecimal("250000"), 5);
         assertEquals(new BigDecimal("260000"), activeItem.getNextMinimumBid());
@@ -122,7 +116,7 @@ class AuctionItemTest {
     // ─── hasBids() ────────────────────────────────────────────────────────────
 
     @Test
-    @DisplayName("hasBids: chưa có bid nào → false")
+    @DisplayName("hasBids: chưa có bid (leadingBidderId = 0) → false")
     void hasBids_noBids_returnsFalse() {
         assertFalse(activeItem.hasBids());
     }
@@ -145,7 +139,15 @@ class AuctionItemTest {
     @Test
     @DisplayName("isActive: status = PENDING → false")
     void isActive_pendingStatus_returnsFalse() {
-        assertFalse(pendingItem.isActive());
+        activeItem.setStatus(AuctionStatus.PENDING);
+        assertFalse(activeItem.isActive());
+    }
+
+    @Test
+    @DisplayName("isActive: status = CLOSED → false")
+    void isActive_closedStatus_returnsFalse() {
+        activeItem.setStatus(AuctionStatus.CLOSED);
+        assertFalse(activeItem.isActive());
     }
 
     // ─── getRemainingSeconds() ────────────────────────────────────────────────
@@ -162,16 +164,24 @@ class AuctionItemTest {
         PhysicalItem expiredItem = new PhysicalItem(
                 3, 10, "Expired Item", "desc", "cat",
                 new BigDecimal("100000"), new BigDecimal("10000"),
-                START, PAST_END
+                START, PAST_END // endTime đã qua
         );
         assertEquals(0L, expiredItem.getRemainingSeconds());
     }
 
-    // ─── getItemType() / isValidItem() ───────────────────────────────────────
+    @Test
+    @DisplayName("getRemainingSeconds: endTime = null → trả về 0")
+    void getRemainingSeconds_nullEndTime_returnsZero() {
+        PhysicalItem item = new PhysicalItem();
+        item.setEndTime(null);
+        assertEquals(0L, item.getRemainingSeconds());
+    }
+
+    // ─── PhysicalItem.getItemType() / isValidItem() ───────────────────────────
 
     @Test
-    @DisplayName("PhysicalItem.getItemType() → trả về 'PHYSICAL'")
-    void getItemType_physicalItem_returnsPhysical() {
+    @DisplayName("getItemType → 'PHYSICAL'")
+    void getItemType_returnsPhysical() {
         assertEquals("PHYSICAL", activeItem.getItemType());
     }
 
@@ -182,35 +192,70 @@ class AuctionItemTest {
     }
 
     @Test
-    @DisplayName("isValidItem: title rỗng → false")
-    void isValidItem_emptyTitle_returnsFalse() {
-        PhysicalItem noTitle = new PhysicalItem(
-                5, 10, "", "desc", "cat",
+    @DisplayName("isValidItem: title null → false")
+    void isValidItem_nullTitle_returnsFalse() {
+        PhysicalItem item = new PhysicalItem(
+                5, 10, null, "desc", "cat",
                 new BigDecimal("100000"), new BigDecimal("10000"),
                 START, END
         );
-        assertFalse(noTitle.isValidItem());
+        assertFalse(item.isValidItem());
+    }
+
+    @Test
+    @DisplayName("isValidItem: title rỗng → false")
+    void isValidItem_emptyTitle_returnsFalse() {
+        PhysicalItem item = new PhysicalItem(
+                5, 10, "   ", "desc", "cat",
+                new BigDecimal("100000"), new BigDecimal("10000"),
+                START, END
+        );
+        assertFalse(item.isValidItem());
     }
 
     @Test
     @DisplayName("isValidItem: startingPrice = 0 → false")
     void isValidItem_zeroStartingPrice_returnsFalse() {
-        PhysicalItem freeItem = new PhysicalItem(
-                6, 10, "Free Item", "desc", "cat",
+        PhysicalItem item = new PhysicalItem(
+                6, 10, "Item", "desc", "cat",
                 BigDecimal.ZERO, new BigDecimal("10000"),
                 START, END
         );
-        assertFalse(freeItem.isValidItem());
+        assertFalse(item.isValidItem());
     }
 
     @Test
     @DisplayName("isValidItem: endTime trước startTime → false")
     void isValidItem_endBeforeStart_returnsFalse() {
-        PhysicalItem badTime = new PhysicalItem(
-                7, 10, "Bad Time Item", "desc", "cat",
+        PhysicalItem item = new PhysicalItem(
+                7, 10, "Item", "desc", "cat",
                 new BigDecimal("100000"), new BigDecimal("10000"),
-                END, START   // đảo ngược: end < start
+                END, START // đảo ngược: end < start
         );
-        assertFalse(badTime.isValidItem());
+        assertFalse(item.isValidItem());
+    }
+
+    // ─── equals / hashCode ────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("equals: cùng id → bằng nhau")
+    void equals_sameId_returnsTrue() {
+        PhysicalItem other = new PhysicalItem(
+                1, 99, "Other Title", "desc", "cat",
+                new BigDecimal("999"), new BigDecimal("1"),
+                START, END
+        );
+        assertEquals(activeItem, other);
+    }
+
+    @Test
+    @DisplayName("equals: khác id → không bằng nhau")
+    void equals_differentId_returnsFalse() {
+        PhysicalItem other = new PhysicalItem(
+                99, 10, "Laptop", "desc", "cat",
+                new BigDecimal("100000"), new BigDecimal("10000"),
+                START, END
+        );
+        assertNotEquals(activeItem, other);
     }
 }
