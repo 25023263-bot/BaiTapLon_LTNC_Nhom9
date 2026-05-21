@@ -114,6 +114,21 @@ public final class SellerProductsPresenter {
     public void onMyProductsTabSelected() { showMyProductsPanel(); }
 
     public void showMyProductsPanel() {
+        UserSession session = UserSession.getInstance();
+
+        // Chưa đăng nhập → yêu cầu login trước
+        if (!session.isLoggedIn()) {
+            host.requireLogin().run();
+            return;
+        }
+
+        // Đã đăng nhập nhưng vẫn là Buyer → hiện điều khoản đăng ký Seller
+        if (session.isBuyer()) {
+            host.showSellerTermsOverlay().run();
+            return;
+        }
+
+        // Seller hoặc Admin → hiện danh sách sản phẩm bình thường
         host.showMyProductsOverlay().run();
         loadMyProducts();
     }
