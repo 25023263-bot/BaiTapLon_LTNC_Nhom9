@@ -179,7 +179,7 @@ public final class ItemDetailCoordinator {
 
         try {
             FXMLLoader loader = new FXMLLoader(
-                    HelloApplication.class.getResource("/fxml/BidDialogView.fxml"));
+                    HelloApplication.class.getResource("/fxml/BidDialogview.fxml"));
             Parent root = loader.load();
 
             BidDialogController ctrl = loader.getController();

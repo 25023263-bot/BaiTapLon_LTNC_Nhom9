@@ -7,6 +7,7 @@ import javafx.application.Platform;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -36,14 +37,48 @@ import java.util.logging.Logger;
  *
  * Cách này đảm bảo không có race condition vì chỉ 1 thread đọc stream.
  * {@link BlockingQueue} đóng vai trò "hộp thư" thread-safe giữa reader và caller.
+ *
+ * <h3>Cấu hình HOST/PORT:</h3>
+ * Đọc từ file {@code server.properties} ở thư mục chạy chương trình.
+ * Nếu không tìm thấy file → dùng mặc định localhost:9999.
+ * <pre>
+ *   server.host=0.tcp.ap.ngrok.io
+ *   server.port=19447
+ * </pre>
  */
 public class SocketClient {
 
-    private static final String HOST    = "localhost";
-    private static final int    PORT    = 9999;
-    private static final int    TIMEOUT_SECONDS = 30;
-
     private static final Logger LOG = Logger.getLogger(SocketClient.class.getName());
+
+    // ── Đọc cấu hình từ server.properties ────────────────────────────────────
+    private static final String HOST;
+    private static final int    PORT;
+
+    static {
+        String host = "localhost";
+        int    port = 9999;
+
+        File configFile = new File("server.properties");
+        if (configFile.exists()) {
+            try (InputStream in = new FileInputStream(configFile)) {
+                Properties props = new Properties();
+                props.load(in);
+                host = props.getProperty("server.host", "localhost");
+                port = Integer.parseInt(props.getProperty("server.port", "9999"));
+                LOG.info("Đọc cấu hình từ server.properties → " + host + ":" + port);
+            } catch (Exception e) {
+                LOG.warning("Không đọc được server.properties, dùng mặc định. Lỗi: " + e.getMessage());
+            }
+        } else {
+            LOG.info("Không tìm thấy server.properties → dùng mặc định localhost:9999");
+        }
+
+        HOST = host;
+        PORT = port;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static final int TIMEOUT_SECONDS = 30;
 
     // Singleton
     private static SocketClient instance;
