@@ -205,6 +205,38 @@ public class HomeController implements Initializable {
         Platform.runLater(this::bootstrapCoordinatorIfPossible);
 
         SocketClient.getInstance().setNotificationHandler(response -> {
+            // Xử lý AuctionClosedEvent: cập nhật số dư UserSession ngay lập tức
+            // mà không cần đăng nhập lại.
+            //
+            // Tại sao phải làm ở đây?
+            //   Server đã trừ/cộng tiền trong DB ngay khi phiên đóng.
+            //   Nhưng client vẫn đang giữ số dư cũ trong UserSession (in-memory).
+            //   Nếu không cập nhật, UI sẽ hiển thị sai cho đến khi user đăng nhập lại.
+            if (response.getData() instanceof
+                    com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionClosedEvent event) {
+
+                com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.UserDTO dto =
+                        UserSession.getInstance().getCurrentUserDTO();
+
+                if (dto != null) {
+                    int myId = dto.getId();
+
+                    // Tôi là buyer thắng → cập nhật walletBalance (đã bị trừ)
+                    if (event.hasWinner() && event.getWinnerId() == myId
+                            && event.getBuyerNewBalance() != null) {
+                        dto.setWalletBalance(event.getBuyerNewBalance());
+                        profilePresenter.refresh(true);
+                    }
+
+                    // Tôi là seller → cập nhật earningsBalance (đã được cộng)
+                    if (event.getSellerId() == myId
+                            && event.getSellerNewBalance() != null) {
+                        dto.setEarningsBalance(event.getSellerNewBalance());
+                        profilePresenter.refresh(true);
+                    }
+                }
+            }
+
             notificationPresenter.onServerNotification();
             catalogPresenter.refreshAll();
         });

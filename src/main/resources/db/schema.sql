@@ -49,10 +49,10 @@ CREATE TABLE IF NOT EXISTS sellers (
 
 -- ─── admins ──────────────────────────────────────────────────────────────────
 -- Ánh xạ: Admin.java
+-- Admin.java không có field đặc thù nào ngoài thông tin kế thừa từ User.java
+-- Bảng này chỉ dùng để đánh dấu user_id là admin (tách biệt khỏi buyers/sellers)
 CREATE TABLE IF NOT EXISTS admins (
-                                      user_id      INTEGER PRIMARY KEY,
-                                      access_level INTEGER NOT NULL DEFAULT 1,
-                                      notes        TEXT,
+                                      user_id INTEGER PRIMARY KEY,
 
                                       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -85,19 +85,17 @@ CREATE TABLE IF NOT EXISTS auctions (
 
 -- ─── physical_items ──────────────────────────────────────────────────────────
 -- Ánh xạ: PhysicalItem.java
--- Lưu ý: cột đặt tên là condition_text thay vì condition
---         vì CONDITION là từ khoá trong SQL
+-- PhysicalItem.java đã xoá toàn bộ physical-only fields (condition, weight,
+-- dimensions, location, shippingCost, allowPickup) vì UI hiện tại không
+-- thu thập và không hiển thị những thông tin này.
+--
+-- Bảng vẫn được giữ lại vì:
+--   1. Khi sau này thêm DigitalItem, cần bảng riêng để lưu thuộc tính đặc thù
+--   2. Dễ mở rộng thêm cột sau mà không phải sửa bảng auctions
 CREATE TABLE IF NOT EXISTS physical_items (
-                                              auction_id     INTEGER PRIMARY KEY,
-                                              condition_text TEXT    NOT NULL DEFAULT 'GOOD',
-                                              weight_grams   REAL    NOT NULL DEFAULT 0.0,
-                                              dimensions     TEXT,
-                                              location       TEXT,
-                                              shipping_cost  REAL    NOT NULL DEFAULT 0.0,
-                                              allow_pickup   INTEGER NOT NULL DEFAULT 0,
+                                              auction_id INTEGER PRIMARY KEY,
 
-                                              FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE,
-                                              CHECK (shipping_cost >= 0)
+                                              FOREIGN KEY (auction_id) REFERENCES auctions(id) ON DELETE CASCADE
 );
 
 

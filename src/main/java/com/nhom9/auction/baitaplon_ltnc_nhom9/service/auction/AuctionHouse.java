@@ -56,8 +56,8 @@ public class AuctionHouse implements Auctionable {
     private void notifyNewBid(AuctionItem item, Bid bid) {
         observers.forEach(o -> o.onNewBid(item, bid));
     }
-    private void notifyClosed(AuctionItem item, Integer winnerId) {
-        observers.forEach(o -> o.onAuctionClosed(item, winnerId));
+    private void notifyClosed(AuctionClosedEvent event) {
+        observers.forEach(o -> o.onAuctionClosed(event));
     }
     private void notifyStarted(AuctionItem item) {
         observers.forEach(o -> o.onAuctionStarted(item));
@@ -551,7 +551,10 @@ public class AuctionHouse implements Auctionable {
             item.setStatus(AuctionStatus.EXPIRED);
             auctionRepo.updateStatus(itemId, AuctionStatus.EXPIRED);
             LOG.info("Phiên hết hạn (không có bid): item #" + itemId);
-            notifyClosed(item, null);
+
+            // Không có winner → balance không đổi → truyền null cho buyer balance
+            notifyClosed(new AuctionClosedEvent(item, null, null,
+                    item.getSellerId(), null));
             return;
         }
 
@@ -561,10 +564,37 @@ public class AuctionHouse implements Auctionable {
         auctionRepo.updateStatus(itemId, AuctionStatus.CLOSED);
 
         // Xử lý thanh toán (trừ tiền buyer, cộng tiền seller)
+        // Sau processPayment(), đọc lại balance mới từ DB để gửi về client.
+        // Tại sao đọc lại từ DB thay vì tự tính?
+        //   → processPayment() đã cập nhật DB và object trong bộ nhớ,
+        //     nhưng object đó là local variable trong processPayment().
+        //   → Cách an toàn nhất là đọc lại từ DB để đảm bảo chính xác 100%.
+        BigDecimal buyerNewBalance  = null;
+        BigDecimal sellerNewBalance = null;
         try {
             processPayment(item, winnerId, item.getCurrentPrice());
             LOG.info(String.format("Phiên kết thúc: item #%d, winner #%d, price=%,.0f",
                     itemId, winnerId, item.getCurrentPrice()));
+
+            // Đọc balance mới từ DB sau khi thanh toán thành công
+            userRepo.findById(winnerId).ifPresent(u -> {
+                // không thể assign vào local final var trong lambda → dùng array trick
+            });
+            // Dùng cách trực tiếp hơn: load lại từ DB
+            var winnerOpt = userRepo.findById(winnerId);
+            if (winnerOpt.isPresent()) {
+                var winner = winnerOpt.get();
+                if (winner instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer b)
+                    buyerNewBalance = b.getWalletBalance();
+                else if (winner instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller s)
+                    buyerNewBalance = s.getEarningsBalance(); // seller thắng: dùng earnings
+            }
+            var sellerOpt = userRepo.findById(item.getSellerId());
+            if (sellerOpt.isPresent() && sellerOpt.get() instanceof
+                    com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller s) {
+                sellerNewBalance = s.getEarningsBalance();
+            }
+
         } catch (Exception paymentEx) {
             LOG.warning(String.format(
                     "Phiên #%d: đóng thành công nhưng processPayment thất bại"
@@ -572,7 +602,9 @@ public class AuctionHouse implements Auctionable {
                     itemId, winnerId, item.getCurrentPrice(), paymentEx.getMessage()));
         }
 
-        notifyClosed(item, winnerId);
+        notifyClosed(new AuctionClosedEvent(
+                item, winnerId, buyerNewBalance,
+                item.getSellerId(), sellerNewBalance));
     }
 
     // ─── Close Expired Auctions ───────────────────────────────────────────────

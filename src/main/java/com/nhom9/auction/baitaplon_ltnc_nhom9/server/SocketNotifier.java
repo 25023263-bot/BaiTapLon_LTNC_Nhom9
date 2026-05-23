@@ -3,6 +3,7 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.server;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.server.protocol.Response;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionClosedEvent;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionObserver;
 
 import java.time.LocalDateTime;
@@ -34,11 +35,19 @@ public class SocketNotifier implements AuctionObserver {
     }
 
     @Override
-    public void onAuctionClosed(AuctionItem item, Integer winnerId) {
-        String msg = winnerId != null
-                ? "Phiên #" + item.getId() + " kết thúc. Người thắng: #" + winnerId
-                : "Phiên #" + item.getId() + " hết hạn (không có bid).";
-        Response notification = Response.notification(msg);
+    public void onAuctionClosed(AuctionClosedEvent event) {
+        // Push toàn bộ event (kèm balance mới) về TẤT CẢ client.
+        //
+        // Tại sao gửi cho tất cả thay vì chỉ buyer/seller?
+        //   - Server không lưu "client nào đang đăng nhập với userId nào"
+        //     (stateless architecture hiện tại).
+        //   - Gửi tất cả: mỗi client tự kiểm tra winnerId/sellerId == myId
+        //     rồi cập nhật UserSession nếu đúng. Không ảnh hưởng UX.
+        //   - Nếu sau này muốn chỉ gửi đúng client → lưu Map<userId, ClientHandler>
+        //     trong AuctionServer.
+        LOG.info("Broadcast auction closed: item #" + event.getItem().getId()
+                + ", winner=" + event.getWinnerId());
+        Response notification = Response.notification(event);
         clients.forEach(c -> c.sendNotification(notification));
     }
 

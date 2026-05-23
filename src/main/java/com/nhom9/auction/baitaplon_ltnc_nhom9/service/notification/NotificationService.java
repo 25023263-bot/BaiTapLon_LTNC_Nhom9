@@ -5,6 +5,7 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Notification;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.BidRepository;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.repository.NotificationRepository;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionClosedEvent;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.AuctionObserver;
 
 import java.time.LocalDateTime;
@@ -93,7 +94,9 @@ public class NotificationService implements AuctionObserver {
     }
 
     @Override
-    public void onAuctionClosed(AuctionItem item, Integer winnerId) {
+    public void onAuctionClosed(AuctionClosedEvent event) {
+        AuctionItem item     = event.getItem();
+        Integer     winnerId = event.getWinnerId();
         try {
             if (winnerId != null) {
                 // Notify người thắng: chúc mừng + yêu cầu thanh toán
@@ -110,10 +113,8 @@ public class NotificationService implements AuctionObserver {
 
                 // Notify người thua: phiên kết thúc, họ không thắng
                 Set<Integer> losers = bidRepo.findDistinctBuyerIds(item.getId());
-                losers.remove(winnerId);              // người thắng đã được notify riêng ở trên
-                losers.remove(item.getSellerId());    // seller đã được notify riêng ở trên
-                // (fix: trước đây thiếu dòng này → seller có thể
-                //  nhận thêm "bạn không thắng" nếu họ từng bid)
+                losers.remove(winnerId);
+                losers.remove(item.getSellerId());
                 for (int loserId : losers) {
                     persist(loserId, item.getId(), Notification.Type.AUCTION_CLOSED,
                             String.format("Phiên \"%s\" đã kết thúc. Bạn không thắng lần này.",

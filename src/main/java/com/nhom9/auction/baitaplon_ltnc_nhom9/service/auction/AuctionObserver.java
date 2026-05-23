@@ -3,7 +3,6 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import java.time.LocalDateTime;
-
 /**
  * Observer nhận sự kiện từ AuctionHouse.
  * Implement bởi NotificationService, UI controllers muốn refresh real-time.
@@ -21,10 +20,18 @@ public interface AuctionObserver {
 
     /**
      * Phiên đấu giá kết thúc (có người thắng hoặc hết hạn).
-     * @param item  vật phẩm đã đóng
-     * @param winner null nếu không có bid nào
+     *
+     * event chứa:
+     *   - item           : vật phẩm đã đóng
+     *   - winnerId       : null nếu không có bid nào
+     *   - buyerNewBalance: số dư mới của buyer sau khi bị trừ tiền (null nếu không có winner)
+     *   - sellerId       : ID của seller
+     *   - sellerNewBalance: số earnings mới của seller sau khi được cộng tiền
+     *
+     * Client dùng sellerId/winnerId để biết mình có liên quan không,
+     * rồi cập nhật số dư trong UserSession ngay lập tức.
      */
-    void onAuctionClosed(AuctionItem item, Integer winnerId);
+    void onAuctionClosed(AuctionClosedEvent event);
 
     /**
      * Phiên đấu giá chuyển sang ACTIVE (đến giờ mở).
