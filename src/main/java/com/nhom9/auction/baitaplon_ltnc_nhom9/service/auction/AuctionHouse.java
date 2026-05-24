@@ -25,8 +25,8 @@ import java.util.logging.Logger;
  * Implements Auctionable + Subject trong Observer pattern.
  *
  * [AUTO-BID] Proxy Bidding Engine:
- *   - Hệ thống KHÔNG đặt ngay mức tối đa của người dùng
- *   - Chỉ tăng lên đủ để dẫn đầu (currentPrice + increment)
+ *   - Người dùng chỉ nhập maxBid (giới hạn tối đa); hệ thống KHÔNG đặt ngay mức đó
+ *   - Chỉ tăng lên đủ để dẫn đầu (currentPrice + minBidIncrement của phiên)
  *   - Khi 2 người đều có auto-bid → resolveAutoBidConflict() xử lý ngay lập tức
  *     (không loop từng bước, tránh tạo hàng trăm rows DB thừa)
  *   - Khi chỉ 1 người có auto-bid → triggerAutoBids() counter 1 lần rồi dừng
@@ -128,10 +128,10 @@ public class AuctionHouse implements Auctionable {
      * → Sau updateCurrentBid(), item.getLeadingBidderId() = bidderId (người mới).
      *   Nếu capture sau, sẽ không tìm được đúng auto-bid của người dẫn đầu cũ.
      *
-     * Ví dụ (increment = 1.000đ):
+     * Ví dụ (minBidIncrement = 1.000đ — bước giá tối thiểu của phiên):
      *   Giá hiện tại: 50.000đ
-     *   A đặt auto limit 100.000đ → hệ thống đặt A: 51.000đ, A dẫn đầu
-     *   B đặt auto limit 200.000đ:
+     *   A đặt auto-bid maxBid = 100.000đ → hệ thống đặt A: 51.000đ, A dẫn đầu
+     *   B đặt auto-bid maxBid = 200.000đ:
      *     - previousLeaderId = A
      *     - B bid: 52.000đ, B dẫn đầu
      *     - resolveAutoBidConflict(): B (200k) > A (100k) → B thắng
@@ -221,27 +221,27 @@ public class AuctionHouse implements Auctionable {
      *
      * Nếu dùng triggerAutoBids() để xử lý 2 auto-bid counter nhau từng bước,
      * sẽ tạo ra rất nhiều rows DB thừa:
-     *   Ví dụ: A limit=100.000đ, B limit=200.000đ, increment=1.000đ
+     *   Ví dụ: A maxBid=100.000đ, B maxBid=200.000đ, minBidIncrement=1.000đ
      *   → triggerAutoBids() loop ~50 lần, tạo 50 rows trong bảng bids
      *   → Chậm, tốn DB, khó debug
      *
-     * resolveAutoBidConflict() thay thế bằng cách so sánh limit trực tiếp:
+     * resolveAutoBidConflict() thay thế bằng cách so sánh maxBid trực tiếp:
      *   → Tính ngay kết quả cuối, chỉ tạo 2 rows (bid cuối của người thua + bid thắng)
      *   → Nhanh hơn, sạch hơn, dễ hiểu hơn
      *
      * ═══ Logic xử lý ═══
      *
-     * Trường hợp 1: newBid.limit > existingBid.limit (B > A)
-     *   → B thắng, giá cuối = A.limit + increment
-     *   → Ghi bid cuối của A tại A.limit (A đã "dùng hết" limit)
-     *   → Ghi bid thắng của B tại A.limit + increment
+     * Trường hợp 1: newBid.maxBid > existingBid.maxBid (B > A)
+     *   → B thắng, giá cuối = A.maxBid + minBidIncrement
+     *   → Ghi bid cuối của A tại A.maxBid (A đã "dùng hết" maxBid)
+     *   → Ghi bid thắng của B tại A.maxBid + minBidIncrement
      *
-     * Trường hợp 2: newBid.limit < existingBid.limit (B < A)
+     * Trường hợp 2: newBid.maxBid < existingBid.maxBid (B < A)
      *   → A vẫn thắng, giá tăng thêm vì B vừa thử counter
-     *   → Giá mới = B.limit + increment (A counter qua B)
-     *   → Ghi bid counter của A tại mức đó (nếu vẫn trong limit A)
+     *   → Giá mới = B.maxBid + minBidIncrement (A counter qua B)
+     *   → Ghi bid counter của A tại mức đó (nếu vẫn trong maxBid của A)
      *
-     * Trường hợp 3: newBid.limit == existingBid.limit
+     * Trường hợp 3: newBid.maxBid == existingBid.maxBid
      *   → Người đặt TRƯỚC thắng (A đặt trước → A thắng)
      *   → Giá không thay đổi, không cần ghi thêm bid
      *
@@ -268,12 +268,12 @@ public class AuctionHouse implements Auctionable {
         if (cmp > 0) {
             // ── Trường hợp 1: B có limit CAO hơn A → B thắng ──────────────────
             //
-            // Lịch sử mong muốn: ...giá_cũ(A) → A.limit(A) → A.limit+increment(B)
+            // Lịch sử mong muốn: ...giá_cũ(A) → A.limit(A) → A.maxBid+minBidIncrement(B)
             // → Biểu đồ luôn đi lên ✅
             //
             // Ví dụ: A đang dẫn đầu ở 800.000đ, A.limit=2.000.000đ, B.limit=2.400.000đ
             //   → Ghi A tại 2.000.000đ (A dùng hết limit)
-            //   → Ghi B tại 2.001.000đ (B thắng, vừa đủ hơn A 1 increment)
+            //   → Ghi B tại 2.001.000đ (B thắng, vừa đủ hơn A 1 bước giá)
             //   → Biểu đồ: 800K → 2.0M → 2.001M  ✅ không bao giờ dip
             BigDecimal finalPrice = oldLimit.add(increment);
 
@@ -311,7 +311,7 @@ public class AuctionHouse implements Auctionable {
         } else if (cmp < 0) {
             // ── Trường hợp 2: A có limit CAO hơn B → A vẫn thắng ─────────────
             //
-            // Lịch sử mong muốn: ...giá_cũ(A) → B.limit(B) → B.limit+increment(A)
+            // Lịch sử mong muốn: ...giá_cũ(A) → B.limit(B) → B.maxBid+minBidIncrement(A)
             // → Biểu đồ luôn đi lên ✅
             //
             // Ví dụ: A đang dẫn đầu ở 800.000đ, A.limit=2.400.000đ, B.limit=2.000.000đ
@@ -321,21 +321,21 @@ public class AuctionHouse implements Auctionable {
 
             // ── FIX BUG #3: counterPrice phải được cap tại oldLimit ────────────
             //
-            // Vấn đề gốc: counterPrice = newLimit + increment
-            // Khi increment lớn hơn khoảng cách (oldLimit - newLimit),
+            // Vấn đề gốc: counterPrice = newLimit + minBidIncrement
+            // Khi minBidIncrement lớn hơn khoảng cách (oldLimit - newLimit),
             // counterPrice vượt qua oldLimit → điều kiện `counterPrice <= oldLimit`
             // trả về FALSE → A không counter → B thắng DÙ B.limit < A.limit.
             //
             // Ví dụ bug:
-            //   A.limit=120.000, B.limit=110.000, increment=15.000
+            //   A.maxBid=120.000, B.maxBid=110.000, minBidIncrement=15.000
             //   counterPrice = 110.000 + 15.000 = 125.000 > 120.000 → A thua oan!
             //   Nhưng A hoàn toàn có thể bid 111.000đ để thắng B.
             //
-            // Fix: counterPrice = min(newLimit + increment, oldLimit)
+            // Fix: counterPrice = min(newLimit + minBidIncrement, oldLimit)
             //   → A counter ở mức tối thiểu đủ để thắng B, không bao giờ vượt limit
-            //   → Nếu oldLimit nằm giữa [newLimit, newLimit+increment):
+            //   → Nếu oldLimit nằm giữa [newLimit, newLimit+minBidIncrement):
             //      A counter đúng bằng oldLimit (A dùng hết limit nhưng vẫn thắng)
-            //   → Biểu đồ: ...→ B.limit → A.limit  (hoặc B.limit+increment nếu đủ room)
+            //   → Biểu đồ: ...→ B.limit → A.limit  (hoặc B.maxBid+minBidIncrement nếu đủ room)
             //              luôn tăng ✅
             BigDecimal counterPrice = newLimit.add(increment).min(oldLimit);
 
@@ -378,12 +378,12 @@ public class AuctionHouse implements Auctionable {
         } else {
             // ── Trường hợp 3: Cùng limit → người đặt TRƯỚC thắng (A) ──────────
             //
-            // Lịch sử mong muốn: ...giá_cũ(A) → B.limit(B) → B.limit+increment(A)
+            // Lịch sử mong muốn: ...giá_cũ(A) → B.limit(B) → B.maxBid+minBidIncrement(A)
             // → Biểu đồ luôn đi lên ✅
             //
-            // Ví dụ: A.limit=B.limit=100.000đ, giá hiện tại 50.000đ, increment=1.000đ
+            // Ví dụ: A.maxBid=B.maxBid=100.000đ, giá hiện tại 50.000đ, minBidIncrement=1.000đ
             //   → Ghi B tại 100.000đ, A counter tại 101.000đ → A dẫn đầu
-            BigDecimal tieBreakPrice = newLimit.add(increment); // = oldLimit + increment
+            BigDecimal tieBreakPrice = newLimit.add(increment); // = oldLimit + minBidIncrement
 
             // ── FIX BUG #1: Guard chống DIP ──────────────────────────────────
             //
@@ -457,15 +457,15 @@ public class AuctionHouse implements Auctionable {
      * ═══ Cơ chế Proxy Bidding ═══
      *
      * Nguyên tắc:
-     *   - Chỉ tăng lên MỨC TỐI THIỂU cần thiết để dẫn đầu (currentPrice + increment)
+     *   - Chỉ tăng lên MỨC TỐI THIỂU cần thiết để dẫn đầu (currentPrice + minBidIncrement)
      *   - Nếu người dẫn đầu cũ có auto-bid → counter 1 lần rồi dừng
      *   - Method này KHÔNG xử lý 2 auto-bid gặp nhau (dùng resolveAutoBidConflict() cho đó)
      *
-     * Ví dụ (increment = 100.000đ):
-     *   A đặt auto limit:  5.000.000đ  → hệ thống đặt cho A: 1.100.000đ
+     * Ví dụ (minBidIncrement = 100.000đ — bước giá tối thiểu của phiên):
+     *   A đặt auto-bid maxBid = 5.000.000đ  → hệ thống đặt cho A: 1.100.000đ
      *   B bid thủ công:    2.000.000đ  → triggerAutoBids → A counter: 2.100.000đ ✅
      *   B bid thủ công:    4.900.000đ  → triggerAutoBids → A counter: 5.000.000đ ✅
-     *   B bid thủ công:    5.500.000đ  → triggerAutoBids → A muốn 5.600.000đ > limit → A thua ✅
+     *   B bid thủ công:    5.500.000đ  → triggerAutoBids → A muốn 5.600.000đ > maxBid → A thua ✅
      *
      * @param item          vật phẩm đang đấu giá (đã được cập nhật currentPrice)
      * @param lastBidderId  người vừa đặt bid thủ công (không trigger cho chính họ)
@@ -483,7 +483,7 @@ public class AuctionHouse implements Auctionable {
 
         // Lấy đối thủ có limit cao nhất (đứng đầu danh sách)
         Bid topRival = rivals.get(0);
-        BigDecimal needed = item.getCurrentPrice().add(increment); // Giá cần để dẫn đầu lại
+        BigDecimal needed = item.getCurrentPrice().add(increment); // Giá cần để dẫn đầu lại (currentPrice + minBidIncrement)
 
         // Kiểm tra rival có đủ limit để counter không
         if (topRival.getAutoBidLimit().compareTo(needed) < 0) {
