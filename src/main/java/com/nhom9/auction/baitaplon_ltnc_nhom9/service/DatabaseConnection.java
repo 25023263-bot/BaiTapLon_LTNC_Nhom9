@@ -17,13 +17,13 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
- * Singleton quản lý connection pool cho toàn ứng dụng.
+ * Singleton quản lý connection pool (HikariCP) cho SQLite.
  *
  * <h3>Tại sao cần Connection Pool?</h3>
  * Trước đây dùng một {@link Connection} duy nhất dùng chung cho tất cả thread.
  * SQLite không thread-safe khi nhiều thread cùng truy cập một Connection —
  * kết quả là mỗi thread tưởng connection "bị đứt" và liên tục tạo mới,
- * gây ra vòng lặp WARNING "Kết nối bị đứt – đang reconnect" trong log.
+ * gây ra vòng lặp WARNING trong log.
  *
  * <h3>HikariCP là gì?</h3>
  * HikariCP là thư viện connection pool nhanh nhất cho Java.
@@ -41,20 +41,13 @@ public class DatabaseConnection {
 
     private static volatile DatabaseConnection instance;
 
-    // Pool thay thế cho connection đơn lẻ
     private final HikariDataSource pool;
 
     // ─── Singleton ────────────────────────────────────────────────────────────
 
     private DatabaseConnection() {
         this.pool = buildPool();
-
-        // Với SQLite: chạy schema tự động nếu chưa có bảng
-        if (!AppConfig.USE_MYSQL) {
-            runSchemaIfNeeded();
-        } else {
-            verifyMySQLConnection();
-        }
+        runSchemaIfNeeded();
     }
 
     public static DatabaseConnection getInstance() {
@@ -79,9 +72,6 @@ public class DatabaseConnection {
      *       // dùng conn ở đây
      *   } // conn tự động được trả về pool khi ra khỏi block này
      * }</pre>
-     *
-     * Tại sao không cần reconnect nữa? Vì HikariCP tự kiểm tra và làm mới
-     * connection khi cần — caller không cần quan tâm đến việc này.
      */
     public Connection getConnection() throws SQLException {
         return pool.getConnection();
@@ -100,57 +90,30 @@ public class DatabaseConnection {
 
     // ─── Pool setup ───────────────────────────────────────────────────────────
 
-    /**
-     * Tạo và cấu hình HikariCP pool phù hợp với database đang dùng.
-     */
     private HikariDataSource buildPool() {
         HikariConfig config = new HikariConfig();
 
-        if (AppConfig.USE_MYSQL) {
-            config.setJdbcUrl(AppConfig.MYSQL_URL);
-            config.setUsername(AppConfig.MYSQL_USER);
-            config.setPassword(AppConfig.MYSQL_PASSWORD);
-            config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        config.setJdbcUrl(AppConfig.SQLITE_URL);
+        config.setDriverClassName("org.sqlite.JDBC");
 
-            // Pool size cho MySQL: tối đa 10 connection đồng thời
-            config.setMaximumPoolSize(10);
-            config.setMinimumIdle(2);
+        // SQLite chỉ nên dùng 1 writer connection để tránh lock file.
+        // WAL mode hỗ trợ nhiều reader đồng thời nếu cần sau này.
+        config.setMaximumPoolSize(AppConfig.DB_POOL_SIZE);
+        config.setMinimumIdle(AppConfig.DB_MIN_IDLE);
 
-            // Timeout: chờ tối đa 30 giây nếu pool đang hết connection
-            config.setConnectionTimeout(30_000);
+        // Bật WAL và foreign keys cho mọi connection trong pool.
+        // (SQLite reset PRAGMA mỗi khi mở connection mới)
+        config.setConnectionInitSql(
+                "PRAGMA journal_mode=WAL; " +
+                        "PRAGMA foreign_keys=ON; " +
+                        "PRAGMA synchronous=NORMAL;"
+        );
 
-            // Kiểm tra connection còn sống không trước khi dùng
-            config.setConnectionTestQuery("SELECT 1");
-
-            LOG.info("Khởi tạo HikariCP pool cho MySQL: "
-                    + AppConfig.MYSQL_HOST + "/" + AppConfig.MYSQL_DATABASE);
-
-        } else {
-            config.setJdbcUrl(AppConfig.SQLITE_URL);
-            config.setDriverClassName("org.sqlite.JDBC");
-
-            // SQLite chỉ nên dùng 1 writer connection để tránh lock file
-            // nhưng có thể dùng nhiều reader — WAL mode hỗ trợ điều này
-            config.setMaximumPoolSize(1);
-            config.setMinimumIdle(1);
-
-            // Bật WAL và foreign keys cho mọi connection trong pool
-            // (SQLite reset PRAGMA mỗi khi mở connection mới)
-            config.setConnectionInitSql(
-                    "PRAGMA journal_mode=WAL; " +
-                            "PRAGMA foreign_keys=ON; " +
-                            "PRAGMA synchronous=NORMAL;"
-            );
-
-            config.setConnectionTimeout(10_000);
-
-            LOG.info("Khởi tạo HikariCP pool cho SQLite: " + AppConfig.SQLITE_PATH);
-        }
-
+        config.setConnectionTimeout(10_000);
         config.setPoolName("UBid-Pool");
-
-        // Tắt log thừa của HikariCP (nó rất verbose mặc định)
         config.setLeakDetectionThreshold(60_000); // cảnh báo nếu connection bị giữ > 60s
+
+        LOG.info("Khởi tạo HikariCP pool cho SQLite: " + AppConfig.SQLITE_PATH);
 
         try {
             HikariDataSource ds = new HikariDataSource(config);
@@ -159,9 +122,7 @@ public class DatabaseConnection {
         } catch (Exception e) {
             throw new RuntimeException(
                     "Không thể khởi động connection pool.\n" +
-                            (AppConfig.USE_MYSQL
-                                    ? "Kiểm tra MySQL đang chạy và thông tin kết nối trong AppConfig."
-                                    : "Kiểm tra đường dẫn SQLite: " + AppConfig.SQLITE_PATH),
+                            "Kiểm tra đường dẫn SQLite: " + AppConfig.SQLITE_PATH,
                     e
             );
         }
@@ -207,37 +168,13 @@ public class DatabaseConnection {
         }
     }
 
-    private void verifyMySQLConnection() {
-        try (Connection conn = pool.getConnection()) {
-            if (!tableExists(conn, "users")) {
-                LOG.severe(
-                        "⚠️ Bảng 'users' không tìm thấy trong MySQL!\n" +
-                                "Chạy: mysql -u " + AppConfig.MYSQL_USER + " -p " +
-                                AppConfig.MYSQL_DATABASE + " < src/main/resources/db/docs/mysql-schema.sql"
-                );
-            } else {
-                LOG.info("✅ Schema MySQL hợp lệ – bảng 'users' đã tồn tại.");
-            }
-        } catch (SQLException e) {
-            LOG.severe("Không thể kiểm tra schema MySQL: " + e.getMessage());
-        }
-    }
-
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
     private boolean tableExists(Connection conn, String tableName) {
         try {
-            String sql = AppConfig.USE_MYSQL
-                    ? "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?"
-                    : "SELECT name FROM sqlite_master WHERE type='table' AND name=?";
-
+            String sql = "SELECT name FROM sqlite_master WHERE type='table' AND name=?";
             try (var ps = conn.prepareStatement(sql)) {
-                if (AppConfig.USE_MYSQL) {
-                    ps.setString(1, AppConfig.MYSQL_DATABASE);
-                    ps.setString(2, tableName);
-                } else {
-                    ps.setString(1, tableName);
-                }
+                ps.setString(1, tableName);
                 try (ResultSet rs = ps.executeQuery()) {
                     return rs.next();
                 }

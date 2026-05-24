@@ -19,12 +19,12 @@ import java.util.Optional;
  * hiện tại không thu thập các trường physical-only như condition,
  * weight, shipping...).
  *
- * ─── THAY ĐỔI SO VỚI PHIÊN BẢN CŨ ──────────────────────────────────────
+ * ─── GHI CHÚ TRIỂN KHAI ──────────────────────────────────────────────────
  * 1. Bỏ hoàn toàn physical_items: insertTypeExtension, loadPhysicalExtension.
  * 2. Connection được đóng đúng cách (try-with-resources).
- * 3. INSERT OR REPLACE → check-then-insert/update (hoạt động trên MySQL).
- * 4. datetime('now','localtime') → DbUtil.nowSql().
- * 5. toStr/fromStr → DbUtil.toDbString/fromDbString.
+ * 3. UPSERT dùng INSERT OR REPLACE (SQLite) hoặc check-then-insert/update.
+ * 4. Thời gian hiện tại dùng DbUtil.nowSql() → datetime('now','localtime').
+ * 5. Timestamp dùng DbUtil.toDbString/fromDbString.
  * ──────────────────────────────────────────────────────────────────────────
  */
 public class AuctionRepository {
@@ -136,10 +136,7 @@ public class AuctionRepository {
 
     /**
      * ACTIVE auctions đã quá end_time — dùng trong scheduler.
-     *
-     * DbUtil.nowSql() trả về:
-     *   → SQLite: datetime('now','localtime')
-     *   → MySQL:  NOW()
+     * DbUtil.nowSql() → datetime('now','localtime') cho SQLite.
      */
     public List<AuctionItem> findExpiredActive() throws SQLException {
         List<AuctionItem> list = new ArrayList<>();

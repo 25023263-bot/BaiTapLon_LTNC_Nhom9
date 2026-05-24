@@ -15,9 +15,6 @@ module com.nhom9.auction.baitaplon_ltnc_nhom9 {
     requires org.xerial.sqlitejdbc;
     requires com.zaxxer.hikari;
 
-    // ── MySQL connector ─────────────────────────────────────────────────────
-    requires mysql.connector.j;
-
     // ── Root package ────────────────────────────────────────────────────────
     opens   com.nhom9.auction.baitaplon_ltnc_nhom9 to javafx.fxml;
     exports com.nhom9.auction.baitaplon_ltnc_nhom9;
@@ -54,11 +51,6 @@ module com.nhom9.auction.baitaplon_ltnc_nhom9 {
     // ── Mở toàn bộ module cho Mockito (chỉ dùng khi test) ────────────────────
     // WHY: Mockito cần reflection để tạo subclass giả của các concrete class
     // (Repository, Service...). JPMS chặn điều này theo mặc định.
-    // "opens X" không giới hạn module cụ thể → cho phép tất cả, bao gồm
-    // byte-buddy (thư viện Mockito dùng bên trong) và test runner của Maven.
-    //
-    // Đây là cách đơn giản nhất cho project học tập. Khi deploy production
-    // thật sự, nên dùng interface thay vì concrete class để không cần opens.
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.repository;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.service;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction;

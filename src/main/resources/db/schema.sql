@@ -1,8 +1,8 @@
 -- =============================================================================
--- schema.sql – SQLite (dùng để phát triển local)
+-- schema.sql – SQLite
 -- Đồng bộ với Java domain models hiện tại (tháng 5/2026)
 --
--- Khác biệt so với MySQL:
+-- Ghi chú SQLite:
 --   INTEGER PRIMARY KEY = rowid (tương đương AUTO_INCREMENT)
 --   Không có ENUM – dùng TEXT + CHECK constraint
 --   Không có TINYINT(1) – dùng INTEGER (0 = false, 1 = true)

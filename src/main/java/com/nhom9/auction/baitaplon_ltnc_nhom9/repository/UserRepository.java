@@ -14,22 +14,18 @@ import java.util.Optional;
 import java.util.logging.Logger;
 
 /**
- * Truy cập dữ liệu cho User, Buyer, Seller, Admin.
+ * Truy cập dữ liệu cho User, Buyer, Seller, Admin (SQLite).
  * Dùng table-per-subclass: users + (buyers | sellers | admins).
  *
- * ─── THAY ĐỔI SO VỚI PHIÊN BẢN CŨ ──────────────────────────────────────
+ * ─── GHI CHÚ TRIỂN KHAI ──────────────────────────────────────────────────
  * 1. Mỗi method tự mượn Connection từ pool và đóng trong try-with-resources.
- *    → Trước: conn() trả về singleton → không bao giờ được đóng.
- *    → Sau: try (Connection conn = db().getConnection()) { ... }
- *           conn.close() tự gọi khi ra khỏi block → trả về pool.
+ *    → try (Connection conn = db().getConnection()) { ... }
+ *    → conn.close() tự gọi khi ra khỏi block → trả về pool.
  *
- * 2. INSERT OR REPLACE → check-then-insert/update (hoạt động trên cả hai DB).
- *    → INSERT OR REPLACE là cú pháp riêng của SQLite.
- *    → MySQL dùng ON DUPLICATE KEY UPDATE hoặc REPLACE INTO (khác ngữ nghĩa).
- *    → Giải pháp portable nhất: kiểm tra tồn tại rồi INSERT hoặc UPDATE.
+ * 2. UPSERT dùng INSERT OR REPLACE (cú pháp SQLite).
+ *    → Kiểm tra tồn tại rồi INSERT hoặc UPDATE cho an toàn hơn.
  *
- * 3. toStr/fromStr → DbUtil.toDbString/fromDbString.
- *    → Dùng format "yyyy-MM-dd HH:mm:ss" nhất quán trên cả hai DB.
+ * 3. Timestamp dùng DbUtil.toDbString/fromDbString với format "yyyy-MM-dd HH:mm:ss".
  * ──────────────────────────────────────────────────────────────────────────
  */
 public class UserRepository {
@@ -96,10 +92,7 @@ public class UserRepository {
     /**
      * INSERT vào bảng phụ tương ứng với role của user.
      *
-     * Tại sao không dùng INSERT OR REPLACE?
-     * → "INSERT OR REPLACE" là cú pháp riêng SQLite (không có trong MySQL).
-     * → Thay bằng: kiểm tra row đã tồn tại chưa, rồi INSERT hoặc UPDATE.
-     * → Hoạt động giống nhau trên cả SQLite lẫn MySQL.
+     * Kiểm tra row đã tồn tại chưa, rồi quyết định INSERT hoặc UPDATE.
      */
     private void insertRoleExtension(Connection conn, User user) throws SQLException {
         if (user instanceof Buyer b) {
