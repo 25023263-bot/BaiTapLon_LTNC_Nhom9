@@ -24,6 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -281,7 +282,8 @@ class AuctionHouseTest {
             verify(userRepo).updateWalletBalance(eq(BUYER_ID), any());
 
             // Observer notify với đúng winnerId
-            verify(observer).onAuctionClosed(eq(item), eq(BUYER_ID));
+            verify(observer).onAuctionClosed(argThat(event ->
+                    event.getItem().equals(item) && Objects.equals(event.getWinnerId(), BUYER_ID)));
         }
 
         @Test
@@ -298,7 +300,8 @@ class AuctionHouseTest {
             auctionHouse.closeAuction(ITEM_ID);
 
             verify(auctionRepo).updateStatus(ITEM_ID, AuctionStatus.EXPIRED);
-            verify(observer).onAuctionClosed(eq(item), isNull());
+            verify(observer).onAuctionClosed(argThat(event ->
+                    event.getItem().equals(item) && event.getWinnerId() == null));
 
             // Không có payment nếu không có bid
             verifyNoInteractions(userRepo);
