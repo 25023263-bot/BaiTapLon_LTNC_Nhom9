@@ -99,15 +99,15 @@ public class UserRepository {
             if (DbUtil.rowExists(conn, "buyers", "user_id", b.getId())) {
                 String sql = "UPDATE buyers SET wallet_balance=? WHERE user_id=?";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setDouble(1, b.getWalletBalance().doubleValue());
-                    ps.setInt   (2, b.getId());
+                    ps.setBigDecimal(1, b.getWalletBalance());
+                    ps.setInt       (2, b.getId());
                     ps.executeUpdate();
                 }
             } else {
                 String sql = "INSERT INTO buyers (user_id, wallet_balance) VALUES (?,?)";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setInt   (1, b.getId());
-                    ps.setDouble(2, b.getWalletBalance().doubleValue());
+                    ps.setInt       (1, b.getId());
+                    ps.setBigDecimal(2, b.getWalletBalance());
                     ps.executeUpdate();
                 }
             }
@@ -116,15 +116,15 @@ public class UserRepository {
             if (DbUtil.rowExists(conn, "sellers", "user_id", s.getId())) {
                 String sql = "UPDATE sellers SET earnings_balance=? WHERE user_id=?";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setDouble(1, s.getEarningsBalance().doubleValue());
-                    ps.setInt   (2, s.getId());
+                    ps.setBigDecimal(1, s.getEarningsBalance());
+                    ps.setInt       (2, s.getId());
                     ps.executeUpdate();
                 }
             } else {
                 String sql = "INSERT INTO sellers (user_id, earnings_balance) VALUES (?,?)";
                 try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setInt   (1, s.getId());
-                    ps.setDouble(2, s.getEarningsBalance().doubleValue());
+                    ps.setInt       (1, s.getId());
+                    ps.setBigDecimal(2, s.getEarningsBalance());
                     ps.executeUpdate();
                 }
             }
@@ -284,8 +284,8 @@ public class UserRepository {
         String sql = "UPDATE buyers SET wallet_balance=? WHERE user_id=?";
         try (Connection conn = db();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setDouble(1, balance.doubleValue());
-            ps.setInt   (2, buyerId);
+            ps.setBigDecimal(1, balance);
+            ps.setInt       (2, buyerId);
             ps.executeUpdate();
         }
     }
@@ -294,8 +294,8 @@ public class UserRepository {
         String sql = "UPDATE sellers SET earnings_balance=? WHERE user_id=?";
         try (Connection conn = db();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setDouble(1, balance.doubleValue());
-            ps.setInt   (2, sellerId);
+            ps.setBigDecimal(1, balance);
+            ps.setInt       (2, sellerId);
             ps.executeUpdate();
         }
     }
@@ -339,7 +339,8 @@ public class UserRepository {
             ps.setInt(1, id);
             try (ResultSet r2 = ps.executeQuery()) {
                 if (r2.next()) {
-                    b.setWalletBalance(BigDecimal.valueOf(r2.getDouble("wallet_balance")));
+                    String raw = r2.getString("wallet_balance");
+                    b.setWalletBalance(raw != null ? new BigDecimal(raw) : BigDecimal.ZERO);
                 }
             }
         }
@@ -354,7 +355,8 @@ public class UserRepository {
             ps.setInt(1, id);
             try (ResultSet r2 = ps.executeQuery()) {
                 if (r2.next()) {
-                    s.setEarningsBalance(BigDecimal.valueOf(r2.getDouble("earnings_balance")));
+                    String raw = r2.getString("earnings_balance");
+                    s.setEarningsBalance(raw != null ? new BigDecimal(raw) : BigDecimal.ZERO);
                 }
             }
         }
