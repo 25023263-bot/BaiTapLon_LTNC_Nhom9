@@ -20,8 +20,6 @@ public class ItemDTO implements Serializable {
 
     private int id;
     private int sellerId;
-    private String sellerUsername;
-    private String sellerRating;
 
     private String title;
     private String description;
@@ -78,12 +76,6 @@ public class ItemDTO implements Serializable {
 
     public int getSellerId()                                    { return sellerId; }
     public void setSellerId(int sellerId)                       { this.sellerId = sellerId; }
-
-    public String getSellerUsername()                           { return sellerUsername; }
-    public void setSellerUsername(String sellerUsername)        { this.sellerUsername = sellerUsername; }
-
-    public String getSellerRating()                             { return sellerRating; }
-    public void setSellerRating(String sellerRating)            { this.sellerRating = sellerRating; }
 
     public String getTitle()                                    { return title; }
     public void setTitle(String title)                          { this.title = title; }

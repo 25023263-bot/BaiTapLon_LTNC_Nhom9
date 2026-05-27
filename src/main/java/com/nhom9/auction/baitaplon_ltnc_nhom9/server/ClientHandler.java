@@ -198,7 +198,7 @@ public class ClientHandler implements Runnable {
                 .map(b -> {
                     com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.BidDTO bdto =
                             new com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.BidDTO(
-                                    b.getId(), b.getAuctionId(), item.getTitle(),
+                                    b.getId(), b.getAuctionId(),
                                     b.getBuyerId(), b.getBuyerUsername(),
                                     b.getAmount(), b.getBidTime(), b.isAutoBid()
                             );

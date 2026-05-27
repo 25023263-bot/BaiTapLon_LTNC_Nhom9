@@ -3,7 +3,6 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 public class BidDTO implements Serializable {
 
@@ -11,7 +10,6 @@ public class BidDTO implements Serializable {
 
     private int id;
     private int auctionId;
-    private String auctionTitle;
     private int buyerId;
     private String buyerUsername;
     private BigDecimal amount;
@@ -21,12 +19,11 @@ public class BidDTO implements Serializable {
 
     public BidDTO() {}
 
-    public BidDTO(int id, int auctionId, String auctionTitle, int buyerId,
+    public BidDTO(int id, int auctionId, int buyerId,
                   String buyerUsername, BigDecimal amount, LocalDateTime bidTime,
                   boolean autoBid) {
         this.id              = id;
         this.auctionId       = auctionId;
-        this.auctionTitle    = auctionTitle;
         this.buyerId         = buyerId;
         this.buyerUsername   = buyerUsername;
         this.amount          = amount;
@@ -35,30 +32,11 @@ public class BidDTO implements Serializable {
         this.isLeading       = false;
     }
 
-    private static final DateTimeFormatter DISPLAY_FORMAT =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-
-    public String getFormattedBidTime() {
-        return bidTime != null ? bidTime.format(DISPLAY_FORMAT) : "";
-    }
-
-    public String getFormattedAmount() {
-        return String.format("%,.0f đ", amount);
-    }
-
-    public String getStatusLabel() {
-        if (isLeading) return "🏆 Đang dẫn đầu";
-        return autoBid ? "🤖 Auto-bid" : "Đã vượt";
-    }
-
     public int getId()                              { return id; }
     public void setId(int id)                       { this.id = id; }
 
     public int getAuctionId()                       { return auctionId; }
     public void setAuctionId(int auctionId)         { this.auctionId = auctionId; }
-
-    public String getAuctionTitle()                 { return auctionTitle; }
-    public void setAuctionTitle(String title)       { this.auctionTitle = title; }
 
     public int getBuyerId()                         { return buyerId; }
     public void setBuyerId(int buyerId)             { this.buyerId = buyerId; }
@@ -80,7 +58,7 @@ public class BidDTO implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("BidDTO{id=%d, auction='%s', buyer='%s', amount=%s, leading=%s}",
-                id, auctionTitle, buyerUsername, amount, isLeading);
+        return String.format("BidDTO{id=%d, auctionId=%d, buyer='%s', amount=%s, leading=%s}",
+                id, auctionId, buyerUsername, amount, isLeading);
     }
 }

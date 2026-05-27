@@ -25,7 +25,6 @@ public class UserDTO implements Serializable {
     public UserDTO() {}
 
     public boolean isBuyer()  { return role == UserRole.BUYER; }
-    public boolean isSeller() { return role == UserRole.SELLER; }
     public boolean isAdmin()  { return role == UserRole.ADMIN; }
 
     public String getDisplayName() {
