@@ -49,11 +49,6 @@ public class Seller extends User {
         updatedAt = LocalDateTime.now();
     }
 
-    @Override
-    public String getRoleDescription() {
-        return "Người bán – có thể đăng vật phẩm, quản lý phiên đấu giá.";
-    }
-
     /**
      * Tạo một Buyer tạm thời đại diện cho Seller khi tham gia đấu giá.
      *

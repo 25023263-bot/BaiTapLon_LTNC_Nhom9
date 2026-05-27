@@ -4,7 +4,6 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.UserDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.UserRole;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.ItemDTO;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.listing.ListingRequest;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.CurrencyFormatHelper;
@@ -390,10 +389,6 @@ public final class SellerProductsPresenter {
         view.myProductsList().getChildren().add(emptyState);
     }
 
-    /**
-     * Overload nhận AuctionCardModel — dùng khi dữ liệu đến từ ItemDTO (socket).
-     * Tái sử dụng buildMyProductCard(AuctionItem) không còn cần thiết.
-     */
     private VBox buildMyProductCard(AuctionCardModel card) {
         VBox cardBox = new VBox(10);
         cardBox.getStyleClass().add("my-product-card");
@@ -439,57 +434,6 @@ public final class SellerProductsPresenter {
         });
         cardBox.setStyle(cardBox.getStyle() + "; -fx-cursor: hand;");
         return cardBox;
-    }
-
-    private VBox buildMyProductCard(AuctionItem item) {
-        VBox card = new VBox(10);
-        card.getStyleClass().add("my-product-card");
-
-        HBox row = new HBox(16);
-        row.setAlignment(Pos.CENTER_LEFT);
-
-        String emoji = AuctionCardMapper.categoryEmoji(item.getCategory());
-        javafx.scene.Node imgNode = ProductImageHelper.buildNode(
-                item.getImageUrl(), emoji, 60, 60);
-        if (imgNode instanceof Label lbl) {
-            lbl.getStyleClass().add("my-product-card-img");
-        } else if (imgNode instanceof ImageView iv) {
-            iv.setFitWidth(60);
-            iv.setFitHeight(60);
-        }
-
-        VBox info = new VBox(4);
-        HBox.setHgrow(info, Priority.ALWAYS);
-        Label titleLabel = new Label(item.getTitle());
-        titleLabel.getStyleClass().add("my-product-card-title");
-        titleLabel.setWrapText(true);
-        Label categoryLabel = new Label(emoji + "  " + item.getCategory());
-        categoryLabel.setStyle("-fx-text-fill: #888; -fx-font-size: 12px;");
-        Label priceLabel = new Label("Giá khởi: "
-                + CurrencyFormatHelper.formatPrice(item.getStartingPrice().doubleValue()));
-        priceLabel.setStyle("-fx-text-fill: #c9a84c; -fx-font-size: 13px; -fx-font-weight: bold;");
-        info.getChildren().addAll(titleLabel, categoryLabel, priceLabel);
-
-        Label statusBadge = new Label(AuctionCardMapper.statusDisplay(item.getStatus()));
-        statusBadge.getStyleClass().add(
-                item.getStatus() == AuctionStatus.ACTIVE
-                        ? "my-product-badge-live" : "my-product-badge-ended");
-
-        row.getChildren().addAll(imgNode, info, statusBadge);
-        card.getChildren().add(row);
-
-        // Map sang AuctionCardModel để truyền cho coordinator
-        AuctionCardModel uiItem = AuctionCardMapper.toCardSimple(item);
-
-        card.setOnMouseClicked(e -> {
-            host.ensureCoordinators().run();
-            host.openSellerItemDetail().accept(uiItem, () -> {
-                host.refreshCatalog().run();
-                loadMyProducts();
-            });
-        });
-        card.setStyle(card.getStyle() + "; -fx-cursor: hand;");
-        return card;
     }
 
     private boolean validateListProductForm() {

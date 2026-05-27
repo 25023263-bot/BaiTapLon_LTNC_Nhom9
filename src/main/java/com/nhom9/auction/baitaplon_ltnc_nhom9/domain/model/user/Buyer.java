@@ -73,11 +73,6 @@ public class Buyer extends User {
         return walletBalance.compareTo(amount) >= 0;
     }
 
-    @Override
-    public String getRoleDescription() {
-        return "Người mua – có thể đặt bid và theo dõi sản phẩm.";
-    }
-
     // ─── Getters / Setters ───────────────────────────────────────────────────
 
     public BigDecimal getWalletBalance()             { return walletBalance; }

@@ -35,35 +35,6 @@ public class Admin extends User {
         this.updatedAt = updatedAt;
     }
 
-    // ─── Business Logic ──────────────────────────────────────────────────────
-
-    /**
-     * Vô hiệu hoá một tài khoản người dùng.
-     *
-     * Tại sao method này nằm ở Admin?
-     * → Để rõ ý định: chỉ Admin mới được gọi hành động này.
-     *   Service layer kiểm tra instanceof Admin trước khi cho phép.
-     */
-    public void disableUser(User target) {
-        if (target == null) throw new IllegalArgumentException("User không được null.");
-        target.deactivate();
-    }
-
-    /**
-     * Kích hoạt lại một tài khoản đã bị vô hiệu hoá.
-     */
-    public void enableUser(User target) {
-        if (target == null) throw new IllegalArgumentException("User không được null.");
-        target.activate();
-    }
-
-    // ─── Abstract Implementation ─────────────────────────────────────────────
-
-    @Override
-    public String getRoleDescription() {
-        return "Admin – có thể xoá phiên đấu giá và vô hiệu hoá tài khoản.";
-    }
-
     @Override
     public String toString() {
         return String.format("Admin{id=%d, username='%s'}", id, username);

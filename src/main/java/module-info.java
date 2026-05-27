@@ -63,7 +63,6 @@ module com.nhom9.auction.baitaplon_ltnc_nhom9 {
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums;
-    opens com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.common;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto;
     opens com.nhom9.auction.baitaplon_ltnc_nhom9.config;
 }

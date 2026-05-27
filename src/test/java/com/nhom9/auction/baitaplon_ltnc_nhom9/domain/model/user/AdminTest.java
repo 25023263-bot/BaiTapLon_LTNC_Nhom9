@@ -8,13 +8,6 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Unit test cho Admin – kiểm tra các hành vi hiện có của Admin.
- *
- * LƯU Ý: Các test liên quan đến accessLevel, isSuperAdmin(), hasPermission()
- * đã bị xóa vì Admin hiện tại chưa implement các tính năng đó.
- * Sẽ được thêm lại khi production code sẵn sàng.
- */
 @DisplayName("Admin – Hành vi cơ bản")
 class AdminTest {
 
@@ -53,69 +46,27 @@ class AdminTest {
         assertEquals(UserRole.ADMIN, admin.getRole());
     }
 
-    // ─── disableUser() ────────────────────────────────────────────────────────
+    // ─── activate / deactivate ────────────────────────────────────────────────
 
     @Test
-    @DisplayName("disableUser: user đang active → bị vô hiệu hóa")
-    void disableUser_activeUser_becomesInactive() {
-        Admin admin = new Admin(1, "admin", "admin@example.com",
-                "hash", "Admin", "090");
-        Buyer target = new Buyer(2, "buyer", "buyer@example.com",
-                "hash", "Buyer", "091");
+    @DisplayName("deactivate: admin active → bị vô hiệu hóa")
+    void deactivate_activeAdmin_becomesInactive() {
+        Admin admin = new Admin(1, "admin", "admin@example.com", "hash", "Admin", "090");
 
-        admin.disableUser(target);
+        admin.deactivate();
 
-        assertFalse(target.isActive());
+        assertFalse(admin.isActive());
     }
 
     @Test
-    @DisplayName("disableUser: target null → ném IllegalArgumentException")
-    void disableUser_nullTarget_throwsException() {
-        Admin admin = new Admin(1, "admin", "admin@example.com",
-                "hash", "Admin", "090");
+    @DisplayName("activate: admin bị disabled → active trở lại")
+    void activate_inactiveAdmin_becomesActive() {
+        Admin admin = new Admin(1, "admin", "admin@example.com", "hash", "Admin", "090");
+        admin.deactivate();
 
-        assertThrows(IllegalArgumentException.class,
-                () -> admin.disableUser(null));
-    }
+        admin.activate();
 
-    // ─── enableUser() ─────────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("enableUser: user đang bị disabled → active trở lại")
-    void enableUser_inactiveUser_becomesActive() {
-        Admin admin = new Admin(1, "admin", "admin@example.com",
-                "hash", "Admin", "090");
-        Buyer target = new Buyer(2, "buyer", "buyer@example.com",
-                "hash", "Buyer", "091");
-
-        admin.disableUser(target);
-        admin.enableUser(target);
-
-        assertTrue(target.isActive());
-    }
-
-    @Test
-    @DisplayName("enableUser: target null → ném IllegalArgumentException")
-    void enableUser_nullTarget_throwsException() {
-        Admin admin = new Admin(1, "admin", "admin@example.com",
-                "hash", "Admin", "090");
-
-        assertThrows(IllegalArgumentException.class,
-                () -> admin.enableUser(null));
-    }
-
-    // ─── getRoleDescription() ─────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("getRoleDescription: trả về chuỗi không null và không rỗng")
-    void getRoleDescription_returnsNonEmptyString() {
-        Admin admin = new Admin(1, "admin", "admin@example.com",
-                "hash", "Admin", "090");
-
-        String desc = admin.getRoleDescription();
-
-        assertNotNull(desc);
-        assertFalse(desc.isBlank());
+        assertTrue(admin.isActive());
     }
 
     // ─── toString() ───────────────────────────────────────────────────────────
@@ -123,8 +74,7 @@ class AdminTest {
     @Test
     @DisplayName("toString: chứa id và username")
     void toString_containsIdAndUsername() {
-        Admin admin = new Admin(99, "superadmin", "sa@example.com",
-                "hash", "SA", "090");
+        Admin admin = new Admin(99, "superadmin", "sa@example.com", "hash", "SA", "090");
 
         String str = admin.toString();
 

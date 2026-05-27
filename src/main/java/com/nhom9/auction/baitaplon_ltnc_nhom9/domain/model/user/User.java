@@ -10,7 +10,7 @@ import java.io.Serializable;
  * Lớp cơ sở trừu tượng cho mọi người dùng trong hệ thống.
  * Được kế thừa bởi Buyer, Seller, Admin.
  */
-public abstract class User implements Serializable {
+public class User implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -42,11 +42,6 @@ public abstract class User implements Serializable {
         this.createdAt    = LocalDateTime.now();
         this.updatedAt    = LocalDateTime.now();
     }
-
-    // ─── Abstract ────────────────────────────────────────────────────────────
-
-    /** Trả về mô tả ngắn về quyền/chức năng của user này. */
-    public abstract String getRoleDescription();
 
     // ─── Business Methods ────────────────────────────────────────────────────
 
