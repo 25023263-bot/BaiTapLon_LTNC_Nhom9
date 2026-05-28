@@ -7,6 +7,8 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.item.AuctionItem;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.server.protocol.Request;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.server.protocol.Response;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.service.auction.ServiceLocator;
@@ -133,9 +135,9 @@ public class ClientHandler implements Runnable {
 
         // Quan trọng: gửi kèm số dư ví để client hiển thị ngay sau đăng nhập
         // Không set walletBalance → client nhận null → refreshWallet() hiện 0đ mãi
-        if (user instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer buyer) {
+        if (user instanceof Buyer buyer) {
             result.setWalletBalance(buyer.getWalletBalance());
-        } else if (user instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller seller) {
+        } else if (user instanceof Seller seller) {
             result.setEarningsBalance(seller.getEarningsBalance());
         }
 
@@ -191,13 +193,13 @@ public class ClientHandler implements Runnable {
         });
 
         // Lấy toàn bộ lịch sử bid — dùng cho bid history list và price chart
-        List<com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid> bids =
+        List<Bid> bids =
                 locator.getBidRepo().findByAuctionId(auctionId);
 
-        List<com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.BidDTO> bidDTOs = bids.stream()
+        List<BidDTO> bidDTOs = bids.stream()
                 .map(b -> {
-                    com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.BidDTO bdto =
-                            new com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.BidDTO(
+                    BidDTO bdto =
+                            new BidDTO(
                                     b.getId(), b.getAuctionId(),
                                     b.getBuyerId(), b.getBuyerUsername(),
                                     b.getAmount(), b.getBidTime(), b.isAutoBid()
@@ -305,9 +307,9 @@ public class ClientHandler implements Runnable {
         // Client dùng số dư này để cập nhật UI ngay lập tức — không cần tự tính toán.
         UserDTO result = new UserDTO();
         result.setId(user.getId());
-        if (user instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Buyer buyer) {
+        if (user instanceof Buyer buyer) {
             result.setWalletBalance(buyer.getWalletBalance());
-        } else if (user instanceof com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.Seller seller) {
+        } else if (user instanceof Seller seller) {
             result.setEarningsBalance(seller.getEarningsBalance());
         }
         return Response.ok(result);

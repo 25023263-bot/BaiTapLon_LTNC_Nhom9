@@ -6,7 +6,7 @@ import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.ItemDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.Bid;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.enums.AuctionStatus;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.BidDialogController;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.BidRequest;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.BidRequest;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller.ItemDetailController;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.UserSession;

@@ -1,4 +1,4 @@
-package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
+package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model;
 
 /**
  * Kết quả trả về từ BidDialogController về ItemDetailCoordinator.

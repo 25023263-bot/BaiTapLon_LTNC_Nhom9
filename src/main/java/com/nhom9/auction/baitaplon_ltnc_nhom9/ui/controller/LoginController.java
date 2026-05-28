@@ -2,11 +2,9 @@ package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
 
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.dto.UserDTO;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.domain.model.user.User;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.server.protocol.Request;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.server.protocol.Response;
-import com.nhom9.auction.baitaplon_ltnc_nhom9.client.SocketClient;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.AlertHelper;
 import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.helpers.UserSession;
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.network.ServerConnection;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -21,24 +19,14 @@ import java.util.function.Consumer;
 /**
  * Controller cho LoginView.
  *
- * <h3>Bước 8 — Xoá fallback offline:</h3>
- * <ul>
- *   <li>Bỏ field {@code authService} và import {@code AuthService}.</li>
- *   <li>Bỏ method {@code loginLocally()} — không còn gọi DB trực tiếp từ client.</li>
- *   <li>Bỏ method {@code setStandaloneAuth()} và tham số {@code authService}
- *       trong {@code configureForModal()}.</li>
- *   <li>{@code onLogin()} luôn gọi {@code loginViaSocket()} —
- *       nếu server offline thì hiện lỗi rõ ràng.</li>
- * </ul>
- *
  * <h3>Luồng đăng nhập:</h3>
  * <pre>
  *   User nhập username/password
  *       │
  *       ▼  Background thread
- *   SocketClient.sendRequest(LOGIN, dto)
+ *   ServerConnection.login(username, password)
  *       │
- *       ▼  Server xác thực, trả Response
+ *       ▼  Server xác thực, trả UserDTO
  *   OK  → lưu UserDTO vào UserSession → gọi onLoginSuccess
  *   ERR → hiện thông báo lỗi
  * </pre>
@@ -92,14 +80,14 @@ public class LoginController {
             return;
         }
 
-        if (!SocketClient.getInstance().isConnected()) {
+        if (!ServerConnection.isConnected()) {
             AlertHelper.showError("UBID — Không có kết nối",
                     "Không thể kết nối đến server.\n" +
                             "Hãy đảm bảo AuctionServer đang chạy và thử lại.");
             return;
         }
 
-        loginViaSocket(username, password);
+        loginAsync(username, password);
     }
 
     @FXML
@@ -115,40 +103,27 @@ public class LoginController {
     // ── Login via socket ──────────────────────────────────────────────────────
 
     /**
-     * Login qua socket trên background thread — không block JavaFX UI thread.
-     *
-     * Convention: password gửi trong field {@code phone} của UserDTO
-     * (vì DTO không có field password riêng).
+     * Gọi ServerConnection.login() trên background thread — không block JavaFX UI thread.
      */
-    private void loginViaSocket(String username, String password) {
+    private void loginAsync(String username, String password) {
         setLoginButtonEnabled(false);
-
-        UserDTO dto = new UserDTO();
-        dto.setUsername(username);
-        dto.setPhone(password); // phone = password (convention)
 
         Thread t = new Thread(() -> {
             try {
-                Request  req = new Request(Request.Type.LOGIN, dto);
-                Response res = SocketClient.getInstance().sendRequest(req);
+                UserDTO loggedIn = ServerConnection.login(username, password);
 
                 Platform.runLater(() -> {
                     setLoginButtonEnabled(true);
-                    if (res.isOk()) {
-                        UserDTO loggedIn = (UserDTO) res.getData();
-                        UserSession.getInstance().loginWithDTO(loggedIn);
-                        onLoginSuccess.accept(null);
-                    } else {
-                        AlertHelper.showError("UBID — Đăng nhập", res.getMessage());
-                    }
+                    UserSession.getInstance().loginWithDTO(loggedIn);
+                    onLoginSuccess.accept(null);
                 });
 
             } catch (Exception e) {
                 Platform.runLater(() -> {
                     setLoginButtonEnabled(true);
-                    AlertHelper.showError("UBID — Lỗi kết nối",
-                            "Mất kết nối đến server.\n" +
-                                    "Kiểm tra AuctionServer đang chạy và thử lại.");
+                    AlertHelper.showError("UBID — Đăng nhập",
+                            e.getMessage() != null ? e.getMessage() :
+                                    "Mất kết nối đến server.\nKiểm tra AuctionServer đang chạy và thử lại.");
                 });
             }
         }, "login-request-thread");

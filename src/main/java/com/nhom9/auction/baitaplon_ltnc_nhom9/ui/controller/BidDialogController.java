@@ -1,5 +1,6 @@
 package com.nhom9.auction.baitaplon_ltnc_nhom9.ui.controller;
 
+import com.nhom9.auction.baitaplon_ltnc_nhom9.ui.model.BidRequest;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
