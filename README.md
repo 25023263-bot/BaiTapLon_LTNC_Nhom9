@@ -10,9 +10,9 @@ Auction House là ứng dụng đấu giá trực tuyến theo mô hình **Clien
 
 **Phạm vi hệ thống:**
 
-- **Buyer** — duyệt sản phẩm, đặt giá thủ công hoặc kích hoạt Auto-Bid, quản lý ví tiền.
-- **Seller** — đăng sản phẩm lên đấu giá, theo dõi trạng thái phiên, xem lịch sử.
-- **Admin** — quản lý toàn bộ người dùng và sản phẩm, xem doanh thu nền tảng.
+- **Buyer** — duyệt sản phẩm, đặt giá thủ công hoặc kích hoạt Auto-Bid, ví tiền.
+- **Seller** — đăng sản phẩm lên đấu giá, theo dõi trạng thái phiên, xem lịch sử, ví tiền. (Seller có thể là Buyer)
+- **Admin** — quản lý toàn bộ người dùng và sản phẩm.
 - **Server** — xử lý logic đấu giá, đồng bộ trạng thái đến tất cả Client qua Socket.
 
 ---
