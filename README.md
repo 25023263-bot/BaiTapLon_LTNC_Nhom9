@@ -58,8 +58,7 @@ src/main/java/.../
 │   │   ├── user/                   # User (abstract) → Buyer / Seller / Admin
 │   │   ├── item/                   # AuctionItem (abstract) → PhysicalItem
 │   │   ├── Bid.java
-│   │   ├── Notification.java
-│   │   └── common/                 # Page<T>, FilterCriteria (Builder)
+│   │   └── Notification.java
 │   ├── dto/                        # UserDTO, ItemDTO, BidDTO (an toàn truyền mạng)
 │   └── model/enums/                # AuctionStatus, UserRole
 │
@@ -155,13 +154,13 @@ java -jar target/client.jar
 > Client tự kết nối đến host/port khai báo trong `server.properties`.
 > Mỗi lần chạy `client.jar` là một phiên người dùng độc lập — có thể chạy song song để test đấu giá đồng thời.
 
-### Tài khoản mặc định (seed.sql)
+### Tài khoản admin mặc định (seed.sql)
 
-| Role | Username | Password     |
-|---|---|--------------|
+| Role | Username | Password |
+|---|---|----|
 | Admin | `admin` | `12345678Aa` |
-| Seller | `seller1` | `Seller@123` |
-| Buyer | `buyer1` | `Buyer@123`  |
+| Seller | `` | `` |
+| Buyer | `` | `` |
 
 ---
 
@@ -200,9 +199,9 @@ java -jar target/client.jar
 
 ## 9. Thành viên nhóm 9
 
-| Họ tên              | MSSV     | Phụ trách |
-|---------------------|----------|---|
-| _[Nguyễn Văn Hiệp]_ | 25023241 | |
-| _[Thành viên 2]_    |          | |
-| _[Thành viên 3]_    |          | |
-| _[Thành viên 4]_    |          | |
+| Họ tên            | MSSV     | 
+|-------------------|----------|
+| _Nguyễn Văn Hiệp_ | 25023241 |
+| _Nguyễn Phi Hùng_ |          |
+| _Vũ Thị Bích Hợp_ |          |
+| _Nguyễn Đức Minh_ |          |
