@@ -159,8 +159,6 @@ java -jar target/client.jar
 | Role | Username | Password |
 |---|---|----|
 | Admin | `admin` | `12345678Aa` |
-| Seller | `` | `` |
-| Buyer | `` | `` |
 
 ---
 
@@ -192,8 +190,7 @@ java -jar target/client.jar
 
 | | Link |
 |---|---|
-| 📄 Báo cáo PDF | _https://drive.google.com/file/d/1ssH1_ESe4pVFEdxUkxbsDBu5dCOFuQwV/view?usp=sharing_ |
-| 🎬 Video demo | _https://drive.google.com/file/d/1Gsfu12wpQnISdQRmeYdnTwYpLLq9-3VC/view?usp=sharing_ |
+| 🎬 Video demo | _https://drive.google.com/file/d/1ssH1_ESe4pVFEdxUkxbsDBu5dCOFuQwV/view?usp=sharing_ |
+| 📄 Báo cáo PDF | _https://drive.google.com/file/d/1Gsfu12wpQnISdQRmeYdnTwYpLLq9-3VC/view?usp=sharing_ |
 
 ---
-
