@@ -532,8 +532,6 @@ public class AuctionHouse implements Auctionable {
         // resolveAutoBidConflict() đã xử lý hoàn toàn và triggerAutoBids() chỉ cần 1 lần.
     }
 
-    // ─── Buy Now ──────────────────────────────────────────────────────────────
-
     // ─── Close Auction ────────────────────────────────────────────────────────
 
     @Override
@@ -577,10 +575,6 @@ public class AuctionHouse implements Auctionable {
                     itemId, winnerId, item.getCurrentPrice()));
 
             // Đọc balance mới từ DB sau khi thanh toán thành công
-            userRepo.findById(winnerId).ifPresent(u -> {
-                // không thể assign vào local final var trong lambda → dùng array trick
-            });
-            // Dùng cách trực tiếp hơn: load lại từ DB
             var winnerOpt = userRepo.findById(winnerId);
             if (winnerOpt.isPresent()) {
                 var winner = winnerOpt.get();

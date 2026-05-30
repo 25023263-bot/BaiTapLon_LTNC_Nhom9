@@ -9,13 +9,6 @@ import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Unit test cho Buyer – kiểm tra logic ví tiền và các thao tác liên quan.
- *
- * LƯU Ý: Các test liên quan đến incrementWins() và getTotalWins() đã bị xóa
- * vì Buyer hiện tại chưa có field totalWins.
- * Sẽ được thêm lại khi production code sẵn sàng.
- */
 @DisplayName("Buyer – Quản lý ví tiền")
 class BuyerTest {
 
