@@ -168,7 +168,7 @@ java -jar target/client.jar
 
 ### Bắt buộc
 
-- [x] **Quản lý người dùng** — đăng ký, đăng nhập, cập nhật hồ sơ, phân quyền Buyer / Seller / Admin
+- [x] **Quản lý người dùng** — đăng ký, đăng nhập, phân quyền Buyer / Seller / Admin
 - [x] **Quản lý sản phẩm** — Seller đăng sản phẩm lên đấu giá, đặt giá khởi điểm và thời gian kết thúc
 - [x] **Chức năng đấu giá** — đặt giá, kiểm tra giá tối thiểu, kiểm tra số dư ví, xác nhận thanh toán
 - [x] **Xử lý lỗi & ngoại lệ** — 5 custom exception: `AuctionClosedException`, `BidTooLowException`, `InsufficientBalanceException`, `AuthenticationException`, `DuplicateUserException`
@@ -192,16 +192,8 @@ java -jar target/client.jar
 
 | | Link |
 |---|---|
-| 📄 Báo cáo PDF | _[Thêm link tại đây]_ |
-| 🎬 Video demo | _[Thêm link tại đây]_ |
+| 📄 Báo cáo PDF | _https://drive.google.com/file/d/1ssH1_ESe4pVFEdxUkxbsDBu5dCOFuQwV/view?usp=sharing_ |
+| 🎬 Video demo | _https://drive.google.com/file/d/1Gsfu12wpQnISdQRmeYdnTwYpLLq9-3VC/view?usp=sharing_ |
 
 ---
 
-## 9. Thành viên nhóm 9
-
-| Họ tên            | MSSV     | 
-|-------------------|----------|
-| _Nguyễn Văn Hiệp_ | 25023241 |
-| _Nguyễn Phi Hùng_ |          |
-| _Vũ Thị Bích Hợp_ |          |
-| _Nguyễn Đức Minh_ |          |
