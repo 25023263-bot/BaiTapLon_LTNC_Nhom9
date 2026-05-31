@@ -70,7 +70,7 @@ public class NotificationService implements AuctionObserver {
             // 2. Buyers đã bid trước nhận OUTBID
             //    Dùng bảng bids thay vì watchlist: buyer có thể bid mà không watch
             String msgOutbid = String.format(
-                    "Bạn vừa bị vượt giá trên \"%s\" — giá mới: %,.0f đ",
+                    "Có giá mới trên \"%s\" — giá mới: %,.0f đ",
                     item.getTitle(), bid.getAmount());
 
             Set<Integer> prevBidders = bidRepo.findDistinctBuyerIds(item.getId());
@@ -103,7 +103,7 @@ public class NotificationService implements AuctionObserver {
                 persist(winnerId, item.getId(), Notification.Type.AUCTION_CLOSED,
                         String.format(
                                 "🎉 Chúc mừng! Bạn đã thắng phiên \"%s\" với giá %,.0f đ. " +
-                                        "Vui lòng thanh toán và cung cấp thông tin giao hàng trong vòng 48 giờ.",
+                                        "Hệ thống đã tự động trừ tiền từ tài khoản của bạn",
                                 item.getTitle(), item.getCurrentPrice()));
 
                 // Notify seller: phiên kết thúc
