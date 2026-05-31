@@ -465,12 +465,10 @@ public class ClientHandler implements Runnable {
         dto.setDescription(item.getDescription());
         dto.setCategory(item.getCategory());
         dto.setImageUrl(item.getImageUrl());
-        dto.setItemType("PHYSICAL");
         dto.setStartingPrice(item.getStartingPrice());
         dto.setMinBidIncrement(item.getMinBidIncrement());
         dto.setCurrentPrice(item.getCurrentPrice());
         dto.setStatus(item.getStatus());
-        dto.setStartTime(item.getStartTime());
         dto.setEndTime(item.getEndTime());
         dto.setCreatedAt(item.getCreatedAt());
 

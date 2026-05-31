@@ -25,7 +25,6 @@ public class ItemDTO implements Serializable {
     private String description;
     private String category;
     private String imageUrl;
-    private String itemType;
 
     private BigDecimal startingPrice;
     private BigDecimal minBidIncrement;
@@ -34,7 +33,6 @@ public class ItemDTO implements Serializable {
     private String leadingBidderUsername;
 
     private AuctionStatus status;
-    private LocalDateTime startTime;
     private LocalDateTime endTime;
     private LocalDateTime createdAt;
 
@@ -89,9 +87,6 @@ public class ItemDTO implements Serializable {
     public String getImageUrl()                                 { return imageUrl; }
     public void setImageUrl(String imageUrl)                    { this.imageUrl = imageUrl; }
 
-    public String getItemType()                                 { return itemType; }
-    public void setItemType(String itemType)                    { this.itemType = itemType; }
-
     public BigDecimal getStartingPrice()                        { return startingPrice; }
     public void setStartingPrice(BigDecimal startingPrice)      { this.startingPrice = startingPrice; }
 
@@ -109,9 +104,6 @@ public class ItemDTO implements Serializable {
 
     public AuctionStatus getStatus()                            { return status; }
     public void setStatus(AuctionStatus status)                 { this.status = status; }
-
-    public LocalDateTime getStartTime()                         { return startTime; }
-    public void setStartTime(LocalDateTime startTime)           { this.startTime = startTime; }
 
     public LocalDateTime getEndTime()                           { return endTime; }
     public void setEndTime(LocalDateTime endTime)               { this.endTime = endTime; }
