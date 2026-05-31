@@ -43,7 +43,7 @@ import java.util.logging.Logger;
  * Nếu không tìm thấy file → dùng mặc định localhost:9999.
  * <pre>
  *   server.host=0.tcp.ap.ngrok.io
- *   server.port=19447
+ *   server.port=...
  * </pre>
  */
 public class SocketClient {
